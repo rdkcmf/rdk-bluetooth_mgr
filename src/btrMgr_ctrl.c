@@ -19,7 +19,11 @@ static void sig_handler(int sig);
 /*----------------------------------------------------------------------------*/
 /*                             External Functions                             */
 /*----------------------------------------------------------------------------*/
+#if 0
 int main(int argc,char *argv[])
+#else
+int stub(int argc,char *argv[])
+#endif
 {
 	const char* debugConfigFile = NULL;
 	signal(SIGTERM, sig_handler);

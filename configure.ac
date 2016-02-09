@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([bluetooth-mgr], [1.0], [Thomson_silvera@cable.comcast.com])
+AC_INIT([btr-mgr], [1.0], [Thomson_silvera@cable.comcast.com])
 AC_CONFIG_MACRO_DIR([cfg])
 AC_CONFIG_AUX_DIR([cfg])
 AM_INIT_AUTOMAKE([subdir-objects foreign no-dist-gzip dist-bzip2 1.9])
@@ -30,11 +30,15 @@ AC_CHECK_HEADERS([stdlib.h unistd.h])
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 
-SUBDIRS="src"
+BTR_MGR_SRC="src"
+BTR_MGR_TEST="tests"
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
+
+AC_SUBST(BTR_MGR_SRC)
+AC_SUBST(BTR_MGR_TEST)
 
 # Checks for library functions.
 
