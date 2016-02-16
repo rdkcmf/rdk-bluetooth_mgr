@@ -8,8 +8,8 @@
 #ifndef __BTR_MGR_STREAMOUT_H__
 #define __BTR_MGR_STREAMOUT_H__
 
-
-
+/* Interfaces */
+void BTRMgr_SO_Init (void);
 
 
 #endif /* __BTR_MGR_STREAMOUT_H__ */
