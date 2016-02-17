@@ -72,6 +72,7 @@ AC_SUBST(BTR_MGR_TEST)
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/streamOut/Makefile
-                 tests/Makefile])
+                 tests/Makefile
+                 tests/streamOut/Makefile])
 
 AC_OUTPUT
