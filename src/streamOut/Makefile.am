@@ -7,7 +7,7 @@ AM_LDFLAGS =
 
 if USE_GST1
 AM_CPPFLAGS += $(GST_CFLAGS)
-AM_LDFLAGS += $(GST_LIBS)
+AM_LDFLAGS += $(GST_LIBS) -lgstapp-1.0
 endif
 
 lib_LTLIBRARIES = libbtrMgrStreamOut.la
