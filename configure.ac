@@ -75,4 +75,9 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/streamOut/Makefile])
 
+#TODO: Check the platform we are building for and then choose the config Subdirs
+PFRM_UTILS_TOP_DIR="soc/broadcom"
+AC_CONFIG_SUBDIRS([soc/broadcom])
+AC_SUBST(PFRM_UTILS_TOP_DIR)
+
 AC_OUTPUT
