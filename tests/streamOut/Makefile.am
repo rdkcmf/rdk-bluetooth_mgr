@@ -3,7 +3,12 @@ SUBDIRS =
 INCLUDE_FILES =
 
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/streamOut
-bin_PROGRAMS = btrMgrStreamOutTest
+bin_PROGRAMS = btrMgrStreamOutTest btrMgrStreamOutCoreTest
+
 btrMgrStreamOutTest_SOURCES = btrMgr_streamOutTest.c
 btrMgrStreamOutTest_CFLAGS = $(INCLUDE_FILES)
 btrMgrStreamOutTest_LDADD = $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la
+
+btrMgrStreamOutCoreTest_SOURCES = btrMgr_streamOutCoreTest.c
+btrMgrStreamOutCoreTest_CFLAGS = $(INCLUDE_FILES)
+btrMgrStreamOutCoreTest_LDADD = $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(BTRCORE_LIBS)

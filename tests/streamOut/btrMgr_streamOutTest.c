@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 /* Interface lib Headers */
 #include "btrMgr_streamOut.h"
@@ -302,9 +303,12 @@ int main (
         if (inFileBytesLeft < inBufSize)
             inBytesToEncode = inFileBytesLeft;
 
+        usleep((float)inBytesToEncode * 1000000.0/1764000.0);
+
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
         BTRMgr_SO_SendBuffer(inDataBuf, inBytesToEncode);
         inFileBytesLeft -= inBytesToEncode;
+
     }
 
 

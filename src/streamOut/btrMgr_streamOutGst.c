@@ -53,6 +53,7 @@ typedef struct _stBTRMgrSOGst {
     void* pPipeline;
     void* pSrc;
     void* pSink;
+    void* pRtpPay;
     void* pLoop;
     void* pLoopThread;
     guint busWId;
@@ -164,8 +165,8 @@ BTRMgr_SO_GstInit (
     /* Create elements */
     appsrc   = gst_element_factory_make ("appsrc",   "btmgr-so-appsrc");
 #if defined(DISABLE_SBC_ENCODING)
-    sbcenc   = gst_element_factory_make ("queue",   "btmgr-so-sbcenc");
-    rtpsbcpay= gst_element_factory_make ("queue","btmgr-so-rtpsbcpay");
+    sbcenc   = gst_element_factory_make ("queue",    "btmgr-so-sbcenc");
+    rtpsbcpay= gst_element_factory_make ("queue",    "btmgr-so-rtpsbcpay");
 #else
     sbcenc   = gst_element_factory_make ("sbcenc",   "btmgr-so-sbcenc");
     rtpsbcpay= gst_element_factory_make ("rtpsbcpay","btmgr-so-rtpsbcpay");
@@ -204,6 +205,7 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pPipeline   = (void*)pipeline;
     pstBtrMgrSoGst->pSrc        = (void*)appsrc;
     pstBtrMgrSoGst->pSink       = (void*)fdsink;
+    pstBtrMgrSoGst->pRtpPay     = (void*)rtpsbcpay;
     pstBtrMgrSoGst->pLoop       = (void*)loop;
     pstBtrMgrSoGst->pLoopThread = (void*)mainLoopThread;
     pstBtrMgrSoGst->busWId      = busWatchId;
@@ -269,6 +271,7 @@ BTRMgr_SO_GstStart (
     GstElement* pipeline    = (GstElement*)pstBtrMgrSoGst->pPipeline;
     GstElement* appsrc      = (GstElement*)pstBtrMgrSoGst->pSrc;
     GstElement* fdsink      = (GstElement*)pstBtrMgrSoGst->pSink;
+    GstElement* rtpsbcpay   = (GstElement*)pstBtrMgrSoGst->pRtpPay;
     guint       busWatchId  = pstBtrMgrSoGst->busWId;
 
     GstCaps* appsrcSrcCaps  = NULL;
@@ -297,8 +300,10 @@ BTRMgr_SO_GstStart (
     g_object_set (appsrc, "format", GST_FORMAT_TIME, NULL);
     g_object_set (appsrc, "do-timestamp", 1, NULL);
 
+    g_object_set (rtpsbcpay, "mtu", aiBTDevMTU, NULL);
+
     g_object_set (fdsink, "fd", aiBTDevFd, NULL);
-    g_object_set (fdsink, "blocksize", aiBTDevMTU, NULL);
+
 
     gst_caps_unref(appsrcSrcCaps);
 

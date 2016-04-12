@@ -24,9 +24,31 @@ AC_PROG_MAKE_SET
 AC_PROG_CC
 
 # Checks for libraries.
+AC_CHECK_LIB(btrCore, BTRCore_Init,
+                   btrCore_ok=yes, btrCore_ok=no
+                   AC_MSG_ERROR([BTRCORE library (libbtrCore) not found]))
+if test "$btrCore_ok" = yes; then
+   AC_MSG_CHECKING([for btrCore])
+   AC_TRY_CPP(
+[#include <stdio.h>
+#undef PACKAGE
+#undef VERSION
+#undef HAVE_STDLIB_H
+#include "btrCoreTypes.h"
+#include "btrCore.h"],
+         btrCore_ok=yes,
+         btrCore_ok=no)
+   AC_MSG_RESULT($btrCore_ok)
+   if test "$btrCore_ok" = yes; then
+      BTRCORE_LIBS="-lbtrCore"
+   else
+      AC_MSG_ERROR([BTRCORE library (libbtrCore) not found])
+   fi
+fi
+AC_SUBST([BTRCORE_LIBS])
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h unistd.h])
+AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_avMedia.h])
 
 # Use Glib
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
