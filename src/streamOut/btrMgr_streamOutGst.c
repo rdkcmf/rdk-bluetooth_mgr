@@ -53,10 +53,12 @@ typedef struct _stBTRMgrSOGst {
     void* pPipeline;
     void* pSrc;
     void* pSink;
-    void* pRtpPay;
+    void* pAudioEnc;
+    void* pRtpAudioPay;
     void* pLoop;
     void* pLoopThread;
     guint busWId;
+    GstClockTime gstClkTStamp;
 } stBTRMgrSOGst;
 
 
@@ -141,8 +143,8 @@ BTRMgr_SO_GstInit (
     tBTRMgrSoGstHdl* phBTRMgrSoGstHdl
 ) {
     GstElement*     appsrc;
-    GstElement*     sbcenc;
-    GstElement*     rtpsbcpay;
+    GstElement*     audenc;
+    GstElement*     rtpaudpay;
     GstElement*     fdsink;
     GstElement*     pipeline;
     stBTRMgrSOGst*  pstBtrMgrSoGst = NULL;
@@ -164,12 +166,13 @@ BTRMgr_SO_GstInit (
 
     /* Create elements */
     appsrc   = gst_element_factory_make ("appsrc",   "btmgr-so-appsrc");
-#if defined(DISABLE_SBC_ENCODING)
-    sbcenc   = gst_element_factory_make ("queue",    "btmgr-so-sbcenc");
-    rtpsbcpay= gst_element_factory_make ("queue",    "btmgr-so-rtpsbcpay");
+#if defined(DISABLE_AUDIO_ENCODING)
+    audenc   = gst_element_factory_make ("queue",    "btmgr-so-sbcenc");
+    rtpaudpay= gst_element_factory_make ("queue",    "btmgr-so-rtpsbcpay");
 #else
-    sbcenc   = gst_element_factory_make ("sbcenc",   "btmgr-so-sbcenc");
-    rtpsbcpay= gst_element_factory_make ("rtpsbcpay","btmgr-so-rtpsbcpay");
+	/*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
+    audenc   = gst_element_factory_make ("sbcenc",   "btmgr-so-sbcenc");
+    rtpaudpay= gst_element_factory_make ("rtpsbcpay","btmgr-so-rtpsbcpay");
 #endif
     fdsink   = gst_element_factory_make ("fdsink",   "btmgr-so-fdsink");
 
@@ -179,7 +182,7 @@ BTRMgr_SO_GstInit (
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-so-pipeline");
 
-    if (!appsrc || !sbcenc || !rtpsbcpay || !fdsink || !loop || !pipeline) {
+    if (!appsrc || !audenc || !rtpaudpay || !fdsink || !loop || !pipeline) {
         g_print ("%s:%d:%s - Gstreamer plugin missing for streamOut\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
@@ -189,8 +192,8 @@ BTRMgr_SO_GstInit (
     g_object_unref (bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), appsrc, sbcenc, rtpsbcpay, fdsink, NULL);
-    gst_element_link_many (appsrc, sbcenc, rtpsbcpay, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, rtpaudpay, fdsink, NULL);
+    gst_element_link_many (appsrc, audenc, rtpaudpay, fdsink, NULL);
 
     mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_run_context", btrMgr_SO_g_main_loop_run_context, loop);
 
@@ -205,7 +208,8 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pPipeline   = (void*)pipeline;
     pstBtrMgrSoGst->pSrc        = (void*)appsrc;
     pstBtrMgrSoGst->pSink       = (void*)fdsink;
-    pstBtrMgrSoGst->pRtpPay     = (void*)rtpsbcpay;
+    pstBtrMgrSoGst->pAudioEnc   = (void*)audenc;
+    pstBtrMgrSoGst->pRtpAudioPay= (void*)rtpaudpay;
     pstBtrMgrSoGst->pLoop       = (void*)loop;
     pstBtrMgrSoGst->pLoopThread = (void*)mainLoopThread;
     pstBtrMgrSoGst->busWId      = busWatchId;
@@ -221,7 +225,7 @@ eBTRMgrSOGstStatus
 BTRMgr_SO_GstDeInit (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -261,7 +265,7 @@ BTRMgr_SO_GstStart (
     int aiBTDevFd,
     int aiBTDevMTU
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -271,7 +275,8 @@ BTRMgr_SO_GstStart (
     GstElement* pipeline    = (GstElement*)pstBtrMgrSoGst->pPipeline;
     GstElement* appsrc      = (GstElement*)pstBtrMgrSoGst->pSrc;
     GstElement* fdsink      = (GstElement*)pstBtrMgrSoGst->pSink;
-    GstElement* rtpsbcpay   = (GstElement*)pstBtrMgrSoGst->pRtpPay;
+    GstElement* audenc      = (GstElement*)pstBtrMgrSoGst->pAudioEnc;
+    GstElement* rtpaudpay   = (GstElement*)pstBtrMgrSoGst->pRtpAudioPay;
     guint       busWatchId  = pstBtrMgrSoGst->busWId;
 
     GstCaps* appsrcSrcCaps  = NULL;
@@ -286,6 +291,8 @@ BTRMgr_SO_GstStart (
         return eBTRMgrSOGstFailure;
     }
 
+    pstBtrMgrSoGst->gstClkTStamp = 0;
+
     /*TODO: Set the caps dynamically based on input arguments to Start */
     appsrcSrcCaps = gst_caps_new_simple ("audio/x-raw",
                                          "format", G_TYPE_STRING, GST_AUDIO_NE (S16),
@@ -296,11 +303,16 @@ BTRMgr_SO_GstStart (
 
     g_object_set (appsrc, "caps", appsrcSrcCaps, NULL);
     g_object_set (appsrc, "blocksize", aiInBufMaxSize, NULL);
+    g_object_set (appsrc, "max-bytes", 64 * aiInBufMaxSize, NULL); /*TODO: 64 should be a configurable parameter */
+    g_object_set (appsrc, "is-live", 1, NULL);
+    g_object_set (appsrc, "block", 1, NULL);
     g_object_set (appsrc, "min-latency", 0, NULL);
     g_object_set (appsrc, "format", GST_FORMAT_TIME, NULL);
-    g_object_set (appsrc, "do-timestamp", 1, NULL);
 
-    g_object_set (rtpsbcpay, "mtu", aiBTDevMTU, NULL);
+    g_object_set (audenc, "perfect-timestamp", 1, NULL);
+
+    g_object_set (rtpaudpay, "mtu", aiBTDevMTU, NULL);
+    g_object_set (rtpaudpay, "min-frames", -1, NULL);
 
     g_object_set (fdsink, "fd", aiBTDevFd, NULL);
 
@@ -322,7 +334,7 @@ eBTRMgrSOGstStatus
 BTRMgr_SO_GstStop (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -346,6 +358,8 @@ BTRMgr_SO_GstStop (
         return eBTRMgrSOGstFailure;
     }
 
+    pstBtrMgrSoGst->gstClkTStamp = 0;
+
     return eBTRMgrSOGstSuccess;
 }
 
@@ -354,7 +368,7 @@ eBTRMgrSOGstStatus
 BTRMgr_SO_GstPause (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -392,7 +406,7 @@ eBTRMgrSOGstStatus
 BTRMgr_SO_GstResume (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -432,7 +446,7 @@ BTRMgr_SO_GstSendBuffer (
     char*   pcInBuf,
     int     aiInBufSize
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -459,6 +473,13 @@ BTRMgr_SO_GstSendBuffer (
 
         //TODO: Repalce memcpy and new_alloc if possible
         memcpy (gstBufMap.data, pcInBuf, aiInBufSize);
+
+        //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
+		// size of the incoming buffer (which represents the num of samples received at this instant)
+        GST_BUFFER_PTS (gstBuf) = pstBtrMgrSoGst->gstClkTStamp;
+        GST_BUFFER_DURATION (gstBuf) = gst_util_uint64_scale_int (1, GST_USECOND * 42667, 1);
+        pstBtrMgrSoGst->gstClkTStamp += GST_BUFFER_DURATION (gstBuf);
+
         gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
 
         gst_buffer_unmap (gstBuf, &gstBufMap);
@@ -472,7 +493,7 @@ eBTRMgrSOGstStatus
 BTRMgr_SO_GstSendEOS (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
-    stBTRMgrSOGst const* pstBtrMgrSoGst = (stBTRMgrSOGst const*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);

@@ -10,5 +10,5 @@ btrMgrStreamOutTest_CFLAGS = $(INCLUDE_FILES)
 btrMgrStreamOutTest_LDADD = $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la
 
 btrMgrStreamOutCoreTest_SOURCES = btrMgr_streamOutCoreTest.c
-btrMgrStreamOutCoreTest_CFLAGS = $(INCLUDE_FILES)
-btrMgrStreamOutCoreTest_LDADD = $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(BTRCORE_LIBS)
+btrMgrStreamOutCoreTest_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
+btrMgrStreamOutCoreTest_LDADD = $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(BTRCORE_LIBS) $(RMFAUDIOCAPTURE_LIBS)

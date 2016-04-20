@@ -280,7 +280,7 @@ int main (
     inFileBytesLeft = ftell(inFileFp);
     fseek(inFileFp, 0, SEEK_SET);
 
-#if defined(DISABLE_SBC_ENCODING)
+#if defined(DISABLE_AUDIO_ENCODING)
     (void)extractWavHeader;
 #else
     memset(&lstAudioWavHeader, 0, sizeof(lstAudioWavHeader));

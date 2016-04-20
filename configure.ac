@@ -47,6 +47,28 @@ if test "$btrCore_ok" = yes; then
 fi
 AC_SUBST([BTRCORE_LIBS])
 
+AC_CHECK_LIB(rmfAudioCapture, RMF_AudioCapture_Open,
+                   rmfAudioCapture_ok=yes, rmfAudioCapture_ok=no
+                   AC_MSG_ERROR([RMFAUDIOCAPTURE library (librmfAudioCapture) not found]))
+if test "$rmfAudioCapture_ok" = yes; then
+   AC_MSG_CHECKING([for rmfAudioCapture])
+   AC_TRY_COMPILE(
+[#include <stdio.h>
+#undef PACKAGE
+#undef VERSION
+#undef HAVE_STDLIB_H
+#include "rmfAudioCapture.h"],,
+         rmfAudioCapture_ok=yes,
+         rmfAudioCapture_ok=no)
+   AC_MSG_RESULT($rmfAudioCapture_ok)
+   if test "$rmfAudioCapture_ok" = yes; then
+      RMFAUDIOCAPTURE_LIBS="-lrmfAudioCapture"
+   else
+      AC_MSG_ERROR([RMFAUDIOCAPTURE library (librmfAudioCapture) not found])
+   fi
+fi
+AC_SUBST([RMFAUDIOCAPTURE_LIBS])
+
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_avMedia.h])
 
