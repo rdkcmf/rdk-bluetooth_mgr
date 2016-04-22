@@ -97,10 +97,25 @@ $GST_PKG_ERRORS])], [])
 
 AM_CONDITIONAL(USE_GST1, test "x$enable_gstreamer1" = "xyes" -a "x$have_gst1" = "xyes")
 
+RPC_ENABLE="" #true"
+RPC_FLAGS="" #-DBTMGR_ENABLE_IARM_INTERFACE"
+AC_ARG_ENABLE([rpc],
+              AS_HELP_STRING([--enable-rpc],[enable rpc plugin (default is no)]),
+              [
+      		case "${enableval}" in
+        	 yes) RPC_FLAGS="-DBTMGR_ENABLE_IARM_INTERFACE" RPC_ENABLE=true;;
+        	 no)  RPC_ENABLE=false AC_MSG_ERROR([rpc plugin is disabled]) ;;
+        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-rpc]) ;;
+       		esac
+    	      ],
+    	      [echo "rpc plugin is disabled"])
+
 plugindir="\$(libdir)/gstreamer-$GST_MAJORMINOR"
 
 BTR_MGR_SRC="src"
 BTR_MGR_TEST="tests"
+
+AM_CONDITIONAL(USE_RPC, test "x$RPC_ENABLE" = xtrue)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
@@ -110,11 +125,15 @@ AC_SUBST(plugindir)
 AC_SUBST(GST_MAJORMINOR)
 AC_SUBST(BTR_MGR_SRC)
 AC_SUBST(BTR_MGR_TEST)
+AC_SUBST(RPC_FLAGS)
 
 # Checks for library functions.
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile
+                 src/main/Makefile
+                 src/rpc/Makefile
+                 src/ctrl/Makefile
                  src/streamOut/Makefile
                  tests/Makefile
                  tests/streamOut/Makefile])
