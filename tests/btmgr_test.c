@@ -1,16 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #include <unistd.h>
 #include "btmgr.h"
-
-
-static void _SignalHandler(int sgnl)
-{
-    signal (sgnl, SIG_DFL);
-    kill(getpid(), sgnl);
-}
 
 static void printOptions (void)
 {
@@ -62,13 +54,6 @@ int main()
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     int loop = 1, i = 0;
     char array[32] = "";
-
-    signal(SIGINT, _SignalHandler);
-    signal(SIGKILL, _SignalHandler);
-    signal(SIGQUIT, _SignalHandler);
-    signal(SIGHUP, _SignalHandler);
-
-    signal (SIGPIPE, SIG_IGN);
 
     rc = BTMGR_Init();
 
@@ -188,6 +173,26 @@ int main()
                 break;
             case 10:
                 {
+                    BTMGR_Devices_t pairedDevices;
+
+                    memset (&pairedDevices, 0, sizeof(pairedDevices));
+                    rc = BTMGR_GetPairedDevices(0, &pairedDevices);
+                    if (BTMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                    {
+                        int j = 0;
+                        printf ("\nSuccess....   Devices are, \n");
+                        for (; j< pairedDevices.m_numOfDevices; j++)
+                        {
+                            printf ("%s \t\t %s", pairedDevices.m_deviceProperty[i].m_name, pairedDevices.m_deviceProperty[i].m_deviceAddress);
+                        }
+                        printf ("\n\n");
+                    }
+                }
+                break;
+            case 11:
+                {
                     memset (array, '\0', sizeof(array));
                     printf ("Please Enter the name of the device that you want to pair \t: ");
                     getName(array);
@@ -200,7 +205,7 @@ int main()
                         printf ("\nSuccess....\n");
                 }
                 break;
-            case 11:
+            case 12:
                 {
                     memset (array, '\0', sizeof(array));
                     printf ("Please Enter the name of the device that you want to Unpair \t: ");
@@ -212,26 +217,6 @@ int main()
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
-                }
-                break;
-            case 12:
-                {
-                    BTMGR_Devices_t discoveredDevices;
-
-                    memset (&discoveredDevices, 0, sizeof(discoveredDevices));
-                    rc = BTMGR_GetPairedDevices(0, &discoveredDevices);
-                    if (BTMGR_RESULT_SUCCESS != rc)
-                        printf ("failed\n");
-                    else
-                    {
-                        int j = 0;
-                        printf ("\nSuccess....   Devices are, \n");
-                        for (; j< discoveredDevices.m_numOfDevices; j++)
-                        {
-                            printf ("%s \t\t %s", discoveredDevices.m_deviceProperty[i].m_name, discoveredDevices.m_deviceProperty[i].m_deviceAddress);
-                        }
-                        printf ("\n\n");
-                    }
                 }
                 break;
             case 13:
@@ -313,11 +298,11 @@ int main()
                 break;
             case 18:
                 {
-                    unsigned char index = 0;
-                    printf ("Please set the Streaming Pref \t");
-                    index = (unsigned char) getUserSelection();
+                    //unsigned char index = 0;
+                    //printf ("Please set the Adapter Index\t");
+                    //index = (unsigned char) getUserSelection();
 
-                    rc = BTMGR_StartAudioStreamingOut(index);
+                    rc = BTMGR_StartAudioStreamingOut(0);
                     if (BTMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -352,5 +337,6 @@ int main()
         }
     }
 
+    BTMGR_DeInit();
     return 0;
 }

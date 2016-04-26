@@ -11,7 +11,7 @@ static IARM_Result_t _GetNumberOfAdapters(void *arg)
     unsigned char numOfAdapters = 0;
     unsigned char *pNumberOfAdapters = (unsigned char*) arg;
 
-    BTMGRLOG_INFO ("_GetNumberOfAdapters : Entering %s", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering %s", __FUNCTION__);
     if (gIsBTMGR_Internal_Inited)
     {
         if (pNumberOfAdapters)
@@ -715,7 +715,7 @@ void btmgr_BeginIARMMode()
         IARM_Bus_Init(IARM_BUS_BTMGR_NAME);
         IARM_Bus_Connect();
 
-        BTMGRLOG_INFO ("_GetNumberOfAdapters : Entering %s", __FUNCTION__);
+        BTMGRLOG_INFO ("Entering %s", __FUNCTION__);
 
         IARM_Bus_RegisterCall("GetNumberOfAdapters", _GetNumberOfAdapters);
         IARM_Bus_RegisterCall("SetAdapterName", _SetAdapterName);

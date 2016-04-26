@@ -8,5 +8,5 @@ AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) -lbtrCore -lrdklogger
 lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btmgr.c
 libBTMgr_la_includedir = $(includedir)
-libBTMgr_la_include_HEADERS = btmgr_priv.h
+libBTMgr_la_include_HEADERS = ${top_srcdir}/include/btmgr.h
 endif

@@ -53,7 +53,8 @@ BTMGR_Result_t BTMGR_DeInit()
 
     if (isBTMGR_Inited)
     {
-        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DeInit", 0, 0);
+        /* This is leading to Crash the BTMgrBus which is listening; So lets not call this. */
+        //retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DeInit", 0, 0);
         if (IARM_RESULT_SUCCESS == retCode)
         {
             BTMGRLOG_INFO ("BTMGR_DeInit: Success");
@@ -412,7 +413,7 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devi
     {
         memset (&pairedDevices, 0, sizeof(pairedDevices));
         pairedDevices.m_adapterIndex = index_of_adapter;
-        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetDiscoveredDevices", (void *)&pairedDevices, sizeof(pairedDevices));
+        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetPairedDevices", (void *)&pairedDevices, sizeof(pairedDevices));
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pPairedDevices, &pairedDevices.m_devices, sizeof(BTMGR_Devices_t));
@@ -679,8 +680,17 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
             (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST == eventId))
         {
             memcpy (&newEvent, pReceivedEvent, sizeof(BTMGR_EventMessage_t));
-            m_eventCallbackFunction (newEvent);
+            if (m_eventCallbackFunction)
+                m_eventCallbackFunction (newEvent);
+
             BTMGRLOG_INFO ("_btmgr_deviceCallback : posted event(%d) from the adapter(%d) to listener successfully", newEvent.m_eventType, newEvent.m_adapterIndex);
+            if (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId)
+            {
+                int i = 0;
+                for (; i < newEvent.m_eventData.m_numOfDevices; i++)
+                    BTMGRLOG_INFO ("_btmgr_deviceCallback : Name = %s\n", newEvent.m_eventData.m_deviceProperty[i].m_name);
+                BTMGRLOG_INFO ("\n\n\n\n");
+            }
         }
         else
         {
