@@ -44,6 +44,7 @@
 /* Local defines */
 #define BTR_MGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
 #define BTR_MGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
+#define BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS 16  // Number of blocks in the internal queue
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 
@@ -54,6 +55,7 @@ typedef struct _stBTRMgrSOGst {
     void* pSrc;
     void* pSink;
     void* pAudioEnc;
+    void* pAECapsFilter;
     void* pRtpAudioPay;
     void* pLoop;
     void* pLoopThread;
@@ -138,12 +140,13 @@ btrMgr_SO_validateStateWithTimeout (
 
 
 /* Interfaces */
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstInit (
     tBTRMgrSoGstHdl* phBTRMgrSoGstHdl
 ) {
     GstElement*     appsrc;
     GstElement*     audenc;
+    GstElement*     aecapsfilter;
     GstElement*     rtpaudpay;
     GstElement*     fdsink;
     GstElement*     pipeline;
@@ -165,16 +168,18 @@ BTRMgr_SO_GstInit (
     gst_init (NULL, NULL);
 
     /* Create elements */
-    appsrc   = gst_element_factory_make ("appsrc",   "btmgr-so-appsrc");
+    appsrc   = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
 #if defined(DISABLE_AUDIO_ENCODING)
-    audenc   = gst_element_factory_make ("queue",    "btmgr-so-sbcenc");
-    rtpaudpay= gst_element_factory_make ("queue",    "btmgr-so-rtpsbcpay");
+    audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
+    aecapsfilter= gst_element_factory_make ("queue", "btmgr-so-aecapsfilter");
+    rtpaudpay   = gst_element_factory_make ("queue", "btmgr-so-rtpsbcpay");
 #else
 	/*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
-    audenc   = gst_element_factory_make ("sbcenc",   "btmgr-so-sbcenc");
-    rtpaudpay= gst_element_factory_make ("rtpsbcpay","btmgr-so-rtpsbcpay");
+    audenc      = gst_element_factory_make ("sbcenc", "btmgr-so-sbcenc");
+    aecapsfilter= gst_element_factory_make ("capsfilter", "btmgr-so-aecapsfilter");
+    rtpaudpay   = gst_element_factory_make ("rtpsbcpay", "btmgr-so-rtpsbcpay");
 #endif
-    fdsink   = gst_element_factory_make ("fdsink",   "btmgr-so-fdsink");
+    fdsink      = gst_element_factory_make ("fdsink", "btmgr-so-fdsink");
 
     /* Create and event loop and feed gstreamer bus mesages to it */
     loop = g_main_loop_new (NULL, FALSE);
@@ -182,7 +187,7 @@ BTRMgr_SO_GstInit (
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-so-pipeline");
 
-    if (!appsrc || !audenc || !rtpaudpay || !fdsink || !loop || !pipeline) {
+    if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
         g_print ("%s:%d:%s - Gstreamer plugin missing for streamOut\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
@@ -192,8 +197,8 @@ BTRMgr_SO_GstInit (
     g_object_unref (bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, rtpaudpay, fdsink, NULL);
-    gst_element_link_many (appsrc, audenc, rtpaudpay, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
 
     mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_run_context", btrMgr_SO_g_main_loop_run_context, loop);
 
@@ -205,14 +210,15 @@ BTRMgr_SO_GstInit (
     }
 
 
-    pstBtrMgrSoGst->pPipeline   = (void*)pipeline;
-    pstBtrMgrSoGst->pSrc        = (void*)appsrc;
-    pstBtrMgrSoGst->pSink       = (void*)fdsink;
-    pstBtrMgrSoGst->pAudioEnc   = (void*)audenc;
-    pstBtrMgrSoGst->pRtpAudioPay= (void*)rtpaudpay;
-    pstBtrMgrSoGst->pLoop       = (void*)loop;
-    pstBtrMgrSoGst->pLoopThread = (void*)mainLoopThread;
-    pstBtrMgrSoGst->busWId      = busWatchId;
+    pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
+    pstBtrMgrSoGst->pSrc            = (void*)appsrc;
+    pstBtrMgrSoGst->pSink           = (void*)fdsink;
+    pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
+    pstBtrMgrSoGst->pAECapsFilter   = (void*)aecapsfilter;
+    pstBtrMgrSoGst->pRtpAudioPay    = (void*)rtpaudpay;
+    pstBtrMgrSoGst->pLoop           = (void*)loop;
+    pstBtrMgrSoGst->pLoopThread     = (void*)mainLoopThread;
+    pstBtrMgrSoGst->busWId          = busWatchId;
 
 
     *phBTRMgrSoGstHdl = (tBTRMgrSoGstHdl)pstBtrMgrSoGst;
@@ -221,7 +227,7 @@ BTRMgr_SO_GstInit (
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstDeInit (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
@@ -253,12 +259,13 @@ BTRMgr_SO_GstDeInit (
 
     memset((void*)pstBtrMgrSoGst, 0, sizeof(stBTRMgrSOGst));
     free((void*)pstBtrMgrSoGst);
+    pstBtrMgrSoGst = NULL;
 
     return eBTRMgrSOGstSuccess;
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstStart (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
     int aiInBufMaxSize,
@@ -276,13 +283,16 @@ BTRMgr_SO_GstStart (
     GstElement* appsrc      = (GstElement*)pstBtrMgrSoGst->pSrc;
     GstElement* fdsink      = (GstElement*)pstBtrMgrSoGst->pSink;
     GstElement* audenc      = (GstElement*)pstBtrMgrSoGst->pAudioEnc;
+    GstElement* aecapsfilter= (GstElement*)pstBtrMgrSoGst->pAECapsFilter;
     GstElement* rtpaudpay   = (GstElement*)pstBtrMgrSoGst->pRtpAudioPay;
     guint       busWatchId  = pstBtrMgrSoGst->busWId;
 
     GstCaps* appsrcSrcCaps  = NULL;
+    GstCaps* audEncSrcCaps  = NULL;
 
     (void)pipeline;
     (void)appsrc;
+    (void)audenc;
     (void)busWatchId;
 
     /* Check if we are in correct state */
@@ -301,22 +311,45 @@ BTRMgr_SO_GstStart (
                                          "channels", G_TYPE_INT, 2,
                                           NULL);
 
+    /*TODO: Set the Encoder ouput caps dynamically based on input arguments to Start */
+    audEncSrcCaps = gst_caps_new_simple ("audio/x-sbc",
+                                         "rate", G_TYPE_INT, 48000,
+                                         "channels", G_TYPE_INT, 2,
+                                         "channel-mode", G_TYPE_STRING, "joint",
+                                         "blocks", G_TYPE_INT, 16,
+                                         "subbands", G_TYPE_INT, 8,
+                                         "allocation-method", G_TYPE_STRING, "loudness",
+                                         "bitpool", G_TYPE_INT, 51,
+                                          NULL);
+
     g_object_set (appsrc, "caps", appsrcSrcCaps, NULL);
     g_object_set (appsrc, "blocksize", aiInBufMaxSize, NULL);
-    g_object_set (appsrc, "max-bytes", 64 * aiInBufMaxSize, NULL); /*TODO: 64 should be a configurable parameter */
+
+    g_object_set (appsrc, "max-bytes", BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS * aiInBufMaxSize, NULL);
     g_object_set (appsrc, "is-live", 1, NULL);
     g_object_set (appsrc, "block", 1, NULL);
+
+#if 0
+    g_object_set (appsrc, "do-timestamp", 1, NULL);
     g_object_set (appsrc, "min-latency", 0, NULL);
+#endif
     g_object_set (appsrc, "format", GST_FORMAT_TIME, NULL);
 
+#if 0
     g_object_set (audenc, "perfect-timestamp", 1, NULL);
+#endif
+
+    g_object_set (aecapsfilter, "caps", audEncSrcCaps, NULL);
 
     g_object_set (rtpaudpay, "mtu", aiBTDevMTU, NULL);
     g_object_set (rtpaudpay, "min-frames", -1, NULL);
+    g_object_set (rtpaudpay, "perfect-rtptime", 0, NULL);
 
     g_object_set (fdsink, "fd", aiBTDevFd, NULL);
+    g_object_set (fdsink, "sync", 0, NULL);
 
 
+    gst_caps_unref(audEncSrcCaps);
     gst_caps_unref(appsrcSrcCaps);
 
     /* start play back and listed to events */
@@ -330,7 +363,7 @@ BTRMgr_SO_GstStart (
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstStop (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
@@ -364,7 +397,7 @@ BTRMgr_SO_GstStop (
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstPause (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
@@ -402,7 +435,7 @@ BTRMgr_SO_GstPause (
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstResume (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {
@@ -440,7 +473,7 @@ BTRMgr_SO_GstResume (
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstSendBuffer (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
     char*   pcInBuf,
@@ -477,7 +510,7 @@ BTRMgr_SO_GstSendBuffer (
         //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
 		// size of the incoming buffer (which represents the num of samples received at this instant)
         GST_BUFFER_PTS (gstBuf) = pstBtrMgrSoGst->gstClkTStamp;
-        GST_BUFFER_DURATION (gstBuf) = gst_util_uint64_scale_int (1, GST_USECOND * 42667, 1);
+        GST_BUFFER_DURATION (gstBuf) =  GST_USECOND * (aiInBufSize * 1000)/(48 * (16/2) * 2);
         pstBtrMgrSoGst->gstClkTStamp += GST_BUFFER_DURATION (gstBuf);
 
         gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
@@ -489,7 +522,7 @@ BTRMgr_SO_GstSendBuffer (
 }
 
 
-eBTRMgrSOGstStatus
+eBTRMgrSOGstRet
 BTRMgr_SO_GstSendEOS (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl
 ) {

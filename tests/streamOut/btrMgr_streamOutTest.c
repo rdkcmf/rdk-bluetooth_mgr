@@ -238,7 +238,7 @@ int main (
     int     outFileFd       = 0;
     int     outMTUSize      = OUT_MTU_SIZE;
 
-
+    tBTRMgrSoHdl     hBTRMgrSoHdl;
     stAudioWavHeader lstAudioWavHeader;
 
     if (argc != 5) {
@@ -290,12 +290,12 @@ int main (
     }
 #endif
 
-    BTRMgr_SO_Init();
+    BTRMgr_SO_Init(&hBTRMgrSoHdl);
 
     inDataBuf = (char*)malloc(inBufSize * sizeof(char));
     inBytesToEncode = inBufSize;
 
-    BTRMgr_SO_Start(inBytesToEncode, outFileFd, outMTUSize);
+    BTRMgr_SO_Start(hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
 
 
     while (inFileBytesLeft) {
@@ -306,19 +306,19 @@ int main (
         usleep((float)inBytesToEncode * 1000000.0/1764000.0);
 
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
-        BTRMgr_SO_SendBuffer(inDataBuf, inBytesToEncode);
+        BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
         inFileBytesLeft -= inBytesToEncode;
 
     }
 
 
-    BTRMgr_SO_SendEOS();
+    BTRMgr_SO_SendEOS(hBTRMgrSoHdl);
 
-    BTRMgr_SO_Stop();
+    BTRMgr_SO_Stop(hBTRMgrSoHdl);
 
     free(inDataBuf);
 
-    BTRMgr_SO_DeInit();
+    BTRMgr_SO_DeInit(hBTRMgrSoHdl);
 
     if (streamOutMode == 1)
         fclose(outFileFp);

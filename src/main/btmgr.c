@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 tBTRCoreHandle gBTRCoreHandle = NULL;
-stBTRCoreGetAdapter gDefaultAdapterContext;
+stBTRCoreAdapter gDefaultAdapterContext;
 stBTRCoreListAdapters gListOfAdapters;
 unsigned char gIsDiscoveryInProgress = 0;
 unsigned char gIsDeviceConnected = 0;
@@ -127,7 +127,7 @@ BTMGR_Result_t BTMGR_Init()
             else
             {
                 /* you have atlesat one BlueTooth adapter. Now get the Default Adapter path for future usages; */
-                gDefaultAdapterContext.first_available = 1; /* This is unused by core now but lets fill it */
+                gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
                 if (enBTRCoreSuccess == BTRCore_GetAdapter(gBTRCoreHandle, &gDefaultAdapterContext))
                 {
                     BTMGRLOG_INFO ("Aquired default Adapter; Path is %s", gDefaultAdapterContext.pcAdapterPath);

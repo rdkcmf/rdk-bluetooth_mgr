@@ -11,13 +11,17 @@
 
 #include <sys/time.h>
 
+/* Interface lib Headers */
 #include "btrCore.h"            //basic RDK BT functions
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
+
+#include "btrMgr_streamOut.h"
 
 #include "rmfAudioCapture.h"
 
 typedef struct appDataStruct{
     RMF_AudioCaptureHandle hAudCap;
+    tBTRMgrSoHdl hBTRMgrSoHdl;
     unsigned long bytesWritten;
     unsigned samplerate;
     unsigned channels;
@@ -26,7 +30,7 @@ typedef struct appDataStruct{
 
 
 //test func
-void test_func(stBTRCoreGetAdapter* pstGetAdapter);
+void test_func(stBTRCoreAdapter* pstGetAdapter);
 
 
 #define NO_ADAPTER 1234
@@ -163,7 +167,7 @@ main (
     int devnum;
     int default_adapter = NO_ADAPTER;
 	stBTRCoreGetAdapters    GetAdapters;
-	stBTRCoreGetAdapter     GetAdapter;
+	stBTRCoreAdapter     GetAdapter;
 	stBTRCoreStartDiscovery StartDiscovery;
 	stBTRCoreAbortDiscovery AbortDiscovery;
 	stBTRCoreFindService    FindService;
@@ -192,7 +196,7 @@ main (
     BTRCore_Init(&lhBTRCore);
 
     //Init the adapter
-    GetAdapter.first_available = TRUE;
+    GetAdapter.bFirstAvailable = TRUE;
     if (enBTRCoreSuccess ==	BTRCore_GetAdapter(lhBTRCore, &GetAdapter)) {
         default_adapter = GetAdapter.adapter_number;
         BTRCore_LOG("GetAdapter Returns Adapter number %d\n",default_adapter);
@@ -517,7 +521,7 @@ BTRCore_AbortDiscovery (
 enBTRCoreRet 
 BTRCore_ConfigureAdapter (
     tBTRCoreHandle  hBTRCore,
-    stBTRCoreGetAdapter* pstGetAdapter
+    stBTRCoreAdapter* pstGetAdapter
 ) {
 	BTRCore_LOG(("BTRCore_ConfigureAdapter\n"));
 	return enBTRCoreSuccess;
@@ -559,12 +563,11 @@ BTRCore_AdvertiseService (
 #include <string.h>
 #include <unistd.h>
 
-/* Interface lib Headers */
-#include "btrMgr_streamOut.h"
+
 
 
 /* Local Defines */
-#define IN_BUF_SIZE     8192
+#define IN_BUF_SIZE     1024
 #define OUT_MTU_SIZE    1024
 
 
@@ -752,22 +755,23 @@ helpMenu (
         return;
 }
 
-typedef void*  tBTRMgrCapHandle;
+typedef void*  tBTRMgrCapSoHandle;
 
-typedef struct _stBTRMgrCapHdl {
+typedef struct _stBTRMgrCapSoHdl {
     FILE*   inFileFp;
     char*   inDataBuf;     
     int     inFileBytesLeft; 
     int     inBytesToEncode;
     int     inBufSize;      
-} stBTRMgrCapHdl;
+    tBTRMgrSoHdl hBTRMgrSoHdl;
+} stBTRMgrCapSoHdl;
 
 
 void*
 doDataCapture (
     void* ptr
 ) {
-    tBTRMgrCapHandle    hBTRMgrCap = NULL;
+    tBTRMgrCapSoHandle  hBTRMgrSoCap = NULL;
     int*                penCapThreadExitStatus = malloc(sizeof(int));
 
     FILE*   inFileFp        = NULL;
@@ -775,24 +779,26 @@ doDataCapture (
     int     inFileBytesLeft = 0;
     int     inBytesToEncode = 0;
     int     inBufSize       = IN_BUF_SIZE;
+    tBTRMgrSoHdl hBTRMgrSoHdl;
 
     struct timeval tv;
     unsigned long int    prevTime = 0, currTime = 0;
 
-    hBTRMgrCap = (stBTRMgrCapHdl*) ptr;
+    hBTRMgrSoCap = (stBTRMgrCapSoHdl*) ptr;
     printf("%s \n", "Capture Thread Started");
 
-    if (!((stBTRMgrCapHdl*)hBTRMgrCap)) {
+    if (!((stBTRMgrCapSoHdl*)hBTRMgrSoCap)) {
         fprintf(stderr, "Capture thread failure - BTRMgr Capture not initialized\n");
         *penCapThreadExitStatus = -1;
         return (void*)penCapThreadExitStatus;
     }
 
-    inFileFp        = ((stBTRMgrCapHdl*)hBTRMgrCap)->inFileFp; 
-    inDataBuf       = ((stBTRMgrCapHdl*)hBTRMgrCap)->inDataBuf;
-    inFileBytesLeft = ((stBTRMgrCapHdl*)hBTRMgrCap)->inFileBytesLeft;
-    inBytesToEncode = ((stBTRMgrCapHdl*)hBTRMgrCap)->inBytesToEncode;
-    inBufSize       = ((stBTRMgrCapHdl*)hBTRMgrCap)->inBufSize;
+    inFileFp        = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inFileFp; 
+    inDataBuf       = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inDataBuf;
+    inFileBytesLeft = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inFileBytesLeft;
+    inBytesToEncode = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inBytesToEncode;
+    inBufSize       = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inBufSize;
+    hBTRMgrSoHdl    = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->hBTRMgrSoHdl;
 
     while (inFileBytesLeft) {
 
@@ -808,7 +814,7 @@ doDataCapture (
         printf("inBytesToEncode = %d sleeptime = %lf Processing =%lu\n", inBytesToEncode, (inBytesToEncode * 1000000.0/192000.0) - 1666.666667, currTime - prevTime);
         prevTime = currTime;
 
-        BTRMgr_SO_SendBuffer(inDataBuf, inBytesToEncode);
+        BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
         inFileBytesLeft -= inBytesToEncode;
     }
 
@@ -840,8 +846,7 @@ int streamOutTestMainAlternate (
     unsigned long int    prevTime = 0, currTime = 0;
 #endif
 
-
-
+    tBTRMgrSoHdl     hBTRMgrSoHdl;
     stAudioWavHeader lstAudioWavHeader;
 
     if (argc != 5) {
@@ -900,12 +905,12 @@ int streamOutTestMainAlternate (
     }
 #endif
 
-    BTRMgr_SO_Init();
+    BTRMgr_SO_Init(&hBTRMgrSoHdl);
 
     inDataBuf = (char*)malloc(inBufSize * sizeof(char));
     inBytesToEncode = inBufSize;
 
-    BTRMgr_SO_Start(inBytesToEncode, outFileFd, outMTUSize);
+    BTRMgr_SO_Start(hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
 
 #if 0
     while (inFileBytesLeft) {
@@ -921,22 +926,23 @@ int streamOutTestMainAlternate (
         prevTime = currTime;
 
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
-        BTRMgr_SO_SendBuffer(inDataBuf, inBytesToEncode);
+        BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
         inFileBytesLeft -= inBytesToEncode;
     }
 #else
     GThread*    dataCapThread = NULL;
     void*      penDataCapThreadExitStatus = NULL;
 
-    stBTRMgrCapHdl lstBTRMgrCapHdl;
+    stBTRMgrCapSoHdl lstBTRMgrCapSoHdl;
 
-    lstBTRMgrCapHdl.inFileFp        = inFileFp;
-    lstBTRMgrCapHdl.inDataBuf       = inDataBuf;
-    lstBTRMgrCapHdl.inFileBytesLeft = inFileBytesLeft;
-    lstBTRMgrCapHdl.inBytesToEncode = inBytesToEncode;
-    lstBTRMgrCapHdl.inBufSize       = inBufSize;
+    lstBTRMgrCapSoHdl.inFileFp        = inFileFp;
+    lstBTRMgrCapSoHdl.inDataBuf       = inDataBuf;
+    lstBTRMgrCapSoHdl.inFileBytesLeft = inFileBytesLeft;
+    lstBTRMgrCapSoHdl.inBytesToEncode = inBytesToEncode;
+    lstBTRMgrCapSoHdl.inBufSize       = inBufSize;
+    lstBTRMgrCapSoHdl.hBTRMgrSoHdl    = hBTRMgrSoHdl;
 
-    if((dataCapThread = g_thread_new(NULL, doDataCapture, (void*)&lstBTRMgrCapHdl)) == NULL) {
+    if((dataCapThread = g_thread_new(NULL, doDataCapture, (void*)&lstBTRMgrCapSoHdl)) == NULL) {
          fprintf(stderr, "%s:%d:%s - Failed to create data Capture Thread\n", __FILE__, __LINE__, __FUNCTION__);
     }
 
@@ -945,13 +951,13 @@ int streamOutTestMainAlternate (
     (void)penDataCapThreadExitStatus;
 #endif
 
-    BTRMgr_SO_SendEOS();
+    BTRMgr_SO_SendEOS(hBTRMgrSoHdl);
 
-    BTRMgr_SO_Stop();
+    BTRMgr_SO_Stop(hBTRMgrSoHdl);
 
     free(inDataBuf);
 
-    BTRMgr_SO_DeInit();
+    BTRMgr_SO_DeInit(hBTRMgrSoHdl);
 
     if (streamOutMode == 1)
         fclose(outFileFp);
@@ -968,6 +974,7 @@ cbBufferReady (
     unsigned int inBytesToEncode
 ) {
 
+#if 0
     struct timeval tv;
     static unsigned long int prevCbTime = 0;
     unsigned long int currTime = 0;
@@ -976,18 +983,19 @@ cbBufferReady (
     currTime = (1000000 * tv.tv_sec) + tv.tv_usec;
     printf("CB Interval uSecs =%lu\n", currTime - prevCbTime);
     prevCbTime = currTime;
-
+#endif
 
     appDataStruct *data = (appDataStruct*) context;
-    BTRMgr_SO_SendBuffer(inDataBuf, inBytesToEncode);
+    BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
 
     data->bytesWritten += inBytesToEncode;
-
+#if 0
     printf("audioCaptureCb size=%06d bytesWritten=%06lu\n", inBytesToEncode, data->bytesWritten);
     fflush(stdout);
 
     gettimeofday(&tv,NULL);
     printf("CB Time uSec =%lu\n", ((1000000 * tv.tv_sec) + tv.tv_usec) - currTime);
+#endif
 
     return RMF_SUCCESS;
 }
@@ -1002,6 +1010,7 @@ streamOutLiveTestMainAlternate (
     int     inBytesToEncode = IN_BUF_SIZE;
     int     outFileFd       = 0;
     int     outMTUSize      = OUT_MTU_SIZE;
+
 
     if (argc != 5) {
         fprintf(stderr,"Invalid number of arguments\n");
@@ -1020,12 +1029,13 @@ streamOutLiveTestMainAlternate (
 
     memset(&appData, 0, sizeof(appData));
 
+
+    BTRMgr_SO_Init(&appData.hBTRMgrSoHdl);
+
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
     appData.bitsPerSample = 16;
     appData.samplerate = 48000;
     appData.channels = 2;
-
-    BTRMgr_SO_Init();
 
     if (RMF_AudioCapture_Open(&appData.hAudCap)) {
         goto err_open;
@@ -1039,7 +1049,7 @@ streamOutLiveTestMainAlternate (
     settings.threshold= inBytesToEncode;
 
 
-    BTRMgr_SO_Start(inBytesToEncode, outFileFd, outMTUSize);
+    BTRMgr_SO_Start(appData.hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
 
     if (RMF_AudioCapture_Start(appData.hAudCap, &settings)) {
         goto err_open;
@@ -1051,11 +1061,12 @@ streamOutLiveTestMainAlternate (
 
     RMF_AudioCapture_Stop(appData.hAudCap);
 
-    BTRMgr_SO_SendEOS();
-    BTRMgr_SO_Stop();
+    BTRMgr_SO_SendEOS(appData.hBTRMgrSoHdl);
+    BTRMgr_SO_Stop(appData.hBTRMgrSoHdl);
+
 
     RMF_AudioCapture_Close(appData.hAudCap);
-    BTRMgr_SO_DeInit();
+    BTRMgr_SO_DeInit(appData.hBTRMgrSoHdl);
 
 
 err_open:
