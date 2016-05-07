@@ -543,6 +543,67 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
     return rc;
 }
 
+BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices)
+{
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    enBTRCoreRet halrc = enBTRCoreSuccess;
+    stBTRCoreScannedDevicesCount listOfDevices;
+
+    if (NULL == gBTRCoreHandle)
+    {
+        rc = BTMGR_RESULT_INIT_FAILED;
+        BTMGRLOG_ERROR ("%s : BTRCore is not Inited", __FUNCTION__);
+    }
+    else if((index_of_adapter > getAdaptherCount()) || (!pDiscoveredDevices))
+    {
+        rc = BTMGR_RESULT_INVALID_INPUT;
+        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+    }
+    else
+    {
+        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
+        if (pAdapterPath)
+        {
+            memset (&listOfDevices, 0, sizeof(listOfDevices));
+            halrc = BTRCore_GetListOfScannedDevices(gBTRCoreHandle, pAdapterPath, &listOfDevices);
+            if (enBTRCoreSuccess != halrc)
+            {
+                BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices : Failed to get list of discovered devices");
+                rc = BTMGR_RESULT_GENERIC_FAILURE;
+            }
+            else
+            {
+                /* Reset the values to 0 */
+                memset (pDiscoveredDevices, 0, sizeof(BTMGR_Devices_t));
+                if (listOfDevices.numberOfDevices)
+                {
+                    int i = 0;
+                    BTMGR_DevicesProperty_t *ptr = NULL;
+                    pDiscoveredDevices->m_numOfDevices = listOfDevices.numberOfDevices;
+                    for (i = 0; i < listOfDevices.numberOfDevices; i++)
+                    {
+                        ptr = &pDiscoveredDevices->m_deviceProperty[i];
+                        strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
+                        strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].bd_address, (BTMGR_NAME_LEN_MAX - 1));
+                        ptr->m_rssi = listOfDevices.devices[i].RSSI;
+                    }
+                }
+                else
+                    BTMGRLOG_WARN("No Device is found yet");
+
+                /*  Success */
+                BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices : Successful");
+            }
+        }
+        else
+        {
+            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices : Failed to get adapter path");
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
+        }
+    }
+    return rc;
+}
+
 BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, const char* pNameOfDevice)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;

@@ -299,6 +299,42 @@ static IARM_Result_t _ChangeDeviceDiscoveryStatus(void *arg)
     return retCode;
 }
 
+static IARM_Result_t _GetDiscoveredDevices(void *arg)
+{
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTMGR_IARMDevices_t *pDiscoveredDevices = (BTMGR_IARMDevices_t*) arg;
+
+    if (gIsBTMGR_Internal_Inited)
+    {
+        if (pDiscoveredDevices)
+        {
+            rc = BTMGR_GetDiscoveredDevices(pDiscoveredDevices->m_adapterIndex, &pDiscoveredDevices->m_devices);
+            if (BTMGR_RESULT_SUCCESS == rc)
+            {
+                BTMGRLOG_INFO ("_GetDiscoveredDevices: Success");
+            }
+            else
+            {
+                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+                BTMGRLOG_ERROR ("_GetDiscoveredDevices: Failed; RetCode = %d", rc);
+            }
+        }
+        else
+        {
+            retCode = IARM_RESULT_INVALID_PARAM;
+            BTMGRLOG_ERROR ("_GetDiscoveredDevices: Failed; RetCode = %d", retCode);
+        }
+    }
+    else
+    {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited", __FUNCTION__);
+    }
+
+    return retCode;
+}
+
 static IARM_Result_t _PairDevice(void *arg)
 {
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -725,6 +761,7 @@ void btmgr_BeginIARMMode()
         IARM_Bus_RegisterCall("SetAdapterDiscoverable", _SetAdapterDiscoverable);
         IARM_Bus_RegisterCall("IsAdapterDiscoverable", _IsAdapterDiscoverable);
         IARM_Bus_RegisterCall("SetDeviceDiscoveryStatus", _ChangeDeviceDiscoveryStatus);
+        IARM_Bus_RegisterCall("GetDiscoveredDevices", _GetDiscoveredDevices);
         IARM_Bus_RegisterCall("PairDevice", _PairDevice);
         IARM_Bus_RegisterCall("UnpairDevice", _UnpairDevice);
         IARM_Bus_RegisterCall("GetPairedDevices", _GetPairedDevices);

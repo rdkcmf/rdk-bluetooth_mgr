@@ -7,18 +7,19 @@
 static void printOptions (void)
 {
     printf ("\n\n");
-    printf (" 1. Get Number of Adapter\n");
-    printf (" 2. Set Name to your Adapter\n");
-    printf (" 3. Get Name of your Adapter\n");
-    printf (" 4. Set Adapter Power; 0 to OFF & 1 to ON\n");
-    printf (" 5. Get Adapter Power\n");
-    printf (" 6. Set Discoverable\n");
-    printf (" 7. Is it Discoverable\n");
-    printf (" 8. Start Discovering\n");
-    printf (" 9. Stop Discovering\n");
-    printf ("10. Get List of Paired Devices\n");
-    printf ("11. Pair a Device\n");
-    printf ("12. UnPair a Device\n");
+    printf (" 0. Get Number of Adapter\n");
+    printf (" 1. Set Name to your Adapter\n");
+    printf (" 2. Get Name of your Adapter\n");
+    printf (" 3. Set Adapter Power; 0 to OFF & 1 to ON\n");
+    printf (" 4. Get Adapter Power\n");
+    printf (" 5. Set Discoverable\n");
+    printf (" 6. Is it Discoverable\n");
+    printf (" 7. Start Discovering\n");
+    printf (" 8. Stop Discovering\n");
+    printf (" 9. Get List of Discovered Devices\n");
+    printf ("10. Pair a Device\n");
+    printf ("11. UnPair a Device\n");
+    printf ("12. Get List of Paired Devices\n");
     printf ("13. Connect to Device\n");
     printf ("14. DisConnect from Device\n");
     printf ("15. Get Device Properties\n");
@@ -69,7 +70,7 @@ int main()
         i = getUserSelection();
         switch (i)
         {
-            case 1:
+            case 0:
                 {
                     unsigned char numOfAdapters = 0;
                     rc = BTMGR_GetNumberOfAdapters(&numOfAdapters);
@@ -79,7 +80,7 @@ int main()
                         printf ("\nSuccess.... Count = %d\n", numOfAdapters);
                 }
                 break;
-            case 2:
+            case 1:
                 {
                     memset (array, '\0', sizeof(array));
                     printf ("Please Enter the name that you want to set to your adapter\t: ");
@@ -93,7 +94,7 @@ int main()
                         printf ("\nSuccess....\n");
                 }
                 break;
-            case 3:
+            case 2:
                 {
                     memset (array, '\0', sizeof(array));
                     rc = BTMGR_GetAdapterName(0, array);
@@ -103,7 +104,7 @@ int main()
                         printf ("We received @@%s@@\n", array);
                 }
                 break;
-            case 4:
+            case 3:
                 {
                     unsigned char power_status = 0;
 
@@ -117,7 +118,7 @@ int main()
                         printf ("Success\n");
                 }
                 break;
-            case 5:
+            case 4:
                 {
                     unsigned char power_status = 0;
 
@@ -128,7 +129,7 @@ int main()
                         printf ("Success; Status = %u\n", power_status);
                 }
                 break;
-            case 6:
+            case 5:
                 {
                     unsigned char power_status = 0;
 
@@ -142,7 +143,7 @@ int main()
                         printf ("Success;\n");
                 }
                 break;
-            case 7:
+            case 6:
                 {
                     unsigned char power_status = 0;
 
@@ -153,7 +154,7 @@ int main()
                         printf ("Success; Status = %u\n", power_status);
                 }
                 break;
-            case 8:
+            case 7:
                 {
                     rc = BTMGR_StartDeviceDiscovery(0);
                     if (BTMGR_RESULT_SUCCESS != rc)
@@ -162,7 +163,7 @@ int main()
                         printf ("Success;\n");
                 }
                 break;
-            case 9:
+            case 8:
                 {
                     rc = BTMGR_StopDeviceDiscovery(0);
                     if (BTMGR_RESULT_SUCCESS != rc)
@@ -171,27 +172,27 @@ int main()
                         printf ("Success;\n");
                 }
                 break;
-            case 10:
+            case 9:
                 {
-                    BTMGR_Devices_t pairedDevices;
+                    BTMGR_Devices_t discoveredDevices;
 
-                    memset (&pairedDevices, 0, sizeof(pairedDevices));
-                    rc = BTMGR_GetPairedDevices(0, &pairedDevices);
+                    memset (&discoveredDevices, 0, sizeof(discoveredDevices));
+                    rc = BTMGR_GetDiscoveredDevices(0, &discoveredDevices);
                     if (BTMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                     {
                         int j = 0;
-                        printf ("\nSuccess....   Devices are, \n");
-                        for (; j< pairedDevices.m_numOfDevices; j++)
+                        printf ("\nSuccess....   Discovered Devices (%d) are, \n", discoveredDevices.m_numOfDevices);
+                        for (; j< discoveredDevices.m_numOfDevices; j++)
                         {
-                            printf ("%s \t\t %s", pairedDevices.m_deviceProperty[i].m_name, pairedDevices.m_deviceProperty[i].m_deviceAddress);
+                            printf ("%s \t\t %s", discoveredDevices.m_deviceProperty[j].m_name, discoveredDevices.m_deviceProperty[j].m_deviceAddress);
                         }
                         printf ("\n\n");
                     }
                 }
                 break;
-            case 11:
+            case 10:
                 {
                     memset (array, '\0', sizeof(array));
                     printf ("Please Enter the name of the device that you want to pair \t: ");
@@ -205,7 +206,7 @@ int main()
                         printf ("\nSuccess....\n");
                 }
                 break;
-            case 12:
+            case 11:
                 {
                     memset (array, '\0', sizeof(array));
                     printf ("Please Enter the name of the device that you want to Unpair \t: ");
@@ -217,6 +218,26 @@ int main()
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
+                }
+                break;
+            case 12:
+                {
+                    BTMGR_Devices_t pairedDevices;
+
+                    memset (&pairedDevices, 0, sizeof(pairedDevices));
+                    rc = BTMGR_GetPairedDevices(0, &pairedDevices);
+                    if (BTMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                    {
+                        int j = 0;
+                        printf ("\nSuccess....   Paired Devices (%d) are, \n", pairedDevices.m_numOfDevices);
+                        for (; j< pairedDevices.m_numOfDevices; j++)
+                        {
+                            printf ("%s \t\t %s", pairedDevices.m_deviceProperty[j].m_name, pairedDevices.m_deviceProperty[j].m_deviceAddress);
+                        }
+                        printf ("\n\n");
+                    }
                 }
                 break;
             case 13:

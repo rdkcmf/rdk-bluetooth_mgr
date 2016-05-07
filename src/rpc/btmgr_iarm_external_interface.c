@@ -339,6 +339,37 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
     return rc;
 }
 
+BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices)
+{
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_IARMDevices_t discoveredDevices;
+
+    if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pDiscoveredDevices))
+    {
+        rc = BTMGR_RESULT_INVALID_INPUT;
+        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+    }
+    else
+    {
+        memset (&discoveredDevices, 0, sizeof(discoveredDevices));
+        discoveredDevices.m_adapterIndex = index_of_adapter;
+        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetDiscoveredDevices", (void *)&discoveredDevices, sizeof(discoveredDevices));
+        if (IARM_RESULT_SUCCESS == retCode)
+        {
+            memcpy (pDiscoveredDevices, &discoveredDevices.m_devices, sizeof(BTMGR_Devices_t));
+            BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices: Success");
+        }
+        else
+        {
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
+            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices: Failed; RetCode = %d", retCode);
+        }
+    }
+    return rc;
+}
+
+
 BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, const char* pNameOfDevice)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;

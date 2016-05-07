@@ -66,6 +66,7 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
 
 BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter);
 BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter);
+BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices);
 
 BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, const char* pNameOfDevice);
 BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, const char* pNameOfDevice);
