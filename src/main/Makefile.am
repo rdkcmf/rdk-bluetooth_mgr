@@ -3,7 +3,7 @@ SUBDIRS =
 
 if !USE_RPC
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS}
-AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) -lbtrCore -lrdkloggers
+AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) -lbtrCore -lrdkloggers $(RMFAUDIOCAPTURE_LIBS)
 
 lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btmgr.c

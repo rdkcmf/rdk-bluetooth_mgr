@@ -1,7 +1,9 @@
+#include <unistd.h>
 #include "btmgr.h"
 #include "btmgr_priv.h"
 #include "btrCore.h"
-#include <unistd.h>
+#include "rmfAudioCapture.h"
+#include "btrMgr_streamOut.h"
 
 tBTRCoreHandle gBTRCoreHandle = NULL;
 stBTRCoreAdapter gDefaultAdapterContext;
@@ -18,7 +20,84 @@ const char* BTMGR_DEBUG_OVERRIDE_PATH  = "/opt/debug.ini";
 
 static BTMGR_EventCallback m_eventCallbackFunction = NULL;
 
+typedef struct BTMGR_StreamingHandles_t {
+    RMF_AudioCaptureHandle hAudCap;
+    tBTRMgrSoHdl hBTRMgrSoHdl;
+    unsigned long bytesWritten;
+    unsigned samplerate;
+    unsigned channels;
+    unsigned bitsPerSample;
+} BTMGR_StreamingHandles;
+
+BTMGR_StreamingHandles gStreamCaptureSettings;
+
 /* Private function declarations */
+rmf_Error cbBufferReady (void *pContext, void* pInDataBuf, unsigned int inBytesToEncode)
+{
+    BTMGR_StreamingHandles *data = (BTMGR_StreamingHandles*) pContext;
+    BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, pInDataBuf, inBytesToEncode);
+
+    data->bytesWritten += inBytesToEncode;
+    return RMF_SUCCESS;
+}
+
+BTMGR_Result_t btmgr_StartCastingAudio (int outFileFd, int outMTUSize)
+{
+    int inBytesToEncode = 1024;
+    RMF_AudioCapture_Settings settings;
+
+    if (0 == gIsStreamoutInProgress)
+    {
+        /* Reset the buffer */
+        memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
+        memset(&settings, 0, sizeof(settings));
+
+        /* Init StreamOut module - Create Pipeline */
+        BTRMgr_SO_Init(&gStreamCaptureSettings.hBTRMgrSoHdl);
+
+        /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
+        gStreamCaptureSettings.bitsPerSample = 16;
+        gStreamCaptureSettings.samplerate = 48000;
+        gStreamCaptureSettings.channels = 2;
+
+        if (RMF_AudioCapture_Open(&gStreamCaptureSettings.hAudCap))
+        {
+            return BTMGR_RESULT_GENERIC_FAILURE;
+        }
+
+        RMF_AudioCapture_GetDefaultSettings(&settings);
+        settings.cbBufferReady      = cbBufferReady;
+        settings.cbBufferReadyParm  = &gStreamCaptureSettings;
+        settings.fifoSize           = 16 * inBytesToEncode;
+        settings.threshold          = inBytesToEncode;
+
+        BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
+
+        if (RMF_AudioCapture_Start(gStreamCaptureSettings.hAudCap, &settings))
+        {
+            return BTMGR_RESULT_GENERIC_FAILURE;
+        }
+    }
+
+    return BTMGR_RESULT_SUCCESS;
+}
+
+void btmgr_StopCastingAudio ()
+{
+    if (gIsStreamoutInProgress)
+    {
+        RMF_AudioCapture_Stop(gStreamCaptureSettings.hAudCap);
+
+        BTRMgr_SO_SendEOS(gStreamCaptureSettings.hBTRMgrSoHdl);
+        BTRMgr_SO_Stop(gStreamCaptureSettings.hBTRMgrSoHdl);
+
+        RMF_AudioCapture_Close(gStreamCaptureSettings.hAudCap);
+        BTRMgr_SO_DeInit(gStreamCaptureSettings.hBTRMgrSoHdl);
+    }
+
+    return;
+}
+
 void set_discovery_status (unsigned char status)
 {
     gIsDiscoveryInProgress = status;
@@ -103,6 +182,7 @@ BTMGR_Result_t BTMGR_Init()
         /* Initialze all the database */
         memset (&gDefaultAdapterContext, 0, sizeof(gDefaultAdapterContext));
         memset (&gListOfAdapters, 0, sizeof(gListOfAdapters));
+        memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
         gIsDiscoveryInProgress = 0;
 
         /* Init the mutex */
@@ -1005,6 +1085,12 @@ BTMGR_Result_t BTMGR_SetPreferredAudioStreamOutType(BTMGR_StreamOut_Type_t strea
 BTMGR_Result_t BTMGR_StartAudioStreamingOut (unsigned char index_of_adapter)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    enBTRCoreRet halrc = enBTRCoreSuccess;
+    stBTRCorePairedDevicesCount listOfPDevices;
+    unsigned char isFound = 0;
+    int deviceFD = 0;
+    int deviceReadMTU = 0;
+    int deviceWriteMTU = 0;
 
     if (NULL == gBTRCoreHandle)
     {
@@ -1021,26 +1107,78 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut (unsigned char index_of_adapter)
         rc = BTMGR_RESULT_INVALID_INPUT;
         BTMGRLOG_ERROR ("%s : Preferred Device is not set yet", __FUNCTION__);
     }
+    else if (gIsStreamoutInProgress)
+    {
+        BTMGRLOG_ERROR ("%s : Its already streaming out the audio.. Check the volume in ur head set", __FUNCTION__);
+    }
     else
     {
-        if (0 == gIsDeviceConnected)
+        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
+        /* Check whether the device is in the paired list */
+        halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, pAdapterPath, &listOfPDevices);
+        if (enBTRCoreSuccess == halrc)
         {
-            /* If the device is not connected, Connect to it */
-            rc = BTMGR_ConnectToDevice(index_of_adapter, gPreferredDeviceToStreamOut, BTMGR_DEVICE_TYPE_AUDIOSINK);
+            if (listOfPDevices.numberOfDevices)
+            {
+                int i = 0;
+                for (i = 0; i < listOfPDevices.numberOfDevices; i++)
+                {
+                    if (0 == strcmp(gPreferredDeviceToStreamOut, listOfPDevices.devices[i].device_name))
+                    {
+                        isFound = 1;
+                        break;
+                    }
+                }
+            }
+            else
+                BTMGRLOG_WARN("No Device is paired yet");
         }
-
-        if (BTMGR_RESULT_SUCCESS == rc)
+        if (isFound)
         {
-            /* TODO: Start doing one time init of StreamOut Libs and call it for playing out */
-            gIsStreamoutInProgress = 1;
+            if (0 == gIsDeviceConnected)
+            {
+                /* If the device is not connected, Connect to it */
+                rc = BTMGR_ConnectToDevice(index_of_adapter, gPreferredDeviceToStreamOut, BTMGR_DEVICE_TYPE_AUDIOSINK);
+            }
+
+            if (BTMGR_RESULT_SUCCESS == rc)
+            {
+                /* Aquire Device Data Path to start the audio casting */
+                halrc = BTRCore_GetDeviceDataPath (gBTRCoreHandle, pAdapterPath, gPreferredDeviceToStreamOut, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
+                if (enBTRCoreSuccess == halrc)
+                {
+                    /* Now that you got the FD & Read/Write MTU, start casting the audio */
+                    if (BTMGR_RESULT_SUCCESS == btmgr_StartCastingAudio (deviceFD, deviceWriteMTU))
+                    {
+                        gIsStreamoutInProgress = 1;
+                        BTMGRLOG_WARN("%s : Streaming Started.. Enjoy the show..! :)", __FUNCTION__);
+                    }
+                    else
+                    {
+                        BTMGRLOG_ERROR ("%s : Failed to stream now", __FUNCTION__);
+                        rc = BTMGR_RESULT_GENERIC_FAILURE;
+                    }
+                }
+                else
+                {
+                    BTMGRLOG_ERROR ("%s : Failed to get Device Data Path. So Will not be able to stream now", __FUNCTION__);
+                    rc = BTMGR_RESULT_GENERIC_FAILURE;
+                }
+            }
+            else
+            {
+                BTMGRLOG_ERROR ("%s : Failed to connect to device and not playing", __FUNCTION__);
+            }
         }
         else
         {
-            BTMGRLOG_ERROR ("%s : Failed to connect to device and not playing", __FUNCTION__);
+            BTMGRLOG_ERROR ("%s : Failed to find %s in the paired devices list", __FUNCTION__, gPreferredDeviceToStreamOut);
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
     return rc;
 }
+
 
 BTMGR_Result_t BTMGR_StopAudioStreamingOut(void)
 {
@@ -1048,8 +1186,10 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(void)
 
     if (gIsStreamoutInProgress)
     {
-        /* TODO: Stop StreamOut */
-        gIsStreamoutInProgress = 1;
+        btmgr_StopCastingAudio();
+
+        BTRCore_FreeDeviceDataPath (gBTRCoreHandle, gPreferredDeviceToStreamOut);
+        gIsStreamoutInProgress = 0;
     }
 
     return rc;

@@ -5,7 +5,7 @@
 #include "rdk_debug.h"
 #include "stdlib.h"
 #include "string.h"
-#if 1
+#if 0
 #define BTMGRLOG_ERROR(format...)       RDK_LOG(RDK_LOG_ERROR,  "LOG.RDK.BTMGR", format)
 #define BTMGRLOG_WARN(format...)        RDK_LOG(RDK_LOG_WARN,   "LOG.RDK.BTMGR", format)
 #define BTMGRLOG_INFO(format...)        RDK_LOG(RDK_LOG_INFO,   "LOG.RDK.BTMGR", format)

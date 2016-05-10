@@ -719,8 +719,8 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
             {
                 int i = 0;
                 for (; i < newEvent.m_eventData.m_numOfDevices; i++)
-                    BTMGRLOG_INFO ("_btmgr_deviceCallback : Name = %s\n", newEvent.m_eventData.m_deviceProperty[i].m_name);
-                BTMGRLOG_INFO ("\n\n\n\n");
+                    printf ("_btmgr_deviceCallback : Name = %s\n", newEvent.m_eventData.m_deviceProperty[i].m_name);
+                printf ("\n\n\n\n");
             }
         }
         else

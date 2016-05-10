@@ -46,8 +46,17 @@ static int getUserSelection (void)
 
 void getName (char* mychoice)
 {
+#if 0
     scanf("%s", mychoice);
     getchar();//to catch newline
+    //gets(mychoice);
+#else
+    char *tmp = NULL;
+    fgets (mychoice, 30, stdin);
+    tmp = strchr(mychoice, '\n');
+    if (tmp)
+        *tmp = '\0';
+#endif
 }
 
 int main()
