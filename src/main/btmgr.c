@@ -346,7 +346,7 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
                 BTMGRLOG_INFO ("BTMGR_GetAdapterName : Fetched Successfully");
 
             /*  Copy regardless of success or failure. */
-            strncpy (name, pNameOfAdapter, (BTMGR_NAME_LEN_MAX - 1));
+            strncpy (pNameOfAdapter, name, (BTMGR_NAME_LEN_MAX - 1));
         }
         else
         {
