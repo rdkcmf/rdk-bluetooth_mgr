@@ -1,11 +1,11 @@
 [Unit]
 Description=Bluetooth Manager Daemon over IARM IPC
-After=lighttpd.service iarmbusd.service dsmgr.service
+After=lighttpd.service iarmbusd.service
 Requires=iarmbusd.service
 
 [Service]
-Type=notify
-ExecStart=/usr/bin/btMgrBus
+Type=forking
+ExecStart=/bin/sh -c "/usr/bin/btMgrBus &"
 Restart=always
 
 [Install]

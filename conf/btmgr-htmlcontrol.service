@@ -1,7 +1,7 @@
 [Unit]
 Description=Bluetooth Device Controlling thro' FCGi-HTML Service Daemon
-After=lighttpd.service network-online.target whitebox.service btmgr.service
-Requires=btmgr.service network-online.target lighttpd.service whitebox.service
+After=lighttpd.service network-online.target btmgr.service
+Requires=btmgr.service network-online.target lighttpd.service
 
 [Service]
 Type=forking
