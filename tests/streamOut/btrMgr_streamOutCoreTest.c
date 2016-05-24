@@ -567,7 +567,7 @@ BTRCore_AdvertiseService (
 
 
 /* Local Defines */
-#define IN_BUF_SIZE     1024
+#define IN_BUF_SIZE     2048
 #define OUT_MTU_SIZE    1024
 
 
@@ -816,6 +816,7 @@ doDataCapture (
 
         BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
         inFileBytesLeft -= inBytesToEncode;
+        usleep((inBytesToEncode * 1000000.0/192000.0) - 1666.666667);
     }
 
     *penCapThreadExitStatus = 0;

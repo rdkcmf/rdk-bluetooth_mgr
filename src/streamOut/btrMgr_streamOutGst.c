@@ -51,16 +51,17 @@
 
 
 typedef struct _stBTRMgrSOGst {
-    void* pPipeline;
-    void* pSrc;
-    void* pSink;
-    void* pAudioEnc;
-    void* pAECapsFilter;
-    void* pRtpAudioPay;
-    void* pLoop;
-    void* pLoopThread;
-    guint busWId;
+    void*        pPipeline;
+    void*        pSrc;
+    void*        pSink;
+    void*        pAudioEnc;
+    void*        pAECapsFilter;
+    void*        pRtpAudioPay;
+    void*        pLoop;
+    void*        pLoopThread;
+    guint        busWId;
     GstClockTime gstClkTStamp;
+    guint64      inBufOffset;
 } stBTRMgrSOGst;
 
 
@@ -219,7 +220,8 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pLoop           = (void*)loop;
     pstBtrMgrSoGst->pLoopThread     = (void*)mainLoopThread;
     pstBtrMgrSoGst->busWId          = busWatchId;
-
+    pstBtrMgrSoGst->gstClkTStamp    = 0;
+    pstBtrMgrSoGst->inBufOffset     = 0;
 
     *phBTRMgrSoGstHdl = (tBTRMgrSoGstHdl)pstBtrMgrSoGst;
 
@@ -302,6 +304,7 @@ BTRMgr_SO_GstStart (
     }
 
     pstBtrMgrSoGst->gstClkTStamp = 0;
+    pstBtrMgrSoGst->inBufOffset  = 0;
 
     /*TODO: Set the caps dynamically based on input arguments to Start */
     appsrcSrcCaps = gst_caps_new_simple ("audio/x-raw",
@@ -331,22 +334,21 @@ BTRMgr_SO_GstStart (
 
 #if 0
     g_object_set (appsrc, "do-timestamp", 1, NULL);
-    g_object_set (appsrc, "min-latency", 0, NULL);
 #endif
+    g_object_set (appsrc, "min-latency", GST_USECOND * (aiInBufMaxSize * 1000)/(48 * (16/8) * 2), NULL);
+    g_object_set (appsrc, "stream-type", 0, NULL);
     g_object_set (appsrc, "format", GST_FORMAT_TIME, NULL);
 
-#if 0
     g_object_set (audenc, "perfect-timestamp", 1, NULL);
-#endif
 
     g_object_set (aecapsfilter, "caps", audEncSrcCaps, NULL);
 
     g_object_set (rtpaudpay, "mtu", aiBTDevMTU, NULL);
     g_object_set (rtpaudpay, "min-frames", -1, NULL);
-    g_object_set (rtpaudpay, "perfect-rtptime", 0, NULL);
+    g_object_set (rtpaudpay, "perfect-rtptime", 1, NULL);
 
     g_object_set (fdsink, "fd", aiBTDevFd, NULL);
-    g_object_set (fdsink, "sync", 0, NULL);
+    g_object_set (fdsink, "sync", FALSE, NULL);
 
 
     gst_caps_unref(audEncSrcCaps);
@@ -392,6 +394,7 @@ BTRMgr_SO_GstStop (
     }
 
     pstBtrMgrSoGst->gstClkTStamp = 0;
+    pstBtrMgrSoGst->inBufOffset  = 0;
 
     return eBTRMgrSOGstSuccess;
 }
@@ -509,9 +512,13 @@ BTRMgr_SO_GstSendBuffer (
 
         //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
 		// size of the incoming buffer (which represents the num of samples received at this instant)
-        GST_BUFFER_PTS (gstBuf) = pstBtrMgrSoGst->gstClkTStamp;
-        GST_BUFFER_DURATION (gstBuf) =  GST_USECOND * (aiInBufSize * 1000)/(48 * (16/2) * 2);
-        pstBtrMgrSoGst->gstClkTStamp += GST_BUFFER_DURATION (gstBuf);
+        GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
+        GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (aiInBufSize * 1000)/(48 * (16/8) * 2);
+        pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
+
+        GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
+        pstBtrMgrSoGst->inBufOffset    += aiInBufSize;
+        GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
 
         gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
 
