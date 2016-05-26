@@ -390,7 +390,7 @@ int main ()
                         {
                             printf ("<tr> "
                                     "<td>Name of this Adapter is </td> "
-                                    "<td><input type=\"text\" id=\"name1\" style=\"background-color:white;color:black\" value=%s></td> "
+                                    "<td><input type=\"text\" id=\"name1\" style=\"background-color:#CBD5E4;color:black\" value=%s></td> "
                                     "<td> <button id=\"nameChange\" class=\"button\" onclick=\"ChangeName()\">Change Name</button> </td> "
                                     "</tr> "
                                     "</table> "

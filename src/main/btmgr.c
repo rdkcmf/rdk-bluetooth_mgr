@@ -43,7 +43,7 @@ rmf_Error cbBufferReady (void *pContext, void* pInDataBuf, unsigned int inBytesT
 
 BTMGR_Result_t btmgr_StartCastingAudio (int outFileFd, int outMTUSize)
 {
-    int inBytesToEncode = 1024;
+    int inBytesToEncode = 2048;
     RMF_AudioCapture_Settings settings;
 
     if (0 == gIsStreamoutInProgress)
