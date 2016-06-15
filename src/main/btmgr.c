@@ -132,9 +132,9 @@ void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
     return;
 }
 
-int btmgr_DeviceStatusCallback (stBTRCoreDevStateCB* p_StatusCB)
+void btmgr_DeviceStatusCallback (stBTRCoreDevStateCB* p_StatusCB)
 {
-    return 0;
+    return;
 }
 
 unsigned char getAdaptherCount (void)

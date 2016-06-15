@@ -30,7 +30,7 @@ typedef struct appDataStruct{
 
 
 //test func
-void test_func(stBTRCoreAdapter* pstGetAdapter);
+void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 
 
 #define NO_ADAPTER 1234
@@ -114,12 +114,12 @@ static void sendSBCFileOverBT (
 }
 
 
-int 
+void
 cb_unsolicited_bluetooth_status (
     stBTRCoreDevStateCB* p_StatusCB
 ) {
     printf("device status change: %s\n",p_StatusCB->cDeviceType);
-    return 0;
+    return;
 }
 
 static void
@@ -468,20 +468,32 @@ main (
         case 24:
             printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", liDataPath, lidataWriteMTU);
             {
-                char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", "5\0", "895\0"};
-                streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs);
+                char cliDataPath[4] = {'\0'};
+                char clidataWriteMTU[8] = {'\0'};
+                snprintf(cliDataPath, 4, "%d", liDataPath);
+                snprintf(clidataWriteMTU, 8, "%d", lidataWriteMTU);
+                {
+                    char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, clidataWriteMTU};
+                    streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs);
+                }
             }
             break;
         case 25:
             printf("Sending Live to BT Dev FD = %d MTU = %d\n", liDataPath, lidataWriteMTU);
             {
-                char *streamOutLiveTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", "5\0", "895\0"};
-                streamOutLiveTestMainAlternate(5, streamOutLiveTestMainAlternateArgs);
+                char cliDataPath[4] = {'\0'};
+                char clidataWriteMTU[8] = {'\0'};
+                snprintf(cliDataPath, 4, "%d", liDataPath);
+                snprintf(clidataWriteMTU, 8, "%d", lidataWriteMTU);
+                {
+                    char *streamOutLiveTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, clidataWriteMTU};
+                    streamOutLiveTestMainAlternate(5, streamOutLiveTestMainAlternateArgs);
+                }
             }
             break;
 
         case 88:
-            test_func(&GetAdapter); 
+            test_func(lhBTRCore, &GetAdapter); 
             break;
         case 99: 
             printf("Quitting program!\n");
