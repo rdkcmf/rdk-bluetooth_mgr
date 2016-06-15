@@ -1,7 +1,7 @@
 [Unit]
 Description=Bluetooth Manager Daemon over IARM IPC
-After=lighttpd.service iarmbusd.service
-Requires=iarmbusd.service
+After=lighttpd.service iarmbusd.service bluetooth.service
+Requires=iarmbusd.service bluetooth.service
 
 [Service]
 Type=forking

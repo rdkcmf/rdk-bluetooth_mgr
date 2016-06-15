@@ -5,6 +5,8 @@
 #define BTMGR_DEVICE_COUNT_MAX        16
 #define BTMGR_ADAPTER_COUNT_MAX       16
 
+typedef unsigned long long int BTMgrDeviceHandle;
+
 typedef enum _BTMGR_Result_t {
     BTMGR_RESULT_SUCCESS = 0,
     BTMGR_RESULT_GENERIC_FAILURE = -1,
@@ -26,17 +28,20 @@ typedef enum _BTMGR_StreamOut_Type_t {
     BTMGR_STREAM_SECONDARY,
 } BTMGR_StreamOut_Type_t;
 
-typedef enum _BTMGR_Device_Type_t {
+typedef enum _BTMGR_DeviceConnect_Type_t {
     BTMGR_DEVICE_TYPE_AUDIOSINK     = 1 << 0,
     BTMGR_DEVICE_TYPE_HEADSET       = 1 << 1,
     BTMGR_DEVICE_TYPE_OTHER         = 1 << 2,
-} BTMGR_Device_Type_t;
+} BTMGR_DeviceConnect_Type_t;
 
 typedef struct _BTMGR_DevicesProperty_t {
+    BTMgrDeviceHandle m_deviceHandle;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    BTMGR_Device_Type_t  m_deviceType;
-    int m_rssi;
+    char m_supportedServices [BTMGR_NAME_LEN_MAX];
+    unsigned char m_isPaired;
+    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    int  m_rssi;
 } BTMGR_DevicesProperty_t;
 
 typedef struct _BTMGR_Devices_t {
@@ -51,6 +56,7 @@ typedef struct _BTMGR_EventMessage_t {
 } BTMGR_EventMessage_t;
 
 typedef void (*BTMGR_EventCallback)(BTMGR_EventMessage_t);
+
 
 BTMGR_Result_t BTMGR_Init(void);
 BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters);
@@ -68,22 +74,22 @@ BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter);
 BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter);
 BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices);
 
-BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, const char* pNameOfDevice);
-BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, const char* pNameOfDevice);
+BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
+BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
 BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices);
 
-BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, const char* pNameOfDevice, BTMGR_Device_Type_t connectAs);
-BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, const char* pNameOfDevice);
+BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs);
+BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
 
-BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, const char* pNameOfDevice, BTMGR_DevicesProperty_t *pDeviceProperty);
+BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DevicesProperty_t *pDeviceProperty);
 
 BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback);
-BTMGR_Result_t BTMGR_DeInit(void);
 
-BTMGR_Result_t BTMGR_SetDefaultDeviceToStreamOut(const char* pNameOfDevice);
-BTMGR_Result_t BTMGR_SetPreferredAudioStreamOutType (BTMGR_StreamOut_Type_t stream_pref);
-BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter);
-BTMGR_Result_t BTMGR_StopAudioStreamingOut(void);
+BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_StreamOut_Type_t streamOutPref);
+BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
 BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
+
+BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter);
+BTMGR_Result_t BTMGR_DeInit(void);
 
 #endif /* __BTMGR_H__ */

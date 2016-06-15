@@ -20,13 +20,13 @@ typedef struct _BTMGR_IARMAdapterName_t {
 
 typedef struct _BTMGR_IARMPairDevice_t {
     unsigned char m_adapterIndex;
-    char m_name[BTMGR_NAME_LEN_MAX];
+    BTMgrDeviceHandle m_deviceHandle;
 } BTMGR_IARMPairDevice_t;
 
 typedef struct _BTMGR_IARMConnectDevice_t {
     unsigned char m_adapterIndex;
-    char m_name[BTMGR_NAME_LEN_MAX];
-    BTMGR_Device_Type_t m_connectAs;
+    BTMgrDeviceHandle m_deviceHandle;
+    BTMGR_DeviceConnect_Type_t m_connectAs;
 } BTMGR_IARMConnectDevice_t;
 
 typedef struct _BTMGR_IARMAdapterPower_t {
@@ -47,7 +47,7 @@ typedef struct _BTMGR_IARMAdapterDiscover_t {
 
 typedef struct _BTMGR_IARMDDeviceProperty_t {
     unsigned char m_adapterIndex;
-    char m_name[BTMGR_NAME_LEN_MAX];
+    BTMgrDeviceHandle m_deviceHandle;
     BTMGR_DevicesProperty_t m_deviceProperty;
 } BTMGR_IARMDDeviceProperty_t;
 
@@ -56,13 +56,11 @@ typedef struct _BTMGR_IARMDevices_t {
     BTMGR_Devices_t m_devices;
 } BTMGR_IARMDevices_t;
 
-typedef struct _BTMGR_IARMStartStreaming_t {
+typedef struct _BTMGR_IARMStreaming_t {
     unsigned char m_adapterIndex;
-} BTMGR_IARMStartStreaming_t;
-
-typedef struct _BTMGR_IARMPrefAudioType_t {
+    BTMgrDeviceHandle m_deviceHandle;
     BTMGR_StreamOut_Type_t m_audioPref;
-} BTMGR_IARMPrefAudioType_t;
+} BTMGR_IARMStreaming_t;
 
 typedef struct _BTMGR_IARMStreamingStatus_t {
     unsigned char m_adapterIndex;

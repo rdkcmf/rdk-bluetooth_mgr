@@ -345,7 +345,7 @@ static IARM_Result_t _PairDevice(void *arg)
     {
         if (pPairDevice)
         {
-            rc = BTMGR_PairDevice(pPairDevice->m_adapterIndex, pPairDevice->m_name);
+            rc = BTMGR_PairDevice(pPairDevice->m_adapterIndex, pPairDevice->m_deviceHandle);
             if (BTMGR_RESULT_SUCCESS == rc)
             {
                 BTMGRLOG_INFO ("_PairDevice : Success");
@@ -381,7 +381,7 @@ static IARM_Result_t _UnpairDevice(void *arg)
     {
         if (pUnPairDevice)
         {
-            rc = BTMGR_UnpairDevice(pUnPairDevice->m_adapterIndex, pUnPairDevice->m_name);
+            rc = BTMGR_UnpairDevice(pUnPairDevice->m_adapterIndex, pUnPairDevice->m_deviceHandle);
             if (BTMGR_RESULT_SUCCESS == rc)
             {
                 BTMGRLOG_INFO ("_UnpairDevice : Success");
@@ -453,7 +453,7 @@ static IARM_Result_t _ConnectToDevice(void *arg)
     {
         if (pConnect)
         {
-            rc = BTMGR_ConnectToDevice(pConnect->m_adapterIndex, pConnect->m_name, pConnect->m_connectAs);
+            rc = BTMGR_ConnectToDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle, pConnect->m_connectAs);
             if (BTMGR_RESULT_SUCCESS == rc)
             {
                 BTMGRLOG_INFO ("_ConnectToDevice : Success");
@@ -489,7 +489,7 @@ static IARM_Result_t _DisconnectFromDevice(void *arg)
     {
         if (pConnect)
         {
-            rc = BTMGR_DisconnectFromDevice(pConnect->m_adapterIndex, pConnect->m_name);
+            rc = BTMGR_DisconnectFromDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle);
             if (BTMGR_RESULT_SUCCESS == rc)
             {
                 BTMGRLOG_INFO ("_DisconnectFromDevice : Success");
@@ -525,7 +525,7 @@ static IARM_Result_t _GetDeviceProperties(void *arg)
     {
         if (pDeviceProperty)
         {
-            rc = BTMGR_GetDeviceProperties(pDeviceProperty->m_adapterIndex, pDeviceProperty->m_name, &pDeviceProperty->m_deviceProperty);
+            rc = BTMGR_GetDeviceProperties(pDeviceProperty->m_adapterIndex, pDeviceProperty->m_deviceHandle, &pDeviceProperty->m_deviceProperty);
             if (BTMGR_RESULT_SUCCESS == rc)
             {
                 BTMGRLOG_INFO ("_GetDeviceProperties : Success");
@@ -559,89 +559,17 @@ static IARM_Result_t _DeInit(void *arg)
     return IARM_RESULT_SUCCESS;
 }
 
-static IARM_Result_t _DeviceToStream(void *arg)
-{
-    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    char *pName = (char*) arg;
-
-    if (gIsBTMGR_Internal_Inited)
-    {
-        if (pName)
-        {
-            rc = BTMGR_SetDefaultDeviceToStreamOut(pName);
-            if (BTMGR_RESULT_SUCCESS == rc)
-            {
-                BTMGRLOG_INFO ("_DeviceToStream: Success");
-            }
-            else
-            {
-                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-                BTMGRLOG_ERROR ("_DeviceToStream: Failed; RetCode = %d", rc);
-            }
-        }
-        else
-        {
-            retCode = IARM_RESULT_INVALID_PARAM;
-            BTMGRLOG_ERROR ("_DeviceToStream: Failed; RetCode = %d", retCode);
-        }
-    }
-    else
-    {
-        retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited", __FUNCTION__);
-    }
-
-    return retCode;
-}
-
-static IARM_Result_t _SetPreferredAudio(void *arg)
-{
-    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMPrefAudioType_t *pStreamType =  (BTMGR_IARMPrefAudioType_t*) arg;
-
-    if (gIsBTMGR_Internal_Inited)
-    {
-        if (pStreamType)
-        {
-            rc = BTMGR_SetPreferredAudioStreamOutType(pStreamType->m_audioPref);
-            if (BTMGR_RESULT_SUCCESS == rc)
-            {
-                BTMGRLOG_INFO ("_SetPreferredAudio: Success");
-            }
-            else
-            {
-                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-                BTMGRLOG_ERROR ("_SetPreferredAudio: Failed; RetCode = %d", rc);
-            }
-        }
-        else
-        {
-            retCode = IARM_RESULT_INVALID_PARAM;
-            BTMGRLOG_ERROR ("_SetPreferredAudio: Failed; RetCode = %d", retCode);
-        }
-    }
-    else
-    {
-        retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited", __FUNCTION__);
-    }
-
-    return retCode;
-}
-
 static IARM_Result_t _StartAudioStreaming(void *arg)
 {
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMStartStreaming_t *pStartStream =  (BTMGR_IARMStartStreaming_t*) arg;
+    BTMGR_IARMStreaming_t *pStartStream =  (BTMGR_IARMStreaming_t*) arg;
 
     if (gIsBTMGR_Internal_Inited)
     {
         if (pStartStream)
         {
-            rc = BTMGR_StartAudioStreamingOut(pStartStream->m_adapterIndex);
+            rc = BTMGR_StartAudioStreamingOut(pStartStream->m_adapterIndex, pStartStream->m_deviceHandle, pStartStream->m_audioPref);
             if (BTMGR_RESULT_SUCCESS == rc)
             {
                 BTMGRLOG_INFO ("_StartAudioStreaming: Success");
@@ -671,18 +599,22 @@ static IARM_Result_t _StopAudioStreaming(void *arg)
 {
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTMGR_IARMStreaming_t *pStopStream =  (BTMGR_IARMStreaming_t*) arg;
 
     if (gIsBTMGR_Internal_Inited)
     {
-        rc = BTMGR_StopAudioStreamingOut();
-        if (BTMGR_RESULT_SUCCESS == rc)
+        if (pStopStream)
         {
-            BTMGRLOG_INFO ("_StopAudioStreaming: Success");
-        }
-        else
-        {
-            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-            BTMGRLOG_ERROR ("_StopAudioStreaming: Failed; RetCode = %d", rc);
+            rc = BTMGR_StopAudioStreamingOut(pStopStream->m_adapterIndex, pStopStream->m_deviceHandle);
+            if (BTMGR_RESULT_SUCCESS == rc)
+            {
+                BTMGRLOG_INFO ("_StopAudioStreaming: Success");
+            }
+            else
+            {
+                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+                BTMGRLOG_ERROR ("_StopAudioStreaming: Failed; RetCode = %d", rc);
+            }
         }
     }
     else
@@ -730,6 +662,43 @@ static IARM_Result_t _IsAudioStreaming(void *arg)
     return retCode;
 }
 
+static IARM_Result_t _ResetAdapter(void *arg)
+{
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    unsigned char *pAdapterIndex =  (unsigned char*) arg;
+
+    if (gIsBTMGR_Internal_Inited)
+    {
+        if (pAdapterIndex)
+        {
+            rc = BTMGR_ResetAdapter (*pAdapterIndex);
+            if (BTMGR_RESULT_SUCCESS == rc)
+            {
+                BTMGRLOG_INFO ("_ResetAdapter: Success");
+            }
+            else
+            {
+                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+                BTMGRLOG_ERROR ("_ResetAdapter: Failed; RetCode = %d", rc);
+            }
+        }
+        else
+        {
+            retCode = IARM_RESULT_INVALID_PARAM;
+            BTMGRLOG_ERROR ("_ResetAdapter: Failed; RetCode = %d", retCode);
+        }
+    }
+    else
+    {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited", __FUNCTION__);
+    }
+
+    return retCode;
+
+}
+
 void _EventCallback(BTMGR_EventMessage_t events)
 {
     BTMGR_EventMessage_t eventData;
@@ -768,13 +737,12 @@ void btmgr_BeginIARMMode()
         IARM_Bus_RegisterCall("ConnectToDevice", _ConnectToDevice);
         IARM_Bus_RegisterCall("DisconnectFromDevice", _DisconnectFromDevice);
         IARM_Bus_RegisterCall("GetDeviceProperties", _GetDeviceProperties);
-        IARM_Bus_RegisterCall("DeInit", _DeInit);
 
-        IARM_Bus_RegisterCall("DeviceToStreamOut", _DeviceToStream);
-        IARM_Bus_RegisterCall("SetPreferredAudio", _SetPreferredAudio);
         IARM_Bus_RegisterCall("StartAudioStreaming", _StartAudioStreaming);
         IARM_Bus_RegisterCall("StopAudioStreaming", _StopAudioStreaming);
         IARM_Bus_RegisterCall("IsAudioStreaming", _IsAudioStreaming);
+        IARM_Bus_RegisterCall("DeInit", _DeInit);
+        IARM_Bus_RegisterCall("ResetAdapter", _ResetAdapter);
 
         IARM_Bus_RegisterEvent(BTMGR_IARM_EVENT_MAX);
 

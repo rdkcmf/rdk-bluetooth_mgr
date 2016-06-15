@@ -253,7 +253,7 @@ main (
 
             printf(" adapter_path %s\n", GetAdapter.pcAdapterPath);
             printf(" agent_path %s\n",agent_path);
-            if ( BTRCore_PairDevice(lhBTRCore, devnum) == enBTRCoreSuccess)
+            if ( BTRCore_PairDeviceByIndex(lhBTRCore, devnum) == enBTRCoreSuccess)
                 printf("device pairing successful.\n");
             else
               printf("device pairing FAILED.\n");
@@ -276,7 +276,7 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(lhBTRCore, &GetAdapter);
             devnum = getChoice();
-            BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
+            BTRCore_ConnectDeviceByIndex(lhBTRCore, devnum, enBTRCoreSpeakers);
             printf("device connect process completed.\n");
             break;
         case 8:
@@ -284,7 +284,7 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(lhBTRCore, &GetAdapter);
             devnum = getChoice();
-            BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
+            BTRCore_DisconnectDeviceByIndex(lhBTRCore, devnum, enBTRCoreSpeakers);
             printf("device disconnect process completed.\n");
             break;
         case 9:
@@ -292,7 +292,7 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(lhBTRCore, &GetAdapter);
             devnum = getChoice();
-            BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
+            BTRCore_ConnectDeviceByIndex(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
             printf("device connect process completed.\n");
             break;
         case 10:
@@ -300,7 +300,7 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(lhBTRCore, &GetAdapter);
             devnum = getChoice();
-            BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
+            BTRCore_DisconnectDeviceByIndex(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
             printf("device disconnect process completed.\n");
             break;
         case 11:

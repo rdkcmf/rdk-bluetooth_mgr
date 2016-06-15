@@ -9,7 +9,7 @@ const char *pChangePower    = "ChangePower";
 const char *pSetPower       = "SetPower=";
 const char *pSaveName       = "SaveName=";
 const char *pPairTo         = "PairTo=";
-const char *pUnPairTo       = "UnPairTo=";
+const char *pUnPairTo       = "UnpairTo=";
 const char *pGetName        = "GetName";
 const char *pStartDiscovery = "StartDiscovery";
 const char *pShowDiscovered = "ShowDiscovered";
@@ -20,32 +20,32 @@ const char *pStopPlaying    = "StopPlaying";
 const char *pMainPage = ""
             "<tr> "
             "<td> Power On/Off Adapter </td> "
-            "<td> <button id=\"power\" class=\"button\" onclick=\"ChangePower()\">Go</button> </td> "
+            "<td> <button id=\"power\" class=\"button\" onclick=\"ChangePower()\">....Go....</button> </td> "
             "</tr> "
             " "
             "<tr> "
             "<td> Get Name Of the Adapter </td> "
-            "<td> <button class=\"button\" onclick=\"GetName()\">Go</button> </td> "
+            "<td> <button class=\"button\" onclick=\"GetName()\">....Go....</button> </td> "
             "</tr> "
             " "
             "<tr> "
             "<td> Show Paired Devices </td> "
-            "<td> <button class=\"button\" onclick=\"ShowAllPaired()\">Go</button> </td> "
+            "<td> <button class=\"button\" onclick=\"ShowAllPaired()\">....Go....</button> </td> "
             "</tr> "
             " "
             "<tr> "
             "<td> Start Discovery </td> "
-            "<td> <button class=\"button\" onclick=\"StartDiscovery()\">Go</button> </td> "
+            "<td> <button class=\"button\" onclick=\"StartDiscovery()\">....Go....</button> </td> "
             "</tr> "
             " "
             "<tr> "
             "<td> Show Discovered Devices </td> "
-            "<td> <button class=\"button\" onclick=\"ShowDiscovered()\">Go</button> </td> "
+            "<td> <button class=\"button\" onclick=\"ShowDiscovered()\">....Go....</button> </td> "
             "</tr> "
             " "
             "<tr> "
             "<td> Stop Playing </td> "
-            "<td> <button class=\"button\" onclick=\"StopPlaying()\">Go</button> </td> "
+            "<td> <button class=\"button\" onclick=\"StopPlaying()\">....Go....</button> </td> "
             "</tr> "
             "</table> "
             " "
@@ -193,50 +193,41 @@ void findAndReplaceSplCharWithSpace (char* ptr)
     }
 }
 
-void startStreaming (char* array)
+unsigned long long int gLastPlaying = 0;
+
+void startStreaming (unsigned long long int handle )
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
 
     /* Connect to a device first */
-    rc = BTMGR_ConnectToDevice(0, array, BTMGR_DEVICE_TYPE_AUDIOSINK);
+    rc = BTMGR_ConnectToDevice(0, handle, BTMGR_DEVICE_TYPE_AUDIOSINK);
     if (BTMGR_RESULT_SUCCESS != rc)
-        printf ("<tr>" "<td> Connecting to %s failed\n </td>" "</tr>" "</table> ", array);
+        printf ("<tr>" "<td> Connection establishment failed\n </td>" "</tr>" "</table> ");
     else
     {
-        rc = BTMGR_SetDefaultDeviceToStreamOut(array);
+        sleep(1);
+        rc = BTMGR_StartAudioStreamingOut(0, handle, BTMGR_DEVICE_TYPE_AUDIOSINK);
         if (BTMGR_RESULT_SUCCESS != rc)
-            printf ("<tr>" "<td> Failed Set %s as the default device to streamout\n </td>" "</tr>" "</table> ", array);
+            printf ("<tr>" "<td> Failed to Stream out to this device\n </td>" "</tr>" "</table> ");
         else
         {
-            sleep(1);
-            rc = BTMGR_StartAudioStreamingOut(0);
-            if (BTMGR_RESULT_SUCCESS != rc)
-                printf ("<tr>" "<td> Failed to Stream out to %s\n </td>" "</tr>" "</table> ", array);
-            else
-                printf ("<tr>" "<td> Enjoy the show...\t\t :-)\n </td>" "</tr>" "</table> ");
+            gLastPlaying = handle;
+            printf ("<tr>" "<td> Enjoy the show...\t\t :-)\n </td>" "</tr>" "</table> ");
         }
     }
 }
 
-void stopStreaming (char* array)
+void stopStreaming ()
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
 
-    rc = BTMGR_StopAudioStreamingOut();
+    rc = BTMGR_StopAudioStreamingOut(0, gLastPlaying);
     if (BTMGR_RESULT_SUCCESS != rc)
         printf ("<tr>" "<td> Failed to Stop Streaming... :( </td>" "</tr>" "</table> ");
     else
     {
-#if 0
-        sleep(1);
-        rc = BTMGR_DisconnectFromDevice(0, array);
-        if (BTMGR_RESULT_SUCCESS != rc)
-            printf ("Failed to Disconnect from the device\n");
-        else
-            printf ("Successfully Stopped and Disconnected...\n");
-#else
+        gLastPlaying = 0;
         printf ("<tr>" "<td> Successfully Stopped... </td>" "</tr>" "</table> ");
-#endif
     }
 }
 
@@ -350,12 +341,13 @@ int main ()
                     else if (NULL != (pInput = strstr (func, pPairTo)))
                     {
                         int length = strlen(pPairTo);
+                        unsigned long long int handle = 0;
 
                         memset (array, '\0', sizeof(array));
                         strncpy (array, (pInput+length), 30);
-                        findAndReplaceSplCharWithSpace(array);
+                        handle = strtoll(array, NULL, 0);
 
-                        rc = BTMGR_PairDevice(0, array);
+                        rc = BTMGR_PairDevice(0, handle);
                         if (BTMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to Pair to %s </td>" "</tr>" "</table> ", array);
                         else
@@ -365,12 +357,13 @@ int main ()
                     else if (NULL != (pInput = strstr (func, pUnPairTo)))
                     {
                         int length = strlen(pUnPairTo);
+                        unsigned long long int handle = 0;
 
                         memset (array, '\0', sizeof(array));
                         strncpy (array, (pInput+length), 30);
-                        findAndReplaceSplCharWithSpace(array);
+                        handle = strtoll(array, NULL, 0);
 
-                        rc = BTMGR_UnpairDevice(0, array);
+                        rc = BTMGR_UnpairDevice(0, handle);
 
                         if (BTMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to UnPair to %s </td>" "</tr>" "</table> ", array);
@@ -425,13 +418,16 @@ int main ()
                                 int j = 0;
                                 for (; j< discoveredDevices.m_numOfDevices; j++)
                                 {
+                                    memset (array, '\0', sizeof(array));
                                     printf ("<tr>");
                                     printf ("<td> %s </td>", discoveredDevices.m_deviceProperty[j].m_name );
                                     printf ("<td> %s </td>", discoveredDevices.m_deviceProperty[j].m_deviceAddress);
-                                    printf ("<td> <button onclick=\"location.href='PairTo=%s';\" class=\"button\"> Pair This </button> </td>", discoveredDevices.m_deviceProperty[j].m_name);
+                                    sprintf (array, "%llu", discoveredDevices.m_deviceProperty[j].m_deviceHandle);
+                                    printf ("<td> <button onclick=\"location.href='PairTo=%s';\" class=\"button\"> Pair This </button> </td>", array);
                                     printf ("</tr>");
                                 }
                                 printf ("</table>\n");
+                                printf ("<p> We have %d devices discovered </p>\n", discoveredDevices.m_numOfDevices);
                             }
                         }
                     }
@@ -448,32 +444,32 @@ int main ()
                             int j = 0;
                             for (; j< pairedDevices.m_numOfDevices; j++)
                             {
+                                memset (array, '\0', sizeof(array));
                                 printf ("<tr>");
                                 printf ("<td> %s </td>", pairedDevices.m_deviceProperty[j].m_name );
-                                printf ("<td> <button onclick=\"location.href='UnPairTo=%s';\" class=\"button\"> UnPair </button> </td>", pairedDevices.m_deviceProperty[j].m_name);
-                                printf ("<td> <button onclick=\"location.href='StartPlaying=%s';\" class=\"button\"> StartPlaying </button> </td>", pairedDevices.m_deviceProperty[j].m_name);
+                                sprintf (array, "%llu" , pairedDevices.m_deviceProperty[j].m_deviceHandle);
+                                printf ("<td> <button onclick=\"location.href='UnpairTo=%s';\" class=\"button\"> UnPair </button> </td>", array);
+                                printf ("<td> <button onclick=\"location.href='StartPlaying=%s';\" class=\"button\"> StartPlaying </button> </td>", array);
                                 printf ("</tr>");
                             }
                             printf ("</table>\n");
+                            printf ("<p> We have %d devices paired </p>\n", pairedDevices.m_numOfDevices);
                         }
                     }
                     else if (NULL != (pInput = strstr (func, pStartPlaying)))
                     {
                         int length = strlen(pStartPlaying);
+                        unsigned long long int handle = 0;
 
                         memset (array, '\0', sizeof(array));
                         strncpy (array, (pInput+length), 30);
-                        findAndReplaceSplCharWithSpace(array);
+                        handle = strtoll(array, NULL, 0);
 
-                        startStreaming(array);
+                        startStreaming(handle);
                     }
                     else if (NULL != (pInput = strstr (func, pStopPlaying)))
                     {
-                        //memset (array, '\0', sizeof(array));
-                        //strncpy (array, (pInput+length), 30);
-                        //findAndReplaceSplCharWithSpace(array);
-
-                        stopStreaming(NULL);
+                        stopStreaming();
 
                     }
                     else if (NULL != strstr (func, "GetNumberOfAdapters"))
