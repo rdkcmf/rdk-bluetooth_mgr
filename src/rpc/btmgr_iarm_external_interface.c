@@ -38,10 +38,10 @@ BTMGR_Result_t BTMGR_Init()
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, _btmgr_deviceCallback);
-        BTMGRLOG_INFO ("IARM Interface Inited Successfully");
+        BTMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
     else
-        BTMGRLOG_INFO ("IARM Interface Already Inited");
+        BTMGRLOG_INFO ("IARM Interface Already Inited\n");
 
     return BTMGR_RESULT_SUCCESS;
 }
@@ -57,16 +57,16 @@ BTMGR_Result_t BTMGR_DeInit()
         //retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DeInit", 0, 0);
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_DeInit: Success");
+            BTMGRLOG_INFO ("BTMGR_DeInit: Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_DeInit: Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_DeInit: Failed; RetCode = %d\n", retCode);
         }
     }
     else
-        BTMGRLOG_INFO ("IARM Interface for BTMgr is Not Inited Yet..");
+        BTMGRLOG_INFO ("IARM Interface for BTMgr is Not Inited Yet..\n");
 
     return rc;
 }
@@ -80,7 +80,7 @@ BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters)
     if (!pNumOfAdapters)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -88,12 +88,12 @@ BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters)
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pNumOfAdapters = num_of_adapters;
-            BTMGRLOG_INFO ("BTMGR_GetNumberOfAdapters : Success; Number of Adapters = %d", num_of_adapters);
+            BTMGRLOG_INFO ("BTMGR_GetNumberOfAdapters : Success; Number of Adapters = %d\n", num_of_adapters);
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetNumberOfAdapters : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_GetNumberOfAdapters : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -108,7 +108,7 @@ BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* 
     if((NULL == pNameOfAdapter) || (BTMGR_ADAPTER_COUNT_MAX < index_of_adapter))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -118,12 +118,12 @@ BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* 
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAdapterName", (void *)&adapterSetting, sizeof(adapterSetting));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAdapterName : Success");
+            BTMGRLOG_INFO ("BTMGR_SetAdapterName : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterName : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_SetAdapterName : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -138,7 +138,7 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
     if((NULL == pNameOfAdapter) || (BTMGR_ADAPTER_COUNT_MAX < index_of_adapter))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -149,12 +149,12 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
         if (IARM_RESULT_SUCCESS == retCode)
         {
             strncpy (pNameOfAdapter, adapterSetting.m_name, (BTMGR_NAME_LEN_MAX - 1));
-            BTMGRLOG_INFO ("BTMGR_GetAdapterName : Success");
+            BTMGRLOG_INFO ("BTMGR_GetAdapterName : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -169,7 +169,7 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (power_status > 1))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -179,12 +179,12 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAdapterPowerStatus", (void *)&powerStatus, sizeof(powerStatus));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAdapterPowerStatus : Success");
+            BTMGRLOG_INFO ("BTMGR_SetAdapterPowerStatus : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterPowerStatus : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_SetAdapterPowerStatus : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -199,7 +199,7 @@ BTMGR_Result_t BTMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsig
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pPowerStatus))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -208,12 +208,12 @@ BTMGR_Result_t BTMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsig
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pPowerStatus = powerStatus.m_powerStatus;
-            BTMGRLOG_INFO ("BTMGR_GetAdapterPowerStatus : Success");
+            BTMGRLOG_INFO ("BTMGR_GetAdapterPowerStatus : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetAdapterPowerStatus : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_GetAdapterPowerStatus : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -228,7 +228,7 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (discoverable > 1))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -239,12 +239,12 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAdapterDiscoverable", (void *)&discoverableSetting, sizeof(discoverableSetting));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Success");
+            BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -259,7 +259,7 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pDiscoverable))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -268,12 +268,12 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pDiscoverable = discoverableSetting.m_isDiscoverable;
-            BTMGRLOG_INFO ("BTMGR_IsAdapterDiscoverable : Success");
+            BTMGRLOG_INFO ("BTMGR_IsAdapterDiscoverable : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_IsAdapterDiscoverable : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_IsAdapterDiscoverable : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -288,7 +288,7 @@ BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter)
     if (BTMGR_ADAPTER_COUNT_MAX < index_of_adapter)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -298,12 +298,12 @@ BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter)
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetDeviceDiscoveryStatus", (void *)&deviceDiscovery, sizeof(deviceDiscovery));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StartDeviceDiscovery : Success");
+            BTMGRLOG_INFO ("BTMGR_StartDeviceDiscovery : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StartDeviceDiscovery : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_StartDeviceDiscovery : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -318,7 +318,7 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
     if (BTMGR_ADAPTER_COUNT_MAX < index_of_adapter)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -328,12 +328,12 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetDeviceDiscoveryStatus", (void *)&deviceDiscovery, sizeof(deviceDiscovery));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StopDeviceDiscovery : Success");
+            BTMGRLOG_INFO ("BTMGR_StopDeviceDiscovery : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StopDeviceDiscovery : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_StopDeviceDiscovery : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -348,7 +348,7 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pDiscoveredDevices))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -358,12 +358,12 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pDiscoveredDevices, &discoveredDevices.m_devices, sizeof(BTMGR_Devices_t));
-            BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices: Success");
+            BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices: Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices: Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices: Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -379,7 +379,7 @@ BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandl
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -389,12 +389,12 @@ BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandl
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "PairDevice", (void *)&newDevice, sizeof(newDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_PairDevice : Success");
+            BTMGRLOG_INFO ("BTMGR_PairDevice : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -408,7 +408,7 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -418,12 +418,12 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "UnpairDevice", (void *)&removeDevice, sizeof(removeDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_UnpairDevice : Success");
+            BTMGRLOG_INFO ("BTMGR_UnpairDevice : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -438,7 +438,7 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devi
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pPairedDevices))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -448,12 +448,12 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devi
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pPairedDevices, &pairedDevices.m_devices, sizeof(BTMGR_Devices_t));
-            BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Success");
+            BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -468,7 +468,7 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -478,12 +478,12 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "ConnectToDevice", (void *)&connectToDevice, sizeof(connectToDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Success");
+            BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -499,7 +499,7 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -508,12 +508,12 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DisconnectFromDevice", (void *)&disConnectToDevice, sizeof(disConnectToDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Success");
+            BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -528,7 +528,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle) || (NULL == pDeviceProperty))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -538,12 +538,12 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pDeviceProperty, &deviceProperty.m_deviceProperty, sizeof(BTMGR_DevicesProperty_t));
-            BTMGRLOG_INFO ("BTMGR_GetDeviceProperties : Success");
+            BTMGRLOG_INFO ("BTMGR_GetDeviceProperties : Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -555,12 +555,12 @@ BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback)
     if (!eventCallback)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
         m_eventCallbackFunction = eventCallback;
-        BTMGRLOG_INFO ("BTMGR_RegisterEventCallback : Success");
+        BTMGRLOG_INFO ("BTMGR_RegisterEventCallback : Success\n");
     }
     return rc;
 }
@@ -574,7 +574,7 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -585,12 +585,12 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "StartAudioStreaming", (void *)&streaming, sizeof(streaming));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StartAudioStreamingOut: Success");
+            BTMGRLOG_INFO ("BTMGR_StartAudioStreamingOut: Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StartAudioStreamingOut: Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_StartAudioStreamingOut: Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -605,7 +605,7 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -615,12 +615,12 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "StopAudioStreaming", (void*) &streaming, sizeof(streaming));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StopAudioStreamingOut: Success");
+            BTMGRLOG_INFO ("BTMGR_StopAudioStreamingOut: Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StopAudioStreamingOut: Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_StopAudioStreamingOut: Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -635,7 +635,7 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pStreamingStatus))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -645,12 +645,12 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pStreamingStatus = status.m_streamingStatus;
-            BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Success");
+            BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_IsAudioStreamingOut: Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_IsAudioStreamingOut: Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -664,19 +664,19 @@ BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter)
     if (BTMGR_ADAPTER_COUNT_MAX < index_of_adapter)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "ResetAdapter", (void *)&index_of_adapter, sizeof(index_of_adapter));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Success");
+            BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_IsAudioStreamingOut: Failed; RetCode = %d", retCode);
+            BTMGRLOG_ERROR ("BTMGR_IsAudioStreamingOut: Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -690,7 +690,7 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
 {
     if (NULL == pData)
     {
-        BTMGRLOG_ERROR ("%s : Input is invalid", __FUNCTION__);
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
     else
     {
@@ -707,7 +707,7 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
             if (m_eventCallbackFunction)
                 m_eventCallbackFunction (newEvent);
 
-            BTMGRLOG_INFO ("_btmgr_deviceCallback : posted event(%d) from the adapter(%d) to listener successfully", newEvent.m_eventType, newEvent.m_adapterIndex);
+            BTMGRLOG_INFO ("_btmgr_deviceCallback : posted event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
             if (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId)
             {
                 int i = 0;
@@ -718,7 +718,7 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
         }
         else
         {
-            BTMGRLOG_ERROR ("%s : Event is invalid", __FUNCTION__);
+            BTMGRLOG_ERROR ("%s : Event is invalid\n", __FUNCTION__);
         }
     }
 }

@@ -145,7 +145,7 @@ int main()
                 {
                     unsigned char power_status = 0;
 
-                    printf ("Please set the timeout for the discoverable");
+                    printf ("Please set the timeout for the discoverable \t");
                     power_status = (unsigned char) getUserSelection();
 
                     rc = BTMGR_SetAdapterDiscoverable(0, 1, power_status);

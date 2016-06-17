@@ -5,6 +5,7 @@ Requires=iarmbusd.service bluetooth.service
 
 [Service]
 Type=forking
+TimeoutStartSec=10s
 ExecStart=/bin/sh -c "/usr/bin/btMgrBus &"
 Restart=always
 

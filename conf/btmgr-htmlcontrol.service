@@ -1,12 +1,14 @@
 [Unit]
 Description=Bluetooth Device Controlling thro' FCGi-HTML Service Daemon
 After=lighttpd.service network-online.target btmgr.service
-Requires=btmgr.service network-online.target lighttpd.service
+Requires=btmgr.service
 
 [Service]
 Type=forking
-ExecStart=/bin/sh -c "/usr/bin/spawn-fcgi -fcgi /usr/bin/btMgrHTMLControl -a 127.0.0.1 -p 9625 &"
+ExecStart=/usr/bin/spawn-fcgi -fcgi /usr/bin/btMgrHTMLControl -a 127.0.0.1 -p 9625 -P /tmp/btMgrHTMLControl.pid
 Restart=always
+RestartSec=10s
+PIDFILE=/tmp/btMgrHTMLControl.pid
 
 [Install]
 WantedBy=multi-user.target

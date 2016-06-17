@@ -205,7 +205,7 @@ void startStreaming (unsigned long long int handle )
         printf ("<tr>" "<td> Connection establishment failed\n </td>" "</tr>" "</table> ");
     else
     {
-        sleep(1);
+        sleep(5);
         rc = BTMGR_StartAudioStreamingOut(0, handle, BTMGR_DEVICE_TYPE_AUDIOSINK);
         if (BTMGR_RESULT_SUCCESS != rc)
             printf ("<tr>" "<td> Failed to Stream out to this device\n </td>" "</tr>" "</table> ");
@@ -448,8 +448,8 @@ int main ()
                                 printf ("<tr>");
                                 printf ("<td> %s </td>", pairedDevices.m_deviceProperty[j].m_name );
                                 sprintf (array, "%llu" , pairedDevices.m_deviceProperty[j].m_deviceHandle);
-                                printf ("<td> <button onclick=\"location.href='UnpairTo=%s';\" class=\"button\"> UnPair </button> </td>", array);
                                 printf ("<td> <button onclick=\"location.href='StartPlaying=%s';\" class=\"button\"> StartPlaying </button> </td>", array);
+                                printf ("<td> <button onclick=\"location.href='UnpairTo=%s';\" class=\"button\"> UnPair </button> </td>", array);
                                 printf ("</tr>");
                             }
                             printf ("</table>\n");
