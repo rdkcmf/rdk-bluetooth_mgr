@@ -125,19 +125,6 @@ const char* pStylePage = ""
             "<table align=\"center\"> "
             "";
 
-const char* pPowerPage = ""
-            "<script type=\"text/javascript\"> "
-            " "
-            "function SetPower() { "
-            "    location.href = \"SetPower=\" + document.getElementById(\"power\").value; "
-            "} "
-            " "
-            "</script> "
-            " "
-            "</body> "
-            "</html> "
-            " ";
-
 const char* pGoHome = ""
             "<hr> "
             "<p> </p> "
@@ -289,7 +276,7 @@ int main ()
                 {
                     if (NULL != (pInput = strstr (func, pChangePower)))
                     {
-                        unsigned char power_status = 0;
+                        unsigned char power_status = 1;
                         char temp1[32] = "ON";
                         char temp2[32] = "OFF";
 
@@ -303,9 +290,10 @@ int main ()
                             strcpy (temp2, "ON");
                         }
 
+
                         printf ("<tr> "
                                 "<td>The Device is Currently %s; Power %s Adapter </td> "
-                                "<td> <button id=\"power\" class=\"button\" onclick=\"SetPower()\" value=%s>%s</button> </td> "
+                                "<td> <button onclick=\"location.href='SetPower=%s';\" class=\"button\"> %s</button> </td>"
                                 "</tr> "
                                 "</table> "
                                 " ", temp1, temp2, temp2, temp2);
@@ -401,7 +389,7 @@ int main ()
                     }
                     else if (NULL != (pInput = strstr (func, pShowDiscovered)))
                     {
-                        BTMGR_Devices_t discoveredDevices;
+                        BTMGR_DiscoveredDevicesList_t discoveredDevices;
                         rc = BTMGR_StopDeviceDiscovery(0);
                         if (BTMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Stopping Discovery Failed... </td>" "</tr>" "</table> ");
@@ -433,7 +421,7 @@ int main ()
                     }
                     else if (NULL != (pInput = strstr (func, pShowAllPaired)))
                     {
-                        BTMGR_Devices_t pairedDevices;
+                        BTMGR_PairedDevicesList_t pairedDevices;
                         memset (&pairedDevices, 0, sizeof(pairedDevices));
 
                         rc = BTMGR_GetPairedDevices(0, &pairedDevices);

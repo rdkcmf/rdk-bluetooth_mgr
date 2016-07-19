@@ -4,6 +4,7 @@
 #define BTMGR_NAME_LEN_MAX            64
 #define BTMGR_DEVICE_COUNT_MAX        16
 #define BTMGR_ADAPTER_COUNT_MAX       16
+#define BTMGR_MAX_DEVICE_PROFILE      32
 
 typedef unsigned long long int BTMgrDeviceHandle;
 
@@ -19,7 +20,7 @@ typedef enum _BTMGR_Events_t {
     BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE,
     BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE,
     BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
-    BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
+    BTMGR_EVENT_RECEIVED_EXTERNAL_PAIRING_REQUEST,
     BTMGR_EVENT_MAX
 } BTMGR_Events_t;
 
@@ -34,25 +35,70 @@ typedef enum _BTMGR_DeviceConnect_Type_t {
     BTMGR_DEVICE_TYPE_OTHER         = 1 << 2,
 } BTMGR_DeviceConnect_Type_t;
 
+typedef struct _BTMGR_DeviceService_t {
+    unsigned short m_uuid;
+    char m_profile[BTMGR_NAME_LEN_MAX];
+} BTMGR_DeviceService_t;
+
+typedef struct _BTMGR_DeviceServiceList_t {
+    unsigned short m_numOfService;
+    BTMGR_DeviceService_t m_profileInfo[BTMGR_MAX_DEVICE_PROFILE];
+} BTMGR_DeviceServiceList_t;
+
 typedef struct _BTMGR_DevicesProperty_t {
     BTMgrDeviceHandle m_deviceHandle;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    char m_supportedServices [BTMGR_NAME_LEN_MAX];
+    int  m_rssi;
+    unsigned short m_vendorID;
     unsigned char m_isPaired;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
-    int  m_rssi;
+    BTMGR_DeviceServiceList_t m_serviceInfo;
 } BTMGR_DevicesProperty_t;
 
-typedef struct _BTMGR_Devices_t {
+typedef struct _BTMGR_PairedDevices_t {
+    BTMgrDeviceHandle m_deviceHandle;
+    char m_name [BTMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
+    BTMGR_DeviceServiceList_t m_serviceInfo;
+    unsigned short m_vendorID;
+    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
+} BTMGR_PairedDevices_t;
+
+typedef struct _BTMGR_DiscoveredDevices_t {
+    BTMgrDeviceHandle m_deviceHandle;
+    char m_name [BTMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
+    unsigned short m_vendorID;
+    unsigned char m_isPairedDevice;
+    int  m_rssi;
+} BTMGR_DiscoveredDevices_t;
+
+typedef BTMGR_PairedDevices_t BTMGR_ConnectedDevice_t;
+
+typedef struct _BTMGR_ConnectedDevicesList_t {
     unsigned short m_numOfDevices;
-    BTMGR_DevicesProperty_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
-} BTMGR_Devices_t;
+    BTMGR_ConnectedDevice_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
+} BTMGR_ConnectedDevicesList_t;
+
+typedef struct _BTMGR_PairedDevicesList_t {
+    unsigned short m_numOfDevices;
+    BTMGR_PairedDevices_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
+} BTMGR_PairedDevicesList_t;
+
+typedef struct _BTMGR_DiscoveredDevicesList_t {
+    unsigned short m_numOfDevices;
+    BTMGR_DiscoveredDevices_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
+} BTMGR_DiscoveredDevicesList_t;
+
+
 
 typedef struct _BTMGR_EventMessage_t {
     unsigned char m_adapterIndex;
     BTMGR_Events_t m_eventType;
-    BTMGR_Devices_t m_eventData;
+    union {
+        BTMGR_DiscoveredDevicesList_t m_discoveredDevices;
+    };
 } BTMGR_EventMessage_t;
 
 typedef void (*BTMGR_EventCallback)(BTMGR_EventMessage_t);
@@ -72,14 +118,15 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
 
 BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter);
 BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter);
-BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices);
+BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_DiscoveredDevicesList_t *pDiscoveredDevices);
 
 BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
 BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
-BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices);
+BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_PairedDevicesList_t *pPairedDevices);
 
 BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs);
 BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
+BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_ConnectedDevicesList_t *pConnectedDevices);
 
 BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DevicesProperty_t *pDeviceProperty);
 

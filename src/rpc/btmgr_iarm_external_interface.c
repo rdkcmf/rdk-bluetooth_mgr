@@ -339,11 +339,11 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
     return rc;
 }
 
-BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pDiscoveredDevices)
+BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_DiscoveredDevicesList_t *pDiscoveredDevices)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTMGR_IARMDevices_t discoveredDevices;
+    BTMGR_IARMDiscoveredDevices_t discoveredDevices;
 
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pDiscoveredDevices))
     {
@@ -357,7 +357,7 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetDiscoveredDevices", (void *)&discoveredDevices, sizeof(discoveredDevices));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            memcpy (pDiscoveredDevices, &discoveredDevices.m_devices, sizeof(BTMGR_Devices_t));
+            memcpy (pDiscoveredDevices, &discoveredDevices.m_devices, sizeof(BTMGR_DiscoveredDevicesList_t));
             BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices: Success\n");
         }
         else
@@ -429,11 +429,11 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
     return rc;
 }
 
-BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devices_t *pPairedDevices)
+BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_PairedDevicesList_t *pPairedDevices)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTMGR_IARMDevices_t pairedDevices;
+    BTMGR_IARMPairedDevices_t pairedDevices;
 
     if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pPairedDevices))
     {
@@ -447,7 +447,7 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Devi
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetPairedDevices", (void *)&pairedDevices, sizeof(pairedDevices));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            memcpy (pPairedDevices, &pairedDevices.m_devices, sizeof(BTMGR_Devices_t));
+            memcpy (pPairedDevices, &pairedDevices.m_devices, sizeof(BTMGR_PairedDevicesList_t));
             BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Success\n");
         }
         else
@@ -489,7 +489,6 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
     return rc;
 }
 
-
 BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
@@ -519,6 +518,37 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
     return rc;
 }
 
+BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_ConnectedDevicesList_t *pConnectedDevices)
+{
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_IARMConnectedDevices_t connectedDevices;
+
+    if ((BTMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pConnectedDevices))
+    {
+        rc = BTMGR_RESULT_INVALID_INPUT;
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+    }
+    else
+    {
+        memset (&connectedDevices, 0, sizeof(connectedDevices));
+        connectedDevices.m_adapterIndex = index_of_adapter;
+        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetPairedDevices", (void *)&connectedDevices, sizeof(connectedDevices));
+        if (IARM_RESULT_SUCCESS == retCode)
+        {
+            memcpy (pConnectedDevices, &connectedDevices.m_devices, sizeof(BTMGR_ConnectedDevicesList_t));
+            BTMGRLOG_INFO ("BTMGR_GetConnectedDevices : Success\n");
+        }
+        else
+        {
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
+            BTMGRLOG_ERROR ("BTMGR_GetConnectedDevices : Failed; RetCode = %d\n", retCode);
+        }
+    }
+    return rc;
+}
+
+
 BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DevicesProperty_t *pDeviceProperty)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
@@ -534,7 +564,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
     {
         deviceProperty.m_adapterIndex = index_of_adapter;
         deviceProperty.m_deviceHandle = handle;
-        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DisconnectFromDevice", (void *)&deviceProperty, sizeof(deviceProperty));
+        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetDeviceProperties", (void *)&deviceProperty, sizeof(deviceProperty));
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pDeviceProperty, &deviceProperty.m_deviceProperty, sizeof(BTMGR_DevicesProperty_t));
@@ -711,9 +741,9 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
             if (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId)
             {
                 int i = 0;
-                for (; i < newEvent.m_eventData.m_numOfDevices; i++)
-                    printf ("_btmgr_deviceCallback : Name = %s\n", newEvent.m_eventData.m_deviceProperty[i].m_name);
-                printf ("\n\n\n\n");
+                for (; i < newEvent.m_discoveredDevices.m_numOfDevices; i++)
+                    BTMGRLOG_ERROR("_btmgr_deviceCallback : Name = %s\n", newEvent.m_discoveredDevices.m_deviceProperty[i].m_name);
+                BTMGRLOG_ERROR("\n\n\n\n");
             }
         }
         else

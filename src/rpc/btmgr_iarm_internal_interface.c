@@ -303,7 +303,7 @@ static IARM_Result_t _GetDiscoveredDevices(void *arg)
 {
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMDevices_t *pDiscoveredDevices = (BTMGR_IARMDevices_t*) arg;
+    BTMGR_IARMDiscoveredDevices_t *pDiscoveredDevices = (BTMGR_IARMDiscoveredDevices_t*) arg;
 
     if (gIsBTMGR_Internal_Inited)
     {
@@ -413,7 +413,7 @@ static IARM_Result_t _GetPairedDevices(void *arg)
 {
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMDevices_t *pPairedDevices = (BTMGR_IARMDevices_t*) arg;
+    BTMGR_IARMPairedDevices_t *pPairedDevices = (BTMGR_IARMPairedDevices_t*) arg;
 
     if (gIsBTMGR_Internal_Inited)
     {
@@ -508,6 +508,42 @@ static IARM_Result_t _DisconnectFromDevice(void *arg)
         {
             retCode = IARM_RESULT_INVALID_PARAM;
             BTMGRLOG_ERROR ("_DisconnectFromDevice : Failed; RetCode = %d\n", retCode);
+        }
+    }
+    else
+    {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t _GetConnectedDevices (void *arg)
+{
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTMGR_IARMConnectedDevices_t *pConnectedDevices = (BTMGR_IARMConnectedDevices_t*) arg;
+
+    if (gIsBTMGR_Internal_Inited)
+    {
+        if (pConnectedDevices)
+        {
+            rc = BTMGR_GetConnectedDevices(pConnectedDevices->m_adapterIndex, &pConnectedDevices->m_devices);
+            if (BTMGR_RESULT_SUCCESS == rc)
+            {
+                BTMGRLOG_INFO ("_GetConnectedDevices : Success\n");
+            }
+            else
+            {
+                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+                BTMGRLOG_ERROR ("_GetConnectedDevices : Failed; RetCode = %d\n", rc);
+            }
+        }
+        else
+        {
+            retCode = IARM_RESULT_INVALID_PARAM;
+            BTMGRLOG_ERROR ("_GetConnectedDevices : Failed; RetCode = %d\n", retCode);
         }
     }
     else
@@ -742,6 +778,7 @@ void btmgr_BeginIARMMode()
         IARM_Bus_RegisterCall("GetPairedDevices", _GetPairedDevices);
         IARM_Bus_RegisterCall("ConnectToDevice", _ConnectToDevice);
         IARM_Bus_RegisterCall("DisconnectFromDevice", _DisconnectFromDevice);
+        IARM_Bus_RegisterCall("GetConnectedDevices", _GetConnectedDevices);
         IARM_Bus_RegisterCall("GetDeviceProperties", _GetDeviceProperties);
 
         IARM_Bus_RegisterCall("StartAudioStreaming", _StartAudioStreaming);

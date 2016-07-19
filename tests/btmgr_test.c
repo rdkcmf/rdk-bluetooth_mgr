@@ -186,7 +186,7 @@ int main()
                 break;
             case 10:
                 {
-                    BTMGR_Devices_t discoveredDevices;
+                    BTMGR_DiscoveredDevicesList_t discoveredDevices;
 
                     memset (&discoveredDevices, 0, sizeof(discoveredDevices));
                     rc = BTMGR_GetDiscoveredDevices(0, &discoveredDevices);
@@ -235,7 +235,7 @@ int main()
                 break;
             case 13:
                 {
-                    BTMGR_Devices_t pairedDevices;
+                    BTMGR_PairedDevicesList_t pairedDevices;
 
                     memset (&pairedDevices, 0, sizeof(pairedDevices));
                     rc = BTMGR_GetPairedDevices(0, &pairedDevices);
@@ -285,6 +285,7 @@ int main()
             case 16:
                 {
                     BTMGR_DevicesProperty_t deviceProperty;
+                    int i = 0;
 
                     handle = 0;
                     memset (array, '\0', sizeof(array));
@@ -299,11 +300,19 @@ int main()
                     else
                     {
                         printf ("\nSuccess.... Properties are, \n");
-                        printf ("Name    : %s\n", deviceProperty.m_name);
-                        printf ("Address : %s\n", deviceProperty.m_deviceAddress);
-                        printf ("RSSI    : %d\n", deviceProperty.m_rssi);
-                        printf ("Paired  : %d\n", deviceProperty.m_isPaired);
-                        printf ("Handle  : %llu\n\n\n\n", deviceProperty.m_deviceHandle);
+                        printf ("Handle       : %llu\n", deviceProperty.m_deviceHandle);
+                        printf ("Name         : %s\n", deviceProperty.m_name);
+                        printf ("Address      : %s\n", deviceProperty.m_deviceAddress);
+                        printf ("RSSI         : %d\n", deviceProperty.m_rssi);
+                        printf ("Paired       : %d\n", deviceProperty.m_isPaired);
+                        printf ("Connected    : %d\n", deviceProperty.m_isConnected);
+                        printf ("Vendor ID    : %u\n", deviceProperty.m_vendorID);
+                        for (i = 0; i < deviceProperty.m_serviceInfo.m_numOfService; i++)
+                        {
+                            printf ("Profile ID   : 0x%.4x\n", deviceProperty.m_serviceInfo.m_profileInfo[i].m_uuid);
+                            printf ("Profile Name : %s\n", deviceProperty.m_serviceInfo.m_profileInfo[i].m_profile);
+                        }
+                        printf ("######################\n\n\n");
                     }
                 }
                 break;

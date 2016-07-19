@@ -51,10 +51,20 @@ typedef struct _BTMGR_IARMDDeviceProperty_t {
     BTMGR_DevicesProperty_t m_deviceProperty;
 } BTMGR_IARMDDeviceProperty_t;
 
-typedef struct _BTMGR_IARMDevices_t {
+typedef struct _BTMGR_IARMDiscoveredDevices_t{
     unsigned char m_adapterIndex;
-    BTMGR_Devices_t m_devices;
-} BTMGR_IARMDevices_t;
+    BTMGR_DiscoveredDevicesList_t m_devices;
+} BTMGR_IARMDiscoveredDevices_t;
+
+typedef struct _BTMGR_IARMPairedDevices_t{
+    unsigned char m_adapterIndex;
+    BTMGR_PairedDevicesList_t m_devices;
+} BTMGR_IARMPairedDevices_t;
+
+typedef struct _BTMGR_IARMConnectedDevices_t{
+    unsigned char m_adapterIndex;
+    BTMGR_ConnectedDevicesList_t m_devices;
+} BTMGR_IARMConnectedDevices_t;
 
 typedef struct _BTMGR_IARMStreaming_t {
     unsigned char m_adapterIndex;
