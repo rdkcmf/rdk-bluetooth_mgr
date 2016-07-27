@@ -35,6 +35,12 @@ typedef enum _BTMGR_DeviceConnect_Type_t {
     BTMGR_DEVICE_TYPE_OTHER         = 1 << 2,
 } BTMGR_DeviceConnect_Type_t;
 
+typedef enum _BTMGR_DevicePower_t {
+    BTMGR_DEVICE_POWER_ACTIVE = 0,
+    BTMGR_DEVICE_POWER_LOW,
+    BTMGR_DEVICE_POWER_STANDBY
+} BTMGR_DevicePower_t;
+
 typedef struct _BTMGR_DeviceService_t {
     unsigned short m_uuid;
     char m_profile[BTMGR_NAME_LEN_MAX];
@@ -53,8 +59,20 @@ typedef struct _BTMGR_DevicesProperty_t {
     unsigned short m_vendorID;
     unsigned char m_isPaired;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    unsigned char m_isLowEnergyDevice;
     BTMGR_DeviceServiceList_t m_serviceInfo;
 } BTMGR_DevicesProperty_t;
+
+typedef struct _BTMGR_ConnectedDevice_t {
+    BTMgrDeviceHandle m_deviceHandle;
+    char m_name [BTMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
+    BTMGR_DeviceServiceList_t m_serviceInfo;
+    unsigned short m_vendorID;
+    unsigned char m_isLowEnergyDevice;
+    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    BTMGR_DevicePower_t m_powerStatus;
+} BTMGR_ConnectedDevice_t;
 
 typedef struct _BTMGR_PairedDevices_t {
     BTMgrDeviceHandle m_deviceHandle;
@@ -62,6 +80,7 @@ typedef struct _BTMGR_PairedDevices_t {
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
     BTMGR_DeviceServiceList_t m_serviceInfo;
     unsigned short m_vendorID;
+    unsigned char m_isLowEnergyDevice;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
 } BTMGR_PairedDevices_t;
 
@@ -71,10 +90,10 @@ typedef struct _BTMGR_DiscoveredDevices_t {
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
     unsigned short m_vendorID;
     unsigned char m_isPairedDevice;
+    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    unsigned char m_isLowEnergyDevice;
     int  m_rssi;
 } BTMGR_DiscoveredDevices_t;
-
-typedef BTMGR_PairedDevices_t BTMGR_ConnectedDevice_t;
 
 typedef struct _BTMGR_ConnectedDevicesList_t {
     unsigned short m_numOfDevices;
@@ -90,8 +109,6 @@ typedef struct _BTMGR_DiscoveredDevicesList_t {
     unsigned short m_numOfDevices;
     BTMGR_DiscoveredDevices_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
 } BTMGR_DiscoveredDevicesList_t;
-
-
 
 typedef struct _BTMGR_EventMessage_t {
     unsigned char m_adapterIndex;
