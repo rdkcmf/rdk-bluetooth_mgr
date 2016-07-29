@@ -533,7 +533,7 @@ BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_C
     {
         memset (&connectedDevices, 0, sizeof(connectedDevices));
         connectedDevices.m_adapterIndex = index_of_adapter;
-        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetPairedDevices", (void *)&connectedDevices, sizeof(connectedDevices));
+        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "GetConnectedDevices", (void *)&connectedDevices, sizeof(connectedDevices));
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pConnectedDevices, &connectedDevices.m_devices, sizeof(BTMGR_ConnectedDevicesList_t));
@@ -711,6 +711,42 @@ BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter)
     }
     return rc;
 
+}
+
+const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type)
+{
+    if (type == BTMGR_DEVICE_TYPE_WEARABLE_HEADSET)
+        return "WEARABLE HEADSET";
+    else if (type == BTMGR_DEVICE_TYPE_HANDSFREE)
+        return "HANDSFREE";
+    else if (type == BTMGR_DEVICE_TYPE_MICROPHONE)
+        return "MICROPHONE";
+    else if (type == BTMGR_DEVICE_TYPE_LOUDSPEAKER)
+        return "LOUDSPEAKER";
+    else if (type == BTMGR_DEVICE_TYPE_HEADPHONES)
+        return "HEADPHONES";
+    else if (type == BTMGR_DEVICE_TYPE_PORTABLE_AUDIO)
+        return "PORTABLE AUDIO DEVICE";
+    else if (type == BTMGR_DEVICE_TYPE_CAR_AUDIO)
+        return "CAR AUDIO";
+    else if (type == BTMGR_DEVICE_TYPE_STB)
+        return "STB";
+    else if (type == BTMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)
+        return "HIFI AUDIO DEVICE";
+    else if (type == BTMGR_DEVICE_TYPE_VCR)
+        return "VCR";
+    else if (type == BTMGR_DEVICE_TYPE_VIDEO_CAMERA)
+        return "VIDEO CAMERA";
+    else if (type == BTMGR_DEVICE_TYPE_CAMCODER)
+        return "CAMCODER";
+    else if (type == BTMGR_DEVICE_TYPE_VIDEO_MONITOR)
+        return "VIDEO MONITOR";
+    else if (type == BTMGR_DEVICE_TYPE_TV)
+        return "TV";
+    else if (type == BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE)
+        return "VIDEO CONFERENCING";
+    else
+        return "UNKNOWN DEVICE";
 }
 
 /**********************/

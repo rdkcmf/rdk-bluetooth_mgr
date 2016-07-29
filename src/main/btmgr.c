@@ -121,6 +121,64 @@ unsigned char btmgr_IsThisPairedDevice (BTMgrDeviceHandle handle)
     return 0;
 }
 
+BTMGR_DeviceType_t btmgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type)
+{
+    BTMGR_DeviceType_t type = BTMGR_DEVICE_TYPE_UNKNOWN;
+    switch (device_type)
+    {
+        case enBTRCoreAV_WearableHeadset:
+            type = BTMGR_DEVICE_TYPE_WEARABLE_HEADSET;
+            break;
+        case enBTRCoreAV_Handsfree:
+            type = BTMGR_DEVICE_TYPE_HANDSFREE;
+            break;
+        case enBTRCoreAV_Microphone:
+            type = BTMGR_DEVICE_TYPE_MICROPHONE;
+            break;
+        case enBTRCoreAV_Loudspeaker:
+            type = BTMGR_DEVICE_TYPE_LOUDSPEAKER;
+            break;
+        case enBTRCoreAV_Headphones:
+            type = BTMGR_DEVICE_TYPE_HEADPHONES;
+            break;
+        case enBTRCoreAV_PortableAudio:
+            type = BTMGR_DEVICE_TYPE_PORTABLE_AUDIO;
+            break;
+        case enBTRCoreAV_CarAudio:
+            type = BTMGR_DEVICE_TYPE_CAR_AUDIO;
+            break;
+        case enBTRCoreAV_STB:
+            type = BTMGR_DEVICE_TYPE_STB;
+            break;
+        case enBTRCoreAV_HIFIAudioDevice:
+            type = BTMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE;
+            break;
+        case enBTRCoreAV_VCR:
+            type = BTMGR_DEVICE_TYPE_VCR;
+            break;
+        case enBTRCoreAV_VideoCamera:
+            type = BTMGR_DEVICE_TYPE_VIDEO_CAMERA;
+            break;
+        case enBTRCoreAV_Camcoder:
+            type = BTMGR_DEVICE_TYPE_CAMCODER;
+            break;
+        case enBTRCoreAV_VideoMonitor:
+            type = BTMGR_DEVICE_TYPE_VIDEO_MONITOR;
+            break;
+        case enBTRCoreAV_TV:
+            type = BTMGR_DEVICE_TYPE_TV;
+            break;
+        case enBTRCoreAV_VideoConference:
+            type = BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE;
+            break;
+        case enBTRCoreAV_Reserved:
+        case enBTRCoreAV_Unknown:
+            type = BTMGR_DEVICE_TYPE_UNKNOWN;
+            break;
+    }
+    return type;
+}
+
 void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
 {
     if (isDiscoveryInProgress())
@@ -135,6 +193,7 @@ void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
         for (i = 0; i < devicefound.numberOfDevices; i++)
         {
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle = devicefound.devices[i].device_handle;
+            newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceType = btmgr_MapDeviceTypeFromCore(devicefound.devices[i].device_type);
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_rssi = devicefound.devices[i].RSSI;
             strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_name, devicefound.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
             strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceAddress, devicefound.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
@@ -686,6 +745,7 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
                         strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
                         ptr->m_rssi = listOfDevices.devices[i].RSSI;
                         ptr->m_deviceHandle = listOfDevices.devices[i].device_handle;
+                        ptr->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfDevices.devices[i].device_type);
                     }
                 }
                 else
@@ -804,6 +864,7 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
                         strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                         strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
                         ptr->m_deviceHandle = listOfDevices.devices[i].device_handle;
+                        ptr->m_deviceType = btmgr_MapDeviceTypeFromCore (listOfDevices.devices[i].device_type);
 
                         halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, ptr->m_deviceHandle, &serviceList);
                         if (enBTRCoreSuccess == halrc)
@@ -1019,6 +1080,7 @@ BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_C
             {
                 pConnectedDevices->m_numOfDevices  = 1;
                 pConnectedDevices->m_deviceProperty[0].m_deviceHandle  = deviceProperty.m_deviceHandle;
+                pConnectedDevices->m_deviceProperty[0].m_deviceType = deviceProperty.m_deviceType;
                 pConnectedDevices->m_deviceProperty[0].m_vendorID      = deviceProperty.m_vendorID;
                 pConnectedDevices->m_deviceProperty[0].m_isConnected   = 1;
                 memcpy (&pConnectedDevices->m_deviceProperty[0].m_serviceInfo, &deviceProperty.m_serviceInfo, sizeof (BTMGR_DeviceServiceList_t));
@@ -1081,6 +1143,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                         if (handle == listOfPDevices.devices[i].device_handle)
                         {
                             pDeviceProperty->m_deviceHandle = listOfPDevices.devices[i].device_handle;
+                            pDeviceProperty->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].device_type);
                             pDeviceProperty->m_vendorID = listOfPDevices.devices[i].vendor_id;
                             pDeviceProperty->m_isPaired = 1;
                             strncpy(pDeviceProperty->m_name, listOfPDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
@@ -1130,6 +1193,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                             if (!isFound)
                             {
                                 pDeviceProperty->m_deviceHandle = listOfSDevices.devices[i].device_handle;
+                                pDeviceProperty->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].device_type);
                                 pDeviceProperty->m_vendorID = listOfSDevices.devices[i].vendor_id;
                                 strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                                 strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));

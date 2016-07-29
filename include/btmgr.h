@@ -24,6 +24,27 @@ typedef enum _BTMGR_Events_t {
     BTMGR_EVENT_MAX
 } BTMGR_Events_t;
 
+typedef enum _BTMGR_DeviceType_t {
+    BTMGR_DEVICE_TYPE_UNKNOWN,
+    BTMGR_DEVICE_TYPE_WEARABLE_HEADSET,
+    BTMGR_DEVICE_TYPE_HANDSFREE,
+    BTMGR_DEVICE_TYPE_RESERVED,
+    BTMGR_DEVICE_TYPE_MICROPHONE,
+    BTMGR_DEVICE_TYPE_LOUDSPEAKER,
+    BTMGR_DEVICE_TYPE_HEADPHONES,
+    BTMGR_DEVICE_TYPE_PORTABLE_AUDIO,
+    BTMGR_DEVICE_TYPE_CAR_AUDIO,
+    BTMGR_DEVICE_TYPE_STB,
+    BTMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE,
+    BTMGR_DEVICE_TYPE_VCR,
+    BTMGR_DEVICE_TYPE_VIDEO_CAMERA,
+    BTMGR_DEVICE_TYPE_CAMCODER,
+    BTMGR_DEVICE_TYPE_VIDEO_MONITOR,
+    BTMGR_DEVICE_TYPE_TV,
+    BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE,
+    BTMGR_DEVICE_TYPE_END
+} BTMGR_DeviceType_t;
+
 typedef enum _BTMGR_StreamOut_Type_t {
     BTMGR_STREAM_PRIMARY = 0,
     BTMGR_STREAM_SECONDARY,
@@ -53,6 +74,7 @@ typedef struct _BTMGR_DeviceServiceList_t {
 
 typedef struct _BTMGR_DevicesProperty_t {
     BTMgrDeviceHandle m_deviceHandle;
+    BTMGR_DeviceType_t m_deviceType;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
     int  m_rssi;
@@ -65,6 +87,7 @@ typedef struct _BTMGR_DevicesProperty_t {
 
 typedef struct _BTMGR_ConnectedDevice_t {
     BTMgrDeviceHandle m_deviceHandle;
+    BTMGR_DeviceType_t m_deviceType;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
     BTMGR_DeviceServiceList_t m_serviceInfo;
@@ -76,6 +99,7 @@ typedef struct _BTMGR_ConnectedDevice_t {
 
 typedef struct _BTMGR_PairedDevices_t {
     BTMgrDeviceHandle m_deviceHandle;
+    BTMGR_DeviceType_t m_deviceType;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
     BTMGR_DeviceServiceList_t m_serviceInfo;
@@ -86,6 +110,7 @@ typedef struct _BTMGR_PairedDevices_t {
 
 typedef struct _BTMGR_DiscoveredDevices_t {
     BTMgrDeviceHandle m_deviceHandle;
+    BTMGR_DeviceType_t m_deviceType;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
     unsigned short m_vendorID;
@@ -155,5 +180,8 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
 
 BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter);
 BTMGR_Result_t BTMGR_DeInit(void);
+
+
+const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type);
 
 #endif /* __BTMGR_H__ */
