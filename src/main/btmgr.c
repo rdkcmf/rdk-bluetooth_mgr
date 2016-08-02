@@ -192,7 +192,7 @@ void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
         newEvent.m_discoveredDevices.m_numOfDevices = devicefound.numberOfDevices;
         for (i = 0; i < devicefound.numberOfDevices; i++)
         {
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle = devicefound.devices[i].device_handle;
+            newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle = devicefound.devices[i].deviceId;
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceType = btmgr_MapDeviceTypeFromCore(devicefound.devices[i].device_type);
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_rssi = devicefound.devices[i].RSSI;
             strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_name, devicefound.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
@@ -719,46 +719,37 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
     }
     else
     {
-        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
-        if (pAdapterPath)
+        memset (&listOfDevices, 0, sizeof(listOfDevices));
+        halrc = BTRCore_GetListOfScannedDevices(gBTRCoreHandle, &listOfDevices);
+        if (enBTRCoreSuccess != halrc)
         {
-            memset (&listOfDevices, 0, sizeof(listOfDevices));
-            halrc = BTRCore_GetListOfScannedDevices(gBTRCoreHandle, pAdapterPath, &listOfDevices);
-            if (enBTRCoreSuccess != halrc)
-            {
-                BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices : Failed to get list of discovered devices\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
-            }
-            else
-            {
-                /* Reset the values to 0 */
-                memset (pDiscoveredDevices, 0, sizeof(BTMGR_DiscoveredDevicesList_t));
-                if (listOfDevices.numberOfDevices)
-                {
-                    int i = 0;
-                    BTMGR_DiscoveredDevices_t *ptr = NULL;
-                    pDiscoveredDevices->m_numOfDevices = listOfDevices.numberOfDevices;
-                    for (i = 0; i < listOfDevices.numberOfDevices; i++)
-                    {
-                        ptr = &pDiscoveredDevices->m_deviceProperty[i];
-                        strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
-                        strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
-                        ptr->m_rssi = listOfDevices.devices[i].RSSI;
-                        ptr->m_deviceHandle = listOfDevices.devices[i].device_handle;
-                        ptr->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfDevices.devices[i].device_type);
-                    }
-                }
-                else
-                    BTMGRLOG_WARN("No Device is found yet\n");
-
-                /*  Success */
-                BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices : Successful\n");
-            }
+            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices : Failed to get list of discovered devices\n");
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices : Failed to get adapter path\n");
-            rc = BTMGR_RESULT_GENERIC_FAILURE;
+            /* Reset the values to 0 */
+            memset (pDiscoveredDevices, 0, sizeof(BTMGR_DiscoveredDevicesList_t));
+            if (listOfDevices.numberOfDevices)
+            {
+                int i = 0;
+                BTMGR_DiscoveredDevices_t *ptr = NULL;
+                pDiscoveredDevices->m_numOfDevices = listOfDevices.numberOfDevices;
+                for (i = 0; i < listOfDevices.numberOfDevices; i++)
+                {
+                    ptr = &pDiscoveredDevices->m_deviceProperty[i];
+                    strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
+                    strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
+                    ptr->m_rssi = listOfDevices.devices[i].RSSI;
+                    ptr->m_deviceHandle = listOfDevices.devices[i].deviceId;
+                    ptr->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfDevices.devices[i].device_type);
+                }
+            }
+            else
+                BTMGRLOG_WARN("No Device is found yet\n");
+
+            /*  Success */
+            BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices : Successful\n");
         }
     }
     return rc;
@@ -791,24 +782,15 @@ BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandl
 
         if (0 == btmgr_IsThisPairedDevice(handle))
         {
-            const char* pAdapterPath = getAdaptherPath (index_of_adapter);
-            if (pAdapterPath)
+            halrc = BTRCore_PairDevice (gBTRCoreHandle, handle);
+            if (enBTRCoreSuccess != halrc)
             {
-                halrc = BTRCore_PairDevice (gBTRCoreHandle, pAdapterPath, handle);
-                if (enBTRCoreSuccess != halrc)
-                {
-                    BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed to pair a device\n");
-                    rc = BTMGR_RESULT_GENERIC_FAILURE;
-                }
-                else
-                {
-                    BTMGRLOG_INFO ("BTMGR_PairDevice : Paired Successfully\n");
-                }
+                BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed to pair a device\n");
+                rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed to get adapter path\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
+                BTMGRLOG_INFO ("BTMGR_PairDevice : Paired Successfully\n");
             }
         }
         else
@@ -836,68 +818,59 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
     }
     else
     {
-        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
-        if (pAdapterPath)
+        memset (&listOfDevices, 0, sizeof(listOfDevices));
+
+        halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, &listOfDevices);
+        if (enBTRCoreSuccess != halrc)
         {
-            memset (&listOfDevices, 0, sizeof(listOfDevices));
-
-            halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, pAdapterPath, &listOfDevices);
-            if (enBTRCoreSuccess != halrc)
-            {
-                BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed to get list of paired devices\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
-            }
-            else
-            {
-                /* Reset the values to 0 */
-                memset (pPairedDevices, 0, sizeof(BTMGR_PairedDevicesList_t));
-                if (listOfDevices.numberOfDevices)
-                {
-                    int i = 0;
-                    int j = 0;
-                    BTMGR_PairedDevices_t *ptr = NULL;
-                    pPairedDevices->m_numOfDevices = listOfDevices.numberOfDevices;
-                    for (i = 0; i < listOfDevices.numberOfDevices; i++)
-                    {
-                        memset (&serviceList, 0, sizeof(stBTRCoreSupportedServiceList));
-                        ptr = &pPairedDevices->m_deviceProperty[i];
-                        strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
-                        strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
-                        ptr->m_deviceHandle = listOfDevices.devices[i].device_handle;
-                        ptr->m_deviceType = btmgr_MapDeviceTypeFromCore (listOfDevices.devices[i].device_type);
-
-                        halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, ptr->m_deviceHandle, &serviceList);
-                        if (enBTRCoreSuccess == halrc)
-                        {
-                            ptr->m_serviceInfo.m_numOfService = serviceList.numberOfService;
-                            for (j = 0; j < serviceList.numberOfService; j++)
-                            {
-                                BTMGRLOG_INFO ("%s : Profile ID = %u; Profile Name = %s \n", __FUNCTION__, serviceList.profile[j].uuid_value, serviceList.profile[j].profile_name);
-                                ptr->m_serviceInfo.m_profileInfo[j].m_uuid = serviceList.profile[j].uuid_value;
-                                strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, serviceList.profile[j].profile_name);
-                            }
-                        }
-                        else
-                        {
-                            BTMGRLOG_ERROR ("%s : Failed to Get the Supported Services\n", __FUNCTION__);
-                        }
-
-
-                        if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == ptr->m_deviceHandle))
-                            ptr->m_isConnected = 1;
-                    }
-                }
-                else
-                    BTMGRLOG_WARN("No Device is paired yet\n");
-
-                /*  Success */
-                BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Successful\n");
-            }
+            BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed to get list of paired devices\n");
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed to get adapter path\n");
-            rc = BTMGR_RESULT_GENERIC_FAILURE;
+            /* Reset the values to 0 */
+            memset (pPairedDevices, 0, sizeof(BTMGR_PairedDevicesList_t));
+            if (listOfDevices.numberOfDevices)
+            {
+                int i = 0;
+                int j = 0;
+                BTMGR_PairedDevices_t *ptr = NULL;
+                pPairedDevices->m_numOfDevices = listOfDevices.numberOfDevices;
+                for (i = 0; i < listOfDevices.numberOfDevices; i++)
+                {
+                    memset (&serviceList, 0, sizeof(stBTRCoreSupportedServiceList));
+                    ptr = &pPairedDevices->m_deviceProperty[i];
+                    strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
+                    strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
+                    ptr->m_deviceHandle = listOfDevices.devices[i].deviceId;
+                    ptr->m_deviceType = btmgr_MapDeviceTypeFromCore (listOfDevices.devices[i].device_type);
+
+                    halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, ptr->m_deviceHandle, &serviceList);
+                    if (enBTRCoreSuccess == halrc)
+                    {
+                        ptr->m_serviceInfo.m_numOfService = serviceList.numberOfService;
+                        for (j = 0; j < serviceList.numberOfService; j++)
+                        {
+                            BTMGRLOG_INFO ("%s : Profile ID = %u; Profile Name = %s \n", __FUNCTION__, serviceList.profile[j].uuid_value, serviceList.profile[j].profile_name);
+                            ptr->m_serviceInfo.m_profileInfo[j].m_uuid = serviceList.profile[j].uuid_value;
+                            strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, serviceList.profile[j].profile_name);
+                        }
+                    }
+                    else
+                    {
+                        BTMGRLOG_ERROR ("%s : Failed to Get the Supported Services\n", __FUNCTION__);
+                    }
+
+
+                    if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == ptr->m_deviceHandle))
+                        ptr->m_isConnected = 1;
+                }
+            }
+            else
+                BTMGRLOG_WARN("No Device is paired yet\n");
+
+            /*  Success */
+            BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Successful\n");
         }
     }
     return rc;
@@ -931,25 +904,16 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
 
         if (1 == btmgr_IsThisPairedDevice(handle))
         {
-            const char* pAdapterPath = getAdaptherPath (index_of_adapter);
-            if (pAdapterPath)
+            halrc = BTRCore_UnPairDevice(gBTRCoreHandle, handle);
+            if (enBTRCoreSuccess != halrc)
             {
-                halrc = BTRCore_UnPairDevice(gBTRCoreHandle, pAdapterPath, handle);
-                if (enBTRCoreSuccess != halrc)
-                {
-                    BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to stop discovery\n");
-                    rc = BTMGR_RESULT_GENERIC_FAILURE;
-                }
-                else
-                {
-                    BTMGRLOG_INFO ("BTMGR_UnpairDevice : Discovery Stopped Successfully\n");
-                    set_discovery_status(0);
-                }
+                BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to stop discovery\n");
+                rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to get adapter path\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
+                BTMGRLOG_INFO ("BTMGR_UnpairDevice : Discovery Stopped Successfully\n");
+                set_discovery_status(0);
             }
         }
         else
@@ -984,26 +948,17 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
     }
     else
     {
-        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
-        if (pAdapterPath)
+        /* connectAs param is unused for now.. */
+        halrc = BTRCore_ConnectDevice (gBTRCoreHandle, handle, enBTRCoreSpeakers);
+        if (enBTRCoreSuccess != halrc)
         {
-            /* connectAs param is unused for now.. */
-            halrc = BTRCore_ConnectDevice (gBTRCoreHandle, pAdapterPath, handle, enBTRCoreSpeakers);
-            if (enBTRCoreSuccess != halrc)
-            {
-                BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Failed to Connect to this device\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
-            }
-            else
-            {
-                BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Connected Successfully\n");
-                gIsDeviceConnected = 1;
-            }
+            BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Failed to Connect to this device\n");
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_ConnectToDevice: Failed to get adapter path\n");
-            rc = BTMGR_RESULT_GENERIC_FAILURE;
+            BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Connected Successfully\n");
+            gIsDeviceConnected = 1;
         }
     }
     return rc;
@@ -1124,99 +1079,90 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
     }
     else
     {
-        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
-        if (pAdapterPath)
+        /* Reset the values to 0 */
+        memset (&serviceList, 0, sizeof(stBTRCoreSupportedServiceList));
+        memset (&listOfPDevices, 0, sizeof(listOfPDevices));
+        memset (&listOfSDevices, 0, sizeof(listOfSDevices));
+        memset (pDeviceProperty, 0, sizeof(BTMGR_DevicesProperty_t));
+
+        halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, &listOfPDevices);
+        if (enBTRCoreSuccess == halrc)
         {
-            /* Reset the values to 0 */
-            memset (&serviceList, 0, sizeof(stBTRCoreSupportedServiceList));
-            memset (&listOfPDevices, 0, sizeof(listOfPDevices));
-            memset (&listOfSDevices, 0, sizeof(listOfSDevices));
-            memset (pDeviceProperty, 0, sizeof(BTMGR_DevicesProperty_t));
+            if (listOfPDevices.numberOfDevices)
+            {
+                for (i = 0; i < listOfPDevices.numberOfDevices; i++)
+                {
+                    if (handle == listOfPDevices.devices[i].deviceId)
+                    {
+                        pDeviceProperty->m_deviceHandle = listOfPDevices.devices[i].deviceId;
+                        pDeviceProperty->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].device_type);
+                        pDeviceProperty->m_vendorID = listOfPDevices.devices[i].vendor_id;
+                        pDeviceProperty->m_isPaired = 1;
+                        strncpy(pDeviceProperty->m_name, listOfPDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
+                        strncpy(pDeviceProperty->m_deviceAddress, listOfPDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
+                        if (gCurStreamingDevHandle == handle)
+                            pDeviceProperty->m_isConnected = 1;
 
-            halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, pAdapterPath, &listOfPDevices);
+                        isFound = 1;
+                        break;
+                    }
+                }
+            }
+            else
+                BTMGRLOG_WARN("No Device is paired yet\n");
+        }
+
+        /* If and Only if the device found in paired device list, we can get the supported profile list */
+        if (isFound)
+        {
+            halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, handle, &serviceList);
             if (enBTRCoreSuccess == halrc)
             {
-                if (listOfPDevices.numberOfDevices)
+                pDeviceProperty->m_serviceInfo.m_numOfService = serviceList.numberOfService;
+                for (i = 0; i < serviceList.numberOfService; i++)
                 {
-                    for (i = 0; i < listOfPDevices.numberOfDevices; i++)
-                    {
-                        if (handle == listOfPDevices.devices[i].device_handle)
-                        {
-                            pDeviceProperty->m_deviceHandle = listOfPDevices.devices[i].device_handle;
-                            pDeviceProperty->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].device_type);
-                            pDeviceProperty->m_vendorID = listOfPDevices.devices[i].vendor_id;
-                            pDeviceProperty->m_isPaired = 1;
-                            strncpy(pDeviceProperty->m_name, listOfPDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
-                            strncpy(pDeviceProperty->m_deviceAddress, listOfPDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
-                            if (gCurStreamingDevHandle == handle)
-                                pDeviceProperty->m_isConnected = 1;
-
-                            isFound = 1;
-                            break;
-                        }
-                    }
-                }
-                else
-                    BTMGRLOG_WARN("No Device is paired yet\n");
-            }
-
-            /* If and Only if the device found in paired device list, we can get the supported profile list */
-            if (isFound)
-            {
-                halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, handle, &serviceList);
-                if (enBTRCoreSuccess == halrc)
-                {
-                    pDeviceProperty->m_serviceInfo.m_numOfService = serviceList.numberOfService;
-                    for (i = 0; i < serviceList.numberOfService; i++)
-                    {
-                        BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, serviceList.profile[i].uuid_value, serviceList.profile[i].profile_name);
-                        pDeviceProperty->m_serviceInfo.m_profileInfo[i].m_uuid = serviceList.profile[i].uuid_value;
-                        strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[i].m_profile, serviceList.profile[i].profile_name, BTMGR_NAME_LEN_MAX);
-                    }
-                }
-                else
-                {
-                    BTMGRLOG_ERROR ("%s : Failed to Get the Supported Services\n", __FUNCTION__);
+                    BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, serviceList.profile[i].uuid_value, serviceList.profile[i].profile_name);
+                    pDeviceProperty->m_serviceInfo.m_profileInfo[i].m_uuid = serviceList.profile[i].uuid_value;
+                    strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[i].m_profile, serviceList.profile[i].profile_name, BTMGR_NAME_LEN_MAX);
                 }
             }
-
-
-            halrc = BTRCore_GetListOfScannedDevices (gBTRCoreHandle, pAdapterPath, &listOfSDevices);
-            if (enBTRCoreSuccess == halrc)
+            else
             {
-                if (listOfSDevices.numberOfDevices)
-                {
-                    for (i = 0; i < listOfSDevices.numberOfDevices; i++)
-                    {
-                        if (handle == listOfSDevices.devices[i].device_handle)
-                        {
-                            if (!isFound)
-                            {
-                                pDeviceProperty->m_deviceHandle = listOfSDevices.devices[i].device_handle;
-                                pDeviceProperty->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].device_type);
-                                pDeviceProperty->m_vendorID = listOfSDevices.devices[i].vendor_id;
-                                strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
-                                strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
-                            }
-                            pDeviceProperty->m_rssi = listOfSDevices.devices[i].RSSI;
-                            isFound = 1;
-                            break;
-                        }
-                    }
-                }
-                else
-                    BTMGRLOG_WARN("No Device in scan list\n");
-            }
-
-            if (!isFound)
-            {
-                BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Could not retrive info for this device\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
+                BTMGRLOG_ERROR ("%s : Failed to Get the Supported Services\n", __FUNCTION__);
             }
         }
-        else
+
+
+        halrc = BTRCore_GetListOfScannedDevices (gBTRCoreHandle, &listOfSDevices);
+        if (enBTRCoreSuccess == halrc)
         {
-            BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Failed to get adapter path\n");
+            if (listOfSDevices.numberOfDevices)
+            {
+                for (i = 0; i < listOfSDevices.numberOfDevices; i++)
+                {
+                    if (handle == listOfSDevices.devices[i].deviceId)
+                    {
+                        if (!isFound)
+                        {
+                            pDeviceProperty->m_deviceHandle = listOfSDevices.devices[i].deviceId;
+                            pDeviceProperty->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].device_type);
+                            pDeviceProperty->m_vendorID = listOfSDevices.devices[i].vendor_id;
+                            strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
+                            strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
+                        }
+                        pDeviceProperty->m_rssi = listOfSDevices.devices[i].RSSI;
+                        isFound = 1;
+                        break;
+                    }
+                }
+            }
+            else
+                BTMGRLOG_WARN("No Device in scan list\n");
+        }
+
+        if (!isFound)
+        {
+            BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Could not retrive info for this device\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -1292,9 +1238,8 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
             }
         }
 
-        const char* pAdapterPath = getAdaptherPath (index_of_adapter);
         /* Check whether the device is in the paired list */
-        halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, pAdapterPath, &listOfPDevices);
+        halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, &listOfPDevices);
         if (enBTRCoreSuccess == halrc)
         {
             if (listOfPDevices.numberOfDevices)
@@ -1302,7 +1247,7 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                 int i = 0;
                 for (i = 0; i < listOfPDevices.numberOfDevices; i++)
                 {
-                    if (handle == listOfPDevices.devices[i].device_handle)
+                    if (handle == listOfPDevices.devices[i].deviceId)
                     {
                         isFound = 1;
                         break;
@@ -1318,7 +1263,7 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                     /* Connect the device */
                     {
                         /* If the device is not connected, Connect to it */
-                        BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].device_handle, streamOutPref);
+                        BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref);
 
                         /* FIXME */
                         BTMGRLOG_WARN("%s : Sleep for few sec as alternate to async callback; temp change\n",__FUNCTION__);
@@ -1329,13 +1274,14 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                     if (BTMGR_RESULT_SUCCESS == rc)
                     {
                         /* Aquire Device Data Path to start the audio casting */
-                        halrc = BTRCore_GetDeviceDataPath (gBTRCoreHandle, pAdapterPath, listOfPDevices.devices[i].device_handle, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
+                        halrc = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
+
                         if (enBTRCoreSuccess == halrc)
                         {
                             /* Now that you got the FD & Read/Write MTU, start casting the audio */
                             if (BTMGR_RESULT_SUCCESS == btmgr_StartCastingAudio (deviceFD, deviceWriteMTU))
                             {
-                                gCurStreamingDevHandle = listOfPDevices.devices[i].device_handle;
+                                gCurStreamingDevHandle = listOfPDevices.devices[i].deviceId;
                                 BTMGRLOG_WARN("%s : Streaming Started.. Enjoy the show..! :)\n", __FUNCTION__);
                             }
                             else
@@ -1380,7 +1326,7 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
     {
         btmgr_StopCastingAudio();
 
-        BTRCore_FreeDeviceDataPath (gBTRCoreHandle, gCurStreamingDevHandle);
+        BTRCore_ReleaseDeviceDataPath (gBTRCoreHandle, gCurStreamingDevHandle, enBTRCoreSpeakers);
 
         gCurStreamingDevHandle = 0;
 
