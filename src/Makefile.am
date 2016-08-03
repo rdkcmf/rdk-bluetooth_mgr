@@ -1,1 +1,1 @@
-SUBDIRS = streamOut rpc main ctrl
+SUBDIRS = streamOut streamIn rpc main ctrl

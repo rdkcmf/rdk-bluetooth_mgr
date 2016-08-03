@@ -62,6 +62,14 @@ typedef enum _BTMGR_DevicePower_t {
     BTMGR_DEVICE_POWER_STANDBY
 } BTMGR_DevicePower_t;
 
+typedef enum _BTMGR_RSSIValue_type_t {
+    BTMGR_RSSI_NONE = 0,      //!< No signal (0 bar)
+    BTMGR_RSSI_POOR,          //!< Poor (1 bar)
+    BTMGR_RSSI_FAIR,          //!< Fair (2 bars)
+    BTMGR_RSSI_GOOD,          //!< Good (3 bars)
+    BTMGR_RSSI_EXCELLENT      //!< Excellent (4 bars)
+} BTMGR_RSSIValue_t;
+
 typedef struct _BTMGR_DeviceService_t {
     unsigned short m_uuid;
     char m_profile[BTMGR_NAME_LEN_MAX];
@@ -77,7 +85,8 @@ typedef struct _BTMGR_DevicesProperty_t {
     BTMGR_DeviceType_t m_deviceType;
     char m_name [BTMGR_NAME_LEN_MAX];
     char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    int  m_rssi;
+    BTMGR_RSSIValue_t m_rssi;
+    int m_signalLevel;
     unsigned short m_vendorID;
     unsigned char m_isPaired;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
@@ -117,7 +126,8 @@ typedef struct _BTMGR_DiscoveredDevices_t {
     unsigned char m_isPairedDevice;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
     unsigned char m_isLowEnergyDevice;
-    int  m_rssi;
+    BTMGR_RSSIValue_t m_rssi;
+    int m_signalLevel;
 } BTMGR_DiscoveredDevices_t;
 
 typedef struct _BTMGR_ConnectedDevicesList_t {

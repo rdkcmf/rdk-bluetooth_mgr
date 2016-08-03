@@ -16,12 +16,15 @@
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
 
 #include "btrMgr_streamOut.h"
-
+#include "btrMgr_streamIn.h"
+/*TODO Consolidate these functions to a streamInOut test application
+*/
 #include "rmfAudioCapture.h"
 
 typedef struct appDataStruct{
     RMF_AudioCaptureHandle hAudCap;
     tBTRMgrSoHdl hBTRMgrSoHdl;
+    tBTRMgrSiHdl hBTRMgrSiHdl;
     unsigned long bytesWritten;
     unsigned samplerate;
     unsigned channels;
@@ -37,6 +40,7 @@ void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 
 int streamOutTestMainAlternate (int argc, char* argv[]); 
 int streamOutLiveTestMainAlternate (int argc, char* argv[]);
+int streamInLiveTestMainAlternate (int fd_number, int MTU_size);
 
 static int
 getChoice (
@@ -152,6 +156,7 @@ printMenu (
     printf("23. Send SBC data to BT Headset/Speakers\n");
     printf("24. Send WAV to BT Headset/Speakers - btrMgrStreamOutTest\n");
     printf("25. Send Live Audio to BT Headset/Speakers\n");
+    printf("26. Send audio data from device to settop with BT\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -530,6 +535,10 @@ main (
                 }
             }
             break;
+      case 26:
+             printf("Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", liDataPath, lidataReadMTU);
+             streamInLiveTestMainAlternate(liDataPath, lidataReadMTU);
+             break;
 
         case 88:
             test_func(lhBTRCore, &GetAdapter); 
@@ -1066,3 +1075,42 @@ streamOutLiveTestMainAlternate (
 err_open:
     return 0;
 }
+
+
+int
+streamInLiveTestMainAlternate (int fd_number, int MTU_size)
+   {
+
+    int     inBytesToEncode = IN_BUF_SIZE;
+    int     outFileFd       = 0;
+    int     outMTUSize      = OUT_MTU_SIZE;
+
+    outFileFd = fd_number;
+    outMTUSize  = MTU_size;
+
+    appDataStruct appData;
+
+    memset(&appData, 0, sizeof(appData));
+
+    BTRMgr_SI_Init(&appData.hBTRMgrSiHdl);
+
+    /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
+    appData.bitsPerSample = 16;
+    appData.samplerate = 48000;
+    appData.channels = 2;
+
+
+    BTRMgr_SI_Start(appData.hBTRMgrSiHdl, inBytesToEncode, outFileFd, outMTUSize);
+
+    printf("Press \"Enter\" to stop Audio Input \n");
+    getchar();
+
+    BTRMgr_SI_SendEOS(appData.hBTRMgrSiHdl);
+    BTRMgr_SI_Stop(appData.hBTRMgrSiHdl);
+
+    BTRMgr_SI_DeInit(appData.hBTRMgrSiHdl);
+
+    return 0;
+}
+
+

@@ -32,6 +32,13 @@ typedef struct BTMGR_StreamingHandles_t {
 BTMGR_StreamingHandles gStreamCaptureSettings;
 
 /* Private function declarations */
+#define BTMGR_SIGNAL_POOR       (-90)
+#define BTMGR_SIGNAL_FAIR       (-70)
+#define BTMGR_SIGNAL_GOOD       (-60)
+BTMGR_DeviceType_t btmgr_MapSignalStrengthToRSSI (int signalStrength);
+BTMGR_DeviceType_t btmgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type);
+
+
 rmf_Error cbBufferReady (void *pContext, void* pInDataBuf, unsigned int inBytesToEncode)
 {
     BTMGR_StreamingHandles *data = (BTMGR_StreamingHandles*) pContext;
@@ -179,6 +186,24 @@ BTMGR_DeviceType_t btmgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type
     return type;
 }
 
+BTMGR_DeviceType_t btmgr_MapSignalStrengthToRSSI (int signalStrength)
+{
+    BTMGR_RSSIValue_t rssi = BTMGR_RSSI_NONE;
+    if (signalStrength >= 0)
+    {
+        if (signalStrength >= BTMGR_SIGNAL_GOOD)
+            rssi = BTMGR_RSSI_EXCELLENT;
+        else if (signalStrength >= BTMGR_SIGNAL_FAIR)
+            rssi = BTMGR_RSSI_GOOD;
+        else if (signalStrength >= BTMGR_SIGNAL_POOR)
+            rssi = BTMGR_RSSI_FAIR;
+        else
+            rssi = BTMGR_RSSI_POOR;
+    }
+
+    return rssi;
+}
+
 void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
 {
     if (isDiscoveryInProgress())
@@ -194,7 +219,8 @@ void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
         {
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle = devicefound.devices[i].deviceId;
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceType = btmgr_MapDeviceTypeFromCore(devicefound.devices[i].device_type);
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_rssi = devicefound.devices[i].RSSI;
+            newEvent.m_discoveredDevices.m_deviceProperty[i].m_signalLevel = devicefound.devices[i].RSSI;
+            newEvent.m_discoveredDevices.m_deviceProperty[i].m_rssi = btmgr_MapSignalStrengthToRSSI(devicefound.devices[i].RSSI);
             strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_name, devicefound.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
             strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceAddress, devicefound.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
             newEvent.m_discoveredDevices.m_deviceProperty[i].m_isPairedDevice = btmgr_IsThisPairedDevice (newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle);
@@ -740,7 +766,8 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
                     ptr = &pDiscoveredDevices->m_deviceProperty[i];
                     strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                     strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
-                    ptr->m_rssi = listOfDevices.devices[i].RSSI;
+                    ptr->m_signalLevel = listOfDevices.devices[i].RSSI;
+                    ptr->m_rssi = btmgr_MapSignalStrengthToRSSI (listOfDevices.devices[i].RSSI);
                     ptr->m_deviceHandle = listOfDevices.devices[i].deviceId;
                     ptr->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfDevices.devices[i].device_type);
                 }
@@ -1150,7 +1177,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                             strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                             strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
                         }
-                        pDeviceProperty->m_rssi = listOfSDevices.devices[i].RSSI;
+                        pDeviceProperty->m_signalLevel = listOfSDevices.devices[i].RSSI;
                         isFound = 1;
                         break;
                     }
@@ -1159,6 +1186,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
             else
                 BTMGRLOG_WARN("No Device in scan list\n");
         }
+        pDeviceProperty->m_rssi = btmgr_MapSignalStrengthToRSSI (pDeviceProperty->m_signalLevel);
 
         if (!isFound)
         {

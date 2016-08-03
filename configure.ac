@@ -135,6 +135,7 @@ AC_CONFIG_FILES([Makefile
                  src/rpc/Makefile
                  src/ctrl/Makefile
                  src/streamOut/Makefile
+                 src/streamIn/Makefile
                  tests/Makefile
                  tests/streamOut/Makefile])
 
