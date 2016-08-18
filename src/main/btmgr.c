@@ -204,29 +204,25 @@ BTMGR_DeviceType_t btmgr_MapSignalStrengthToRSSI (int signalStrength)
     return rssi;
 }
 
-void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevicesCount devicefound)
+void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevices devicefound)
 {
-    if (isDiscoveryInProgress())
+    if (isDiscoveryInProgress() && (m_eventCallbackFunction))
     {
-        int i = 0;
         BTMGR_EventMessage_t newEvent;
         memset (&newEvent, 0, sizeof(newEvent));
         
         newEvent.m_adapterIndex = 0;
         newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE;
-        newEvent.m_discoveredDevices.m_numOfDevices = devicefound.numberOfDevices;
-        for (i = 0; i < devicefound.numberOfDevices; i++)
-        {
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle = devicefound.devices[i].deviceId;
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceType = btmgr_MapDeviceTypeFromCore(devicefound.devices[i].device_type);
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_signalLevel = devicefound.devices[i].RSSI;
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_rssi = btmgr_MapSignalStrengthToRSSI(devicefound.devices[i].RSSI);
-            strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_name, devicefound.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
-            strncpy (newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceAddress, devicefound.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
-            newEvent.m_discoveredDevices.m_deviceProperty[i].m_isPairedDevice = btmgr_IsThisPairedDevice (newEvent.m_discoveredDevices.m_deviceProperty[i].m_deviceHandle);
-        }
 
         /*  Post a callback */
+        newEvent.m_discoveredDevice.m_deviceHandle = devicefound.deviceId;
+        newEvent.m_discoveredDevice.m_deviceType = btmgr_MapDeviceTypeFromCore(devicefound.device_type);
+        newEvent.m_discoveredDevice.m_signalLevel = devicefound.RSSI;
+        newEvent.m_discoveredDevice.m_rssi = btmgr_MapSignalStrengthToRSSI(devicefound.RSSI);
+        strncpy (newEvent.m_discoveredDevice.m_name, devicefound.device_name, (BTMGR_NAME_LEN_MAX - 1));
+        strncpy (newEvent.m_discoveredDevice.m_deviceAddress, devicefound.device_address, (BTMGR_NAME_LEN_MAX - 1));
+        newEvent.m_discoveredDevice.m_isPairedDevice = btmgr_IsThisPairedDevice (newEvent.m_discoveredDevice.m_deviceHandle);
+
         m_eventCallbackFunction (newEvent);
     }
     return;
@@ -716,6 +712,18 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
             {
                 BTMGRLOG_INFO ("BTMGR_StopDeviceDiscovery : Discovery Stopped Successfully\n");
                 set_discovery_status(0);
+                if(m_eventCallbackFunction)
+                {
+                    BTMGR_EventMessage_t newEvent;
+                    memset (&newEvent, 0, sizeof(newEvent));
+
+                    newEvent.m_adapterIndex = index_of_adapter;
+                    newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE;
+                    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+                    /*  Post a callback */
+                    m_eventCallbackFunction (newEvent);
+                }
             }
         }
         else
@@ -818,6 +826,18 @@ BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandl
             else
             {
                 BTMGRLOG_INFO ("BTMGR_PairDevice : Paired Successfully\n");
+                if(m_eventCallbackFunction)
+                {
+                    BTMGR_EventMessage_t newEvent;
+                    memset (&newEvent, 0, sizeof(newEvent));
+
+                    newEvent.m_adapterIndex = index_of_adapter;
+                    newEvent.m_eventType = BTMGR_EVENT_DEVICE_PAIRING_COMPLETE;
+                    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+                    /*  Post a callback */
+                    m_eventCallbackFunction (newEvent);
+                }
             }
         }
         else
@@ -934,13 +954,24 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
             halrc = BTRCore_UnPairDevice(gBTRCoreHandle, handle);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to stop discovery\n");
+                BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to unpair\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_UnpairDevice : Discovery Stopped Successfully\n");
-                set_discovery_status(0);
+                BTMGRLOG_INFO ("BTMGR_UnpairDevice : Unpaired Successfully\n");
+                if(m_eventCallbackFunction)
+                {
+                    BTMGR_EventMessage_t newEvent;
+                    memset (&newEvent, 0, sizeof(newEvent));
+
+                    newEvent.m_adapterIndex = index_of_adapter;
+                    newEvent.m_eventType = BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE;
+                    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+                    /*  Post a callback */
+                    m_eventCallbackFunction (newEvent);
+                }
             }
         }
         else
@@ -986,6 +1017,19 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
         {
             BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Connected Successfully\n");
             gIsDeviceConnected = 1;
+
+            if(m_eventCallbackFunction)
+            {
+                BTMGR_EventMessage_t newEvent;
+                memset (&newEvent, 0, sizeof(newEvent));
+
+                newEvent.m_adapterIndex = index_of_adapter;
+                newEvent.m_eventType = BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
+                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+                /*  Post a callback */
+                m_eventCallbackFunction (newEvent);
+            }
         }
     }
     return rc;
@@ -1032,6 +1076,19 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
         {
             BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Disconnected  Successfully\n");
             gIsDeviceConnected = 0;
+
+            if(m_eventCallbackFunction)
+            {
+                BTMGR_EventMessage_t newEvent;
+                memset (&newEvent, 0, sizeof(newEvent));
+
+                newEvent.m_adapterIndex = index_of_adapter;
+                newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE;
+                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+                /*  Post a callback */
+                m_eventCallbackFunction (newEvent);
+            }
         }
     }
     return rc;

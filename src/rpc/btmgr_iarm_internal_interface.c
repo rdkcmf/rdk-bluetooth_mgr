@@ -745,12 +745,53 @@ void _EventCallback(BTMGR_EventMessage_t events)
 {
     BTMGR_EventMessage_t eventData;
     memcpy (&eventData, &events, sizeof(BTMGR_EventMessage_t));
-    
+
     if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE)
     {
         BTMGRLOG_WARN ("Post Discovery Status update\n");
         IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, (void *)&eventData, sizeof(eventData));
     }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE)
+    {
+        BTMGRLOG_WARN ("Post Discovery Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_PAIRING_COMPLETE)
+    {
+        BTMGRLOG_WARN ("Post Device Pairing Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE)
+    {
+        BTMGRLOG_WARN ("Post Device Pairing Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE)
+    {
+        BTMGRLOG_WARN ("Post Device Connection Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE)
+    {
+        BTMGRLOG_WARN ("Post Device Connection Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_OUT_OF_RANGE)
+    {
+        BTMGRLOG_WARN ("Post Device Out of Range event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST)
+    {
+        BTMGRLOG_WARN ("Post External Device Connect Request event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST)
+    {
+        BTMGRLOG_WARN ("Post External Device Pair Request event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, (void *)&eventData, sizeof(eventData));
+    }
+
     return;
 }
 

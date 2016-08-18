@@ -2,7 +2,7 @@
 #define __BTMGR_H__
 
 #define BTMGR_NAME_LEN_MAX            64
-#define BTMGR_DEVICE_COUNT_MAX        16
+#define BTMGR_DEVICE_COUNT_MAX        32
 #define BTMGR_ADAPTER_COUNT_MAX       16
 #define BTMGR_MAX_DEVICE_PROFILE      32
 
@@ -19,8 +19,12 @@ typedef enum _BTMGR_Events_t {
     BTMGR_EVENT_DEVICE_OUT_OF_RANGE = 100,
     BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE,
     BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE,
+    BTMGR_EVENT_DEVICE_PAIRING_COMPLETE,
+    BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE,
+    BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE,
+    BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE,
     BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
-    BTMGR_EVENT_RECEIVED_EXTERNAL_PAIRING_REQUEST,
+    BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
     BTMGR_EVENT_MAX
 } BTMGR_Events_t;
 
@@ -145,11 +149,24 @@ typedef struct _BTMGR_DiscoveredDevicesList_t {
     BTMGR_DiscoveredDevices_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
 } BTMGR_DiscoveredDevicesList_t;
 
+typedef struct _BTMGR_ExternalDevice_t {
+    BTMgrDeviceHandle m_deviceHandle;
+    BTMGR_DeviceType_t m_deviceType;
+    char m_name [BTMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
+    BTMGR_DeviceServiceList_t m_serviceInfo;
+    unsigned short m_vendorID;
+    unsigned char m_isLowEnergyDevice;
+    char m_externalDevicePIN[BTMGR_NAME_LEN_MAX];
+} BTMGR_ExternalDevice_t;
+
 typedef struct _BTMGR_EventMessage_t {
     unsigned char m_adapterIndex;
     BTMGR_Events_t m_eventType;
     union {
-        BTMGR_DiscoveredDevicesList_t m_discoveredDevices;
+        BTMGR_DiscoveredDevices_t m_discoveredDevice;
+        BTMGR_ExternalDevice_t m_externalDevice;
+        unsigned short m_numOfDevices;
     };
 } BTMGR_EventMessage_t;
 
