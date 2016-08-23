@@ -1,5 +1,6 @@
 #include "btmgr_priv.h"
 #include "btmgr_iarm_interface.h"
+#include <sys/types.h>
 #include <unistd.h>
 
 #ifdef BTMGR_ENABLE_IARM_INTERFACE
@@ -17,6 +18,7 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
 BTMGR_Result_t BTMGR_Init()
 {
     const char* pDebugConfig = NULL;
+    char processName[256] = "";
 
     if (!isBTMGR_Inited)
     {
@@ -30,7 +32,8 @@ BTMGR_Result_t BTMGR_Init()
 
         rdk_logger_init(pDebugConfig);
         
-        IARM_Bus_Init("BTMgr-User");
+        sprintf (processName, "BTMgr-User-%u", getpid());
+        IARM_Bus_Init((const char*) &processName);
         IARM_Bus_Connect();
 
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, _btmgr_deviceCallback);
@@ -599,7 +602,7 @@ BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback)
     return rc;
 }
 
-BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_StreamOut_Type_t streamOutPref)
+BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t streamOutPref)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -690,6 +693,36 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
     return rc;
 }
 
+BTMGR_Result_t BTMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTMGR_StreamOut_Type_t type)
+{
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_IARMStreamingType_t streamingType;
+
+    if (BTMGR_ADAPTER_COUNT_MAX < index_of_adapter)
+    {
+        rc = BTMGR_RESULT_INVALID_INPUT;
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+    }
+    else
+    {
+        streamingType.m_adapterIndex = index_of_adapter;
+        streamingType.m_audioOutType = type;
+
+        retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAudioStreamOutType", (void *)&streamingType, sizeof(streamingType));
+        if (IARM_RESULT_SUCCESS == retCode)
+        {
+            BTMGRLOG_INFO ("BTMGR_SetAudioStreamingOutType: Success\n");
+        }
+        else
+        {
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
+            BTMGRLOG_ERROR ("BTMGR_SetAudioStreamingOutType: Failed; RetCode = %d\n", retCode);
+        }
+    }
+    return rc;
+}
+
 BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
@@ -714,7 +747,6 @@ BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter)
         }
     }
     return rc;
-
 }
 
 const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type)

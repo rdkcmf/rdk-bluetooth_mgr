@@ -1291,7 +1291,7 @@ BTMGR_Result_t BTMGR_DeInit(void)
     return rc;
 }
 
-BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_StreamOut_Type_t streamOutPref)
+BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t streamOutPref)
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     enBTRCoreRet halrc = enBTRCoreSuccess;
@@ -1452,6 +1452,14 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
         BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Returned status Successfully\n");
     }
 
+    return rc;
+}
+
+BTMGR_Result_t BTMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTMGR_StreamOut_Type_t type)
+{
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+
+    BTMGRLOG_ERROR ("%s : Secondary audio support is not implemented yet. Always primary audio is played for now\n", __FUNCTION__);
     return rc;
 }
 

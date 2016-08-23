@@ -73,7 +73,7 @@ typedef struct _BTMGR_IARMConnectedDevices_t{
 typedef struct _BTMGR_IARMStreaming_t {
     unsigned char m_adapterIndex;
     BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_StreamOut_Type_t m_audioPref;
+    BTMGR_DeviceConnect_Type_t m_audioPref;
 } BTMGR_IARMStreaming_t;
 
 typedef struct _BTMGR_IARMStreamingStatus_t {
@@ -81,6 +81,10 @@ typedef struct _BTMGR_IARMStreamingStatus_t {
     unsigned char m_streamingStatus;
 } BTMGR_IARMStreamingStatus_t;
 
+typedef struct _BTMGR_IARMStreamingType_t {
+    unsigned char m_adapterIndex;
+    BTMGR_StreamOut_Type_t m_audioOutType;
+} BTMGR_IARMStreamingType_t;
 
 void btmgr_BeginIARMMode();
 void btmgr_TermIARMMode();

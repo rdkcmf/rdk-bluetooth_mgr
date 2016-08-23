@@ -1,5 +1,9 @@
 #ifndef __BTMGR_H__
 #define __BTMGR_H__
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #define BTMGR_NAME_LEN_MAX            64
 #define BTMGR_DEVICE_COUNT_MAX        32
@@ -201,14 +205,19 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
 
 BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback);
 
-BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_StreamOut_Type_t streamOutPref);
+BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs);
 BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
 BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
+BTMGR_Result_t BTMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTMGR_StreamOut_Type_t type);
 
 BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter);
 BTMGR_Result_t BTMGR_DeInit(void);
 
 
 const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __BTMGR_H__ */

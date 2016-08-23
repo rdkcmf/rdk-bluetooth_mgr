@@ -61,6 +61,13 @@ void getName (char* mychoice)
         *tmp = '\0';
 }
 
+void eventCallback (BTMGR_EventMessage_t event)
+{
+    printf ("@@@@@@@@ %s ::::  Event ID %d @@@@@@@@\n", __FUNCTION__, event.m_eventType);
+    return;
+}
+
+
 int main()
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
@@ -75,6 +82,8 @@ int main()
         printf ("Failed to init BTMgr.. Quiting.. \n");
         loop = 0;
     }
+
+    BTMGR_RegisterEventCallback (eventCallback);
 
     while(loop)
     {
@@ -148,7 +157,7 @@ int main()
                     printf ("Please set the timeout for the discoverable \t");
                     power_status = (unsigned char) getUserSelection();
 
-                    rc = BTMGR_SetAdapterDiscoverable(0, 1, power_status);
+                    rc = BTMGR_SetAdapterDiscoverable(0, power_status, 0);
                     if (BTMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -318,14 +327,14 @@ int main()
                 break;
             case 17:
                 {
-                    BTMGR_StreamOut_Type_t stream_pref;
+                    BTMGR_DeviceConnect_Type_t stream_pref;
 
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device that you want to start play\t: ");
                     handle = getDeviceSelection();
 
                     printf ("Please set the Streaming Pref \t");
-                    stream_pref = (BTMGR_StreamOut_Type_t) getUserSelection();
+                    stream_pref = (BTMGR_DeviceConnect_Type_t) getUserSelection();
 
 
                     rc = BTMGR_StartAudioStreamingOut(0, handle, stream_pref);

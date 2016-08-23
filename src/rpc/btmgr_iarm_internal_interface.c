@@ -704,6 +704,43 @@ static IARM_Result_t _IsAudioStreaming(void *arg)
     return retCode;
 }
 
+static IARM_Result_t _SetAudioStreamOutType(void *arg)
+{
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTMGR_IARMStreamingType_t *pStartStream =  (BTMGR_IARMStreamingType_t*) arg;
+
+    BTMGRLOG_DEBUG ("Entering %s\n", __FUNCTION__);
+    if (gIsBTMGR_Internal_Inited)
+    {
+        if (pStartStream)
+        {
+            rc = BTMGR_SetAudioStreamingOutType(pStartStream->m_adapterIndex, pStartStream->m_audioOutType);
+            if (BTMGR_RESULT_SUCCESS == rc)
+            {
+                BTMGRLOG_INFO ("_SetAudioStreamOutType: Success\n");
+            }
+            else
+            {
+                retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+                BTMGRLOG_ERROR ("_SetAudioStreamOutType: Failed; RetCode = %d\n", rc);
+            }
+        }
+        else
+        {
+            retCode = IARM_RESULT_INVALID_PARAM;
+            BTMGRLOG_ERROR ("_SetAudioStreamOutType: Failed; RetCode = %d\n", retCode);
+        }
+    }
+    else
+    {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+    }
+
+    return retCode;
+}
+
 static IARM_Result_t _ResetAdapter(void *arg)
 {
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -825,6 +862,7 @@ void btmgr_BeginIARMMode()
         IARM_Bus_RegisterCall("StartAudioStreaming", _StartAudioStreaming);
         IARM_Bus_RegisterCall("StopAudioStreaming", _StopAudioStreaming);
         IARM_Bus_RegisterCall("IsAudioStreaming", _IsAudioStreaming);
+        IARM_Bus_RegisterCall("SetAudioStreamOutType", _SetAudioStreamOutType);
         IARM_Bus_RegisterCall("DeInit", _DeInit);
         IARM_Bus_RegisterCall("ResetAdapter", _ResetAdapter);
 
