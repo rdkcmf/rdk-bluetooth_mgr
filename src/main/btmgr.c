@@ -228,7 +228,7 @@ void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevices devicefound)
     return;
 }
 
-void btmgr_DeviceStatusCallback (stBTRCoreDevStateCB* p_StatusCB)
+void btmgr_DeviceStatusCallback (stBTRCoreDevStateCBInfo* p_StatusCB,  void* apvUserData)
 {
     return;
 }
@@ -316,10 +316,10 @@ BTMGR_Result_t BTMGR_Init()
             }
 
             /* Register for callback to get the status of connected Devices */
-            BTRCore_RegisterStatusCallback(gBTRCoreHandle, btmgr_DeviceStatusCallback);
+            BTRCore_RegisterStatusCallback(gBTRCoreHandle, btmgr_DeviceStatusCallback, NULL);
 
             /* Register for callback to get the Discovered Devices */
-            BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btmgr_DeviceDiscoveryCallback);
+            BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btmgr_DeviceDiscoveryCallback, NULL);
         }
     }
     else

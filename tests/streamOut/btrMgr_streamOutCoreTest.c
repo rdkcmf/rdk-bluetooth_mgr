@@ -17,30 +17,53 @@
 
 #include "btrMgr_streamOut.h"
 #include "btrMgr_streamIn.h"
-/*TODO Consolidate these functions to a streamInOut test application
-*/
+
 #include "rmfAudioCapture.h"
 
 typedef struct appDataStruct{
-    RMF_AudioCaptureHandle hAudCap;
-    tBTRMgrSoHdl hBTRMgrSoHdl;
-    tBTRMgrSiHdl hBTRMgrSiHdl;
-    unsigned long bytesWritten;
-    unsigned samplerate;
-    unsigned channels;
-    unsigned bitsPerSample;
+    tBTRCoreHandle          hBTRCore;
+    RMF_AudioCaptureHandle  hAudCap;
+    tBTRMgrSoHdl            hBTRMgrSoHdl;
+    tBTRMgrSiHdl            hBTRMgrSiHdl;
+    unsigned long           bytesWritten;
+    unsigned int            samplerate;
+    unsigned int            channels;
+    unsigned int            bitsPerSample;
+    int                     iDataPath;
+    int                     iDataReadMTU;
+    int                     iDataWriteMTU;
 } appDataStruct;
-
-
-//test func
-void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 
 
 #define NO_ADAPTER 1234
 
-int streamOutTestMainAlternate (int argc, char* argv[]); 
-int streamOutLiveTestMainAlternate (int argc, char* argv[]);
-int streamInLiveTestMainAlternate (int fd_number, int MTU_size);
+
+//test func
+void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
+static int streamOutTestMainAlternate (int argc, char* argv[]);
+static int streamOutLiveTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
+static int streamInLiveTestMainAlternate (int fd_number, int MTU_size);
+static int acceptConnection = 0;
+
+static int connectedDeviceIndex=0;
+
+
+static void
+GetTransport (
+    appDataStruct* pstAppData
+) {
+    BTRCore_AcquireDeviceDataPath ( pstAppData->hBTRCore, 
+                                    connectedDeviceIndex,
+                                    enBTRCoreMobileAudioIn,
+                                    &pstAppData->iDataPath,
+                                    &pstAppData->iDataReadMTU,
+                                    &pstAppData->iDataWriteMTU);
+
+    printf("Device Data Path = %d \n",      pstAppData->iDataPath);
+    printf("Device Data Read MTU = %d \n",  pstAppData->iDataReadMTU);
+    printf("Device Data Write MTU= %d \n",  pstAppData->iDataWriteMTU);
+}
+
 
 static int
 getChoice (
@@ -65,10 +88,11 @@ getEncodedSBCFile (
 }
 
 
-static void sendSBCFileOverBT (
-    char* fileLocation,
-    int fd,
-    int mtuSize
+static void 
+sendSBCFileOverBT (
+    char*   fileLocation,
+    int     fd,
+    int     mtuSize
 ) {
     FILE* sbcFilePtr = fopen(fileLocation, "rb");
     int    bytesLeft = 0;
@@ -118,11 +142,44 @@ static void sendSBCFileOverBT (
 }
 
 
+int
+cb_connection_authentication (
+    stBTRCoreConnAuthCBInfo* apstConnAuthCbInfo
+) {
+#if 0
+    printf("\n\nConnection attempt by: %s\n",path);
+#endif
+    printf("Choose 32 to accept the connection or 33 to deny the connection\n\n");
+    do {
+        usleep(20000);
+    } while (acceptConnection == 0);
+
+    printf("you picked %d\n", acceptConnection);
+    if (acceptConnection == 1) {
+        printf("connection accepted\n");
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 1;
+    }
+    else {
+        printf("connection denied\n");
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 0;
+    }
+}
+
+
 void
 cb_unsolicited_bluetooth_status (
-    stBTRCoreDevStateCB* p_StatusCB
+    stBTRCoreDevStateCBInfo* p_StatusCB,
+    void*                    apvUserData
 ) {
     printf("device status change: %s\n",p_StatusCB->cDeviceType);
+    printf("app level cb device status change: new state is %s\n",p_StatusCB->cDeviceCurrState);
+    if ((strcmp(p_StatusCB->cDevicePrevState,"connected") == 0) && (strcmp(p_StatusCB->cDeviceCurrState,"playing") == 0)) {
+        printf("transition to playing, get the transport info...\n");
+        GetTransport((appDataStruct*)apvUserData);
+    }
+
     return;
 }
 
@@ -157,6 +214,12 @@ printMenu (
     printf("24. Send WAV to BT Headset/Speakers - btrMgrStreamOutTest\n");
     printf("25. Send Live Audio to BT Headset/Speakers\n");
     printf("26. Send audio data from device to settop with BT\n");
+    printf("30. install agent for accepting connections NoInputNoOutput\n");
+    printf("31. install agent for accepting connections DisplayYesNo\n");
+    printf("32. Accept a connection request\n");
+    printf("33. Deny a connection request\n");
+    printf("34. Register connection callback to allow accepting or rejection of connections.\n");
+    printf("35. Uninstall agent - allows device-initiated pairing\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -172,7 +235,7 @@ main (
     int devnum;
     int default_adapter = NO_ADAPTER;
 	stBTRCoreGetAdapters    GetAdapters;
-	stBTRCoreAdapter     GetAdapter;
+    stBTRCoreAdapter        lstBTRCoreAdapter;
 	stBTRCoreStartDiscovery StartDiscovery;
 
     char  default_path[128];
@@ -182,12 +245,13 @@ main (
     int bfound;
     int i;
 
-    int liDataPath = 0;
-    int lidataReadMTU = 0;
-    int lidataWriteMTU = 0;
     char *sbcEncodedFileName = NULL;
     
     char myService[16];//for testing findService API
+
+    appDataStruct stAppData;
+
+    memset(&stAppData, 0, sizeof(stAppData));
 
     snprintf(default_path, sizeof(default_path), "/org/bluez/agent_%d", getpid());
 
@@ -198,9 +262,9 @@ main (
     BTRCore_Init(&lhBTRCore);
 
     //Init the adapter
-    GetAdapter.bFirstAvailable = TRUE;
-    if (enBTRCoreSuccess ==	BTRCore_GetAdapter(lhBTRCore, &GetAdapter)) {
-        default_adapter = GetAdapter.adapter_number;
+    lstBTRCoreAdapter.bFirstAvailable = TRUE;
+    if (enBTRCoreSuccess ==	BTRCore_GetAdapter(lhBTRCore, &lstBTRCoreAdapter)) {
+        default_adapter = lstBTRCoreAdapter.adapter_number;
         BTRCore_LOG("GetAdapter Returns Adapter number %d\n",default_adapter);
     }
     else {
@@ -208,8 +272,9 @@ main (
         return -1;
     }
 
+    stAppData.hBTRCore = lhBTRCore;
     //register callback for unsolicted events, such as powering off a bluetooth device
-    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status);
+    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
 
     //display a menu of choices
     printMenu();
@@ -220,7 +285,7 @@ main (
         getchar();//suck up a newline?
         switch (choice) {
         case 1: 
-            printf("Adapter is %s\n", GetAdapter.pcAdapterPath);
+            printf("Adapter is %s\n", lstBTRCoreAdapter.pcAdapterPath);
             break;
         case 2: 
             if (default_adapter != NO_ADAPTER) {
@@ -246,7 +311,7 @@ main (
             {
                 stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
                 printf("Show Found Devices\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
             }
             break;
@@ -254,11 +319,11 @@ main (
             {
                 stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
                 printf("Pick a Device to Pair...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
                 devnum = getChoice();
 
-                printf(" adapter_path %s\n", GetAdapter.pcAdapterPath);
+                printf(" adapter_path %s\n", lstBTRCoreAdapter.pcAdapterPath);
                 printf(" agent_path %s\n",agent_path);
                 if ( BTRCore_PairDevice(lhBTRCore, devnum) == enBTRCoreSuccess)
                     printf("device pairing successful.\n");
@@ -271,7 +336,7 @@ main (
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("UnPair/Forget a device\n");
                 printf("Pick a Device to Remove...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_UnPairDevice(lhBTRCore, devnum);
@@ -281,7 +346,7 @@ main (
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Show Known Devices...using BTRCore_GetListOfPairedDevices\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
             }
             break;
@@ -289,10 +354,11 @@ main (
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Pick a Device to Connect...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
                 printf("device connect process completed.\n");
             }
             break;
@@ -300,7 +366,7 @@ main (
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Pick a Device to Disconnect...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
@@ -311,10 +377,11 @@ main (
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Pick a Device to Connect...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
                 printf("device connect process completed.\n");
             }
             break;
@@ -322,7 +389,7 @@ main (
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Pick a Device to Disonnect...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
@@ -335,7 +402,7 @@ main (
             BTRCore_GetAdapters(lhBTRCore, &GetAdapters);
             if ( GetAdapters.number_of_adapters > 1) {
                 printf("There are %d Bluetooth adapters\n",GetAdapters.number_of_adapters);
-                printf("current adatper is %s\n", GetAdapter.pcAdapterPath);
+                printf("current adatper is %s\n", lstBTRCoreAdapter.pcAdapterPath);
                 printf("Which adapter would you like to use (0 = default)?\n");
                 myadapter = getChoice();
 
@@ -344,26 +411,26 @@ main (
             //END adapter selection
             break;
         case 12:
-            GetAdapter.adapter_number = myadapter;
-            printf("Enabling adapter %d\n",GetAdapter.adapter_number);
-            BTRCore_EnableAdapter(lhBTRCore, &GetAdapter);
+            lstBTRCoreAdapter.adapter_number = myadapter;
+            printf("Enabling adapter %d\n",lstBTRCoreAdapter.adapter_number);
+            BTRCore_EnableAdapter(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 13:
-            GetAdapter.adapter_number = myadapter;
-            printf("Disabling adapter %d\n",GetAdapter.adapter_number);
-            BTRCore_DisableAdapter(lhBTRCore, &GetAdapter);
+            lstBTRCoreAdapter.adapter_number = myadapter;
+            printf("Disabling adapter %d\n",lstBTRCoreAdapter.adapter_number);
+            BTRCore_DisableAdapter(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 14:
             printf("Enter discoverable timeout in seconds.  Zero seconds = FOREVER \n");
-            GetAdapter.DiscoverableTimeout = getChoice();
-            printf("setting DiscoverableTimeout to %d\n",GetAdapter.DiscoverableTimeout);
-            BTRCore_SetDiscoverableTimeout(lhBTRCore, &GetAdapter);
+            lstBTRCoreAdapter.DiscoverableTimeout = getChoice();
+            printf("setting DiscoverableTimeout to %d\n",lstBTRCoreAdapter.DiscoverableTimeout);
+            BTRCore_SetDiscoverableTimeout(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 15:
             printf("Set discoverable.  Zero = Not Discoverable, One = Discoverable \n");
-            GetAdapter.discoverable = getChoice();
-            printf("setting discoverable to %d\n",GetAdapter.discoverable);
-            BTRCore_SetDiscoverable(lhBTRCore, &GetAdapter);
+            lstBTRCoreAdapter.discoverable = getChoice();
+            printf("setting discoverable to %d\n",lstBTRCoreAdapter.discoverable);
+            BTRCore_SetDiscoverable(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 16:
             {
@@ -371,7 +438,7 @@ main (
                 printf("Set friendly name (up to 64 characters): \n");
                 fgets(lcAdapterName, 63 , stdin);
                 printf("setting name to %s\n", lcAdapterName);
-                BTRCore_SetAdapterDeviceName(lhBTRCore, &GetAdapter, lcAdapterName);
+                BTRCore_SetAdapterDeviceName(lhBTRCore, &lstBTRCoreAdapter, lcAdapterName);
             }
             break;
         case 17:
@@ -379,7 +446,7 @@ main (
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Check for Audio Sink capability\n");
                 printf("Pick a Device to Check for Audio Sink...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 if (BTRCore_FindService(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
@@ -400,7 +467,7 @@ main (
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Find a Service\n");
                 printf("Pick a Device to Check for Services...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
@@ -429,7 +496,7 @@ main (
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Find a Service and get details\n");
                 printf("Pick a Device to Check for Services...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
@@ -464,7 +531,7 @@ main (
             {
                 stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
                 printf("Pick a Device to Find (see if it is already paired)...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
                 devnum = getChoice();
                 if ( BTRCore_FindDevice(lhBTRCore, devnum) == enBTRCoreSuccess)
@@ -477,31 +544,35 @@ main (
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Pick a Device to Get Data tranport parameters...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
-                printf("Device Data Path = %d \n", liDataPath);
-                printf("Device Data Read MTU = %d \n", lidataReadMTU);
-                printf("Device Data Write MTU= %d \n", lidataWriteMTU);
+                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
+                printf("Device Data Path = %d \n", stAppData.iDataPath);
+                printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
+                printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
             }
             break;
         case 22:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Pick a Device to ReleaseData tranport...\n");
-                GetAdapter.adapter_number = myadapter;
+                lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ReleaseDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers);
+
+                stAppData.iDataPath      = 0;
+                stAppData.iDataReadMTU   = 0;
+                stAppData.iDataWriteMTU  = 0;
             }
             break;
         case 23:
             printf("Enter Encoded SBC file location to send to BT Headset/Speakers...\n");
-            sbcEncodedFileName = getEncodedSBCFile ();
+            sbcEncodedFileName = getEncodedSBCFile();
             if (sbcEncodedFileName) {
-                printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, liDataPath);
-                sendSBCFileOverBT(sbcEncodedFileName, liDataPath, lidataWriteMTU);
+                printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, stAppData.iDataPath);
+                sendSBCFileOverBT(sbcEncodedFileName, stAppData.iDataPath, stAppData.iDataWriteMTU);
                 free(sbcEncodedFileName);
                 sbcEncodedFileName = NULL;
             }
@@ -510,38 +581,61 @@ main (
             }
             break;
         case 24:
-            printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", liDataPath, lidataWriteMTU);
+            printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
             {
                 char cliDataPath[4] = {'\0'};
-                char clidataWriteMTU[8] = {'\0'};
-                snprintf(cliDataPath, 4, "%d", liDataPath);
-                snprintf(clidataWriteMTU, 8, "%d", lidataWriteMTU);
+                char cliDataWriteMTU[8] = {'\0'};
+                snprintf(cliDataPath, 4, "%d", stAppData.iDataPath);
+                snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
                 {
-                    char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, clidataWriteMTU};
+                    char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
                     streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs);
                 }
             }
             break;
         case 25:
-            printf("Sending Live to BT Dev FD = %d MTU = %d\n", liDataPath, lidataWriteMTU);
+            printf("Sending Live to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
             {
                 char cliDataPath[4] = {'\0'};
-                char clidataWriteMTU[8] = {'\0'};
-                snprintf(cliDataPath, 4, "%d", liDataPath);
-                snprintf(clidataWriteMTU, 8, "%d", lidataWriteMTU);
+                char cliDataWriteMTU[8] = {'\0'};
+                snprintf(cliDataPath, 4, "%d", stAppData.iDataPath);
+                snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
                 {
-                    char *streamOutLiveTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, clidataWriteMTU};
-                    streamOutLiveTestMainAlternate(5, streamOutLiveTestMainAlternateArgs);
+                    char *streamOutLiveTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
+                    streamOutLiveTestMainAlternate(5, streamOutLiveTestMainAlternateArgs, &stAppData);
                 }
             }
             break;
       case 26:
-             printf("Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", liDataPath, lidataReadMTU);
-             streamInLiveTestMainAlternate(liDataPath, lidataReadMTU);
+             printf("Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
+             streamInLiveTestMainAlternate(stAppData.iDataPath, stAppData.iDataReadMTU);
              break;
-
+       case 30:
+            printf("install agent - NoInputNoOutput\n");
+            BTRCore_RegisterAgent(lhBTRCore, 0);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
+            break;
+          case 31:
+            printf("install agent - DisplayYesNo\n");
+            BTRCore_RegisterAgent(lhBTRCore, 1);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
+            break;
+       case 32:
+            printf("accept the connection\n");
+            acceptConnection = 1;
+            break;
+        case 33:
+            printf("deny the connection\n");
+            acceptConnection = 2;//anything but 1 means do not connect
+            break;
+        case 34:
+            printf("register authentication CB\n");
+            BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            break;
+         case 35:
+            printf("uninstall agent - DisplayYesNo\n");
+            BTRCore_UnregisterAgent(lhBTRCore);
+            break;
         case 88:
-            test_func(lhBTRCore, &GetAdapter); 
+            test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 99: 
             printf("Quitting program!\n");
@@ -827,7 +921,8 @@ doDataCapture (
 
 
 
-int streamOutTestMainAlternate (
+static int 
+streamOutTestMainAlternate (
     int     argc,
     char*   argv[]
 ) {
@@ -970,6 +1065,7 @@ int streamOutTestMainAlternate (
     return 0;
 }
 
+
 rmf_Error 
 cbBufferReady (
     void*        context, 
@@ -1004,10 +1100,11 @@ cbBufferReady (
 }
 
 
-int 
+static int 
 streamOutLiveTestMainAlternate (
-    int     argc, 
-    char*   argv[]
+    int             argc, 
+    char*           argv[],
+    appDataStruct*  pstAppData
 )  {
 
     int     inBytesToEncode = IN_BUF_SIZE;
@@ -1028,33 +1125,31 @@ streamOutLiveTestMainAlternate (
 
 
     RMF_AudioCapture_Settings settings;
-    appDataStruct appData;
-
-    memset(&appData, 0, sizeof(appData));
 
 
-    BTRMgr_SO_Init(&appData.hBTRMgrSoHdl);
+
+    BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl));
 
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
-    appData.bitsPerSample = 16;
-    appData.samplerate = 48000;
-    appData.channels = 2;
+    pstAppData->bitsPerSample = 16;
+    pstAppData->samplerate = 48000;
+    pstAppData->channels = 2;
 
-    if (RMF_AudioCapture_Open(&appData.hAudCap)) {
+    if (RMF_AudioCapture_Open(&(pstAppData->hAudCap))) {
         goto err_open;
     }
 
     RMF_AudioCapture_GetDefaultSettings(&settings);
     settings.cbBufferReady      = cbBufferReady;
-    settings.cbBufferReadyParm  = &appData;
+    settings.cbBufferReadyParm  = pstAppData;
 
     settings.fifoSize = 16 * inBytesToEncode;
     settings.threshold= inBytesToEncode;
 
 
-    BTRMgr_SO_Start(appData.hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
+    BTRMgr_SO_Start(pstAppData->hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
 
-    if (RMF_AudioCapture_Start(appData.hAudCap, &settings)) {
+    if (RMF_AudioCapture_Start(pstAppData->hAudCap, &settings)) {
         goto err_open;
     }
 
@@ -1062,14 +1157,14 @@ streamOutLiveTestMainAlternate (
     printf("Press \"Enter\" to stop Audio Capture \n");
     getchar();
 
-    RMF_AudioCapture_Stop(appData.hAudCap);
+    RMF_AudioCapture_Stop(pstAppData->hAudCap);
 
-    BTRMgr_SO_SendEOS(appData.hBTRMgrSoHdl);
-    BTRMgr_SO_Stop(appData.hBTRMgrSoHdl);
+    BTRMgr_SO_SendEOS(pstAppData->hBTRMgrSoHdl);
+    BTRMgr_SO_Stop(pstAppData->hBTRMgrSoHdl);
 
 
-    RMF_AudioCapture_Close(appData.hAudCap);
-    BTRMgr_SO_DeInit(appData.hBTRMgrSoHdl);
+    RMF_AudioCapture_Close(pstAppData->hAudCap);
+    BTRMgr_SO_DeInit(pstAppData->hBTRMgrSoHdl);
 
 
 err_open:
@@ -1077,9 +1172,11 @@ err_open:
 }
 
 
-int
-streamInLiveTestMainAlternate (int fd_number, int MTU_size)
-   {
+static int
+streamInLiveTestMainAlternate (
+    int fd_number,
+    int MTU_size
+) {
 
     int     inBytesToEncode = IN_BUF_SIZE;
     int     outFileFd       = 0;
