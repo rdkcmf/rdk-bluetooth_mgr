@@ -189,17 +189,15 @@ BTMGR_DeviceType_t btmgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type
 BTMGR_DeviceType_t btmgr_MapSignalStrengthToRSSI (int signalStrength)
 {
     BTMGR_RSSIValue_t rssi = BTMGR_RSSI_NONE;
-    if (signalStrength >= 0)
-    {
-        if (signalStrength >= BTMGR_SIGNAL_GOOD)
-            rssi = BTMGR_RSSI_EXCELLENT;
-        else if (signalStrength >= BTMGR_SIGNAL_FAIR)
-            rssi = BTMGR_RSSI_GOOD;
-        else if (signalStrength >= BTMGR_SIGNAL_POOR)
-            rssi = BTMGR_RSSI_FAIR;
-        else
-            rssi = BTMGR_RSSI_POOR;
-    }
+
+    if (signalStrength >= BTMGR_SIGNAL_GOOD)
+        rssi = BTMGR_RSSI_EXCELLENT;
+    else if (signalStrength >= BTMGR_SIGNAL_FAIR)
+        rssi = BTMGR_RSSI_GOOD;
+    else if (signalStrength >= BTMGR_SIGNAL_POOR)
+        rssi = BTMGR_RSSI_FAIR;
+    else
+        rssi = BTMGR_RSSI_POOR;
 
     return rssi;
 }
@@ -778,6 +776,10 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
                     ptr->m_rssi = btmgr_MapSignalStrengthToRSSI (listOfDevices.devices[i].RSSI);
                     ptr->m_deviceHandle = listOfDevices.devices[i].deviceId;
                     ptr->m_deviceType = btmgr_MapDeviceTypeFromCore(listOfDevices.devices[i].device_type);
+                    ptr->m_isPairedDevice = btmgr_IsThisPairedDevice (listOfDevices.devices[i].deviceId);
+
+                    if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == ptr->m_deviceHandle))
+                        ptr->m_isConnected = 1;
                 }
             }
             else
@@ -946,7 +948,7 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
     }
     else
     {
-        /* Update the Paired Device List */
+        /* Get the latest Paired Device List; This is added as the developer could add a device thro test application and try unpair thro' UI */
         BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
 
         if (1 == btmgr_IsThisPairedDevice(handle))
@@ -972,6 +974,9 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
                     /*  Post a callback */
                     m_eventCallbackFunction (newEvent);
                 }
+
+                /* Update the Paired Device List */
+                BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
             }
         }
         else
