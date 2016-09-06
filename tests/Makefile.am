@@ -1,4 +1,4 @@
-SUBDIRS = streamOut
+SUBDIRS = streamInOut
 INCLUDE_FILES =
 
 

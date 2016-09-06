@@ -53,12 +53,12 @@
 typedef struct _stBTRMgrSIGst {
     void*        pPipeline;
     void*        pSrc;
-    void*        pSink;
+    void*        pSrcCapsFilter;
     void*        pAudioDec;
     void*        pAudioParse;
-    void*        pfdCapsFilter;
     void*        psbcdecCapsFilter;
     void*        pRtpAudioDePay;
+    void*        pSink;
     void*        pLoop;
     void*        pLoopThread;
     guint        busWId;
@@ -147,11 +147,11 @@ eBTRMgrSIGstRet
 BTRMgr_SI_GstInit (
     tBTRMgrSiGstHdl* phBTRMgrSiGstHdl
 ) {
-    GstElement*     appsrc;
-    GstElement*     auddec;
+    GstElement*     fdsrc;
     GstElement*     rtpcapsfilter;
     GstElement*     rtpauddepay;
     GstElement*     audparse;
+    GstElement*     auddec;
     GstElement*     fdsink;
     GstElement*     pipeline;
     stBTRMgrSIGst*  pstBtrMgrSiGst = NULL;
@@ -172,23 +172,25 @@ BTRMgr_SI_GstInit (
     gst_init (NULL, NULL);
 
     /* Create elements */
-    appsrc   = gst_element_factory_make ("fdsrc", "btmgr-si-fdsrc");
+    fdsrc           = gst_element_factory_make ("fdsrc",        "btmgr-si-fdsrc");
 
-    /*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
-    auddec      = gst_element_factory_make ("sbcdec", "btmgr-si-sbcdec");
-    rtpcapsfilter = gst_element_factory_make ("capsfilter", "btmgr-si-rtpcapsfilter");
-    rtpauddepay   = gst_element_factory_make ("rtpsbcdepay", "btmgr-si-rtpsbcdepay");
-    audparse    = gst_element_factory_make ("sbcparse", "btmgr-si-rtpsbcparse");
-// make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
-    fdsink      = gst_element_factory_make ("brcmpcmsink", "btmgr-si-pcmsink");
+    /*TODO: Select the Audio Codec and RTP Audio DePayloader based on input format*/
+    rtpcapsfilter   = gst_element_factory_make ("capsfilter",   "btmgr-si-rtpcapsfilter");
+    rtpauddepay     = gst_element_factory_make ("rtpsbcdepay",  "btmgr-si-rtpsbcdepay");
+    audparse        = gst_element_factory_make ("sbcparse",     "btmgr-si-rtpsbcparse");
+    auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
+
+    // make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
+    fdsink          = gst_element_factory_make ("brcmpcmsink",  "btmgr-si-pcmsink");
+
     /* Create an event loop and feed gstreamer bus mesages to it */
     loop = g_main_loop_new (NULL, FALSE);
 
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-si-pipeline");
 
-        if (!appsrc || !auddec || !rtpcapsfilter || !rtpauddepay || !audparse || !fdsink || !loop || !pipeline) {
-            g_print ("%s:%d:%s - Gstreamer plugin missing for streamIn\n", __FILE__, __LINE__, __FUNCTION__);
+    if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !fdsink || !loop || !pipeline) {
+        g_print ("%s:%d:%s - Gstreamer plugin missing for streamIn\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
 
@@ -197,8 +199,8 @@ BTRMgr_SI_GstInit (
     g_object_unref (bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), appsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
-    gst_element_link_many (appsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
 
     mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_run_context", btrMgr_SI_g_main_loop_run_context, loop);
 
@@ -211,12 +213,12 @@ BTRMgr_SI_GstInit (
 
 
     pstBtrMgrSiGst->pPipeline       = (void*)pipeline;
-    pstBtrMgrSiGst->pSrc            = (void*)appsrc;
-    pstBtrMgrSiGst->pSink           = (void*)fdsink;
+    pstBtrMgrSiGst->pSrc            = (void*)fdsrc;
+    pstBtrMgrSiGst->pSrcCapsFilter   = (void*)rtpcapsfilter;
+    pstBtrMgrSiGst->pRtpAudioDePay  = (void*)rtpauddepay;
+    pstBtrMgrSiGst->pAudioParse     = (void*)audparse;
     pstBtrMgrSiGst->pAudioDec       = (void*)auddec;
-    pstBtrMgrSiGst->pfdCapsFilter   = (void*)rtpcapsfilter;
-    pstBtrMgrSiGst->pRtpAudioDePay    = (void*)rtpauddepay;
-    pstBtrMgrSiGst->pAudioParse    = (void*)audparse;
+    pstBtrMgrSiGst->pSink           = (void*)fdsink;
     pstBtrMgrSiGst->pLoop           = (void*)loop;
     pstBtrMgrSiGst->pLoopThread     = (void*)mainLoopThread;
     pstBtrMgrSiGst->busWId          = busWatchId;
@@ -241,13 +243,13 @@ BTRMgr_SI_GstDeInit (
     }
 
     GstElement* pipeline        = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc          = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* fdsrc           = (GstElement*)pstBtrMgrSiGst->pSrc;
     GMainLoop*  loop            = (GMainLoop*)pstBtrMgrSiGst->pLoop;
     GThread*    mainLoopThread  = (GThread*)pstBtrMgrSiGst->pLoopThread;
     guint       busWatchId      = pstBtrMgrSiGst->busWId;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)loop;
     (void)busWatchId;
 
@@ -270,9 +272,9 @@ BTRMgr_SI_GstDeInit (
 eBTRMgrSIGstRet
 BTRMgr_SI_GstStart (
     tBTRMgrSiGstHdl hBTRMgrSiGstHdl,
-    int aiInBufMaxSize,
-    int aiBTDevFd,
-    int aiBTDevMTU
+    int             aiInBufMaxSize,
+    int             aiBTDevFd,
+    int             aiBTDevMTU
 ) {
     stBTRMgrSIGst* pstBtrMgrSiGst = (stBTRMgrSIGst*)hBTRMgrSiGstHdl;
 
@@ -281,17 +283,17 @@ BTRMgr_SI_GstStart (
         return eBTRMgrSIGstFailInArg;
     }
 
-    GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc      = (GstElement*)pstBtrMgrSiGst->pSrc;
-    GstElement* auddec      = (GstElement*)pstBtrMgrSiGst->pAudioDec;
-    GstElement* rtpcapsfilter = (GstElement*)pstBtrMgrSiGst->pfdCapsFilter;
+    GstElement* pipeline        = (GstElement*)pstBtrMgrSiGst->pPipeline;
+    GstElement* fdsrc           = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* rtpcapsfilter   = (GstElement*)pstBtrMgrSiGst->pSrcCapsFilter;
+    GstElement* auddec          = (GstElement*)pstBtrMgrSiGst->pAudioDec;
 
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
 
-    GstCaps* appsrcSrcCaps  = NULL;
+    GstCaps* fdsrcSrcCaps  = NULL;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)auddec;
     (void)busWatchId;
 
@@ -304,19 +306,20 @@ BTRMgr_SI_GstStart (
     pstBtrMgrSiGst->gstClkTStamp = 0;
     pstBtrMgrSiGst->inBufOffset  = 0;
 
-   appsrcSrcCaps = gst_caps_new_simple ("application/x-rtp",
+   fdsrcSrcCaps = gst_caps_new_simple ("application/x-rtp",
                                          "media", G_TYPE_STRING, "audio",
                                          "encoding-name", G_TYPE_STRING, "SBC",
                                          "clock-rate", G_TYPE_INT, 48000,
                                          "payload", G_TYPE_INT, 96,
                                           NULL);
 
+    g_object_set (fdsrc, "fd",          aiBTDevFd,  NULL);
+    g_object_set (fdsrc, "blocksize",   aiBTDevMTU, NULL);
+    g_object_set (rtpcapsfilter, "caps",fdsrcSrcCaps, NULL);
 
-    g_object_set (rtpcapsfilter, "caps", appsrcSrcCaps, NULL);
-    g_object_set (appsrc, "blocksize", aiBTDevMTU, NULL);
-    g_object_set (appsrc, "fd", aiBTDevFd, NULL);
 
-    gst_caps_unref(appsrcSrcCaps);
+
+    gst_caps_unref(fdsrcSrcCaps);
 
     /* start play back and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
@@ -341,12 +344,12 @@ BTRMgr_SI_GstStop (
     }
 
     GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc      = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* fdsrc       = (GstElement*)pstBtrMgrSiGst->pSrc;
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSiGst->pLoop;
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)loop;
     (void)busWatchId;
 
@@ -376,12 +379,12 @@ BTRMgr_SI_GstPause (
     }
 
     GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc      = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* fdsrc       = (GstElement*)pstBtrMgrSiGst->pSrc;
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSiGst->pLoop;
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)loop;
     (void)busWatchId;
 
@@ -414,12 +417,12 @@ BTRMgr_SI_GstResume (
     }
 
     GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc      = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* fdsrc       = (GstElement*)pstBtrMgrSiGst->pSrc;
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSiGst->pLoop;
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)loop;
     (void)busWatchId;
 
@@ -454,12 +457,12 @@ BTRMgr_SI_GstSendBuffer (
     }
 
     GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc      = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* fdsrc       = (GstElement*)pstBtrMgrSiGst->pSrc;
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSiGst->pLoop;
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)loop;
     (void)busWatchId;
 
@@ -484,7 +487,7 @@ BTRMgr_SI_GstSendBuffer (
         pstBtrMgrSiGst->inBufOffset    += aiInBufSize;
         GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSiGst->inBufOffset - 1;
 
-        gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
+        gst_app_src_push_buffer (GST_APP_SRC (fdsrc), gstBuf);
 
         gst_buffer_unmap (gstBuf, &gstBufMap);
     }
@@ -505,17 +508,17 @@ BTRMgr_SI_GstSendEOS (
     }
 
     GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* appsrc      = (GstElement*)pstBtrMgrSiGst->pSrc;
+    GstElement* fdsrc       = (GstElement*)pstBtrMgrSiGst->pSrc;
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSiGst->pLoop;
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
 
     (void)pipeline;
-    (void)appsrc;
+    (void)fdsrc;
     (void)loop;
     (void)busWatchId;
 
     /* push EOS */
-    gst_app_src_end_of_stream (GST_APP_SRC (appsrc));
+    gst_element_send_event (pipeline, gst_event_new_eos ());
 
     return eBTRMgrSIGstSuccess;
 }

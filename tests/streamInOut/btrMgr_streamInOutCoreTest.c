@@ -1178,12 +1178,9 @@ streamInLiveTestMainAlternate (
     int MTU_size
 ) {
 
-    int     inBytesToEncode = IN_BUF_SIZE;
-    int     outFileFd       = 0;
-    int     outMTUSize      = OUT_MTU_SIZE;
-
-    outFileFd = fd_number;
-    outMTUSize  = MTU_size;
+    int     inBytesToEncode= IN_BUF_SIZE;
+    int     inFileFd       = fd_number;
+    int     inMTUSize      = MTU_size;
 
     appDataStruct appData;
 
@@ -1197,7 +1194,7 @@ streamInLiveTestMainAlternate (
     appData.channels = 2;
 
 
-    BTRMgr_SI_Start(appData.hBTRMgrSiHdl, inBytesToEncode, outFileFd, outMTUSize);
+    BTRMgr_SI_Start(appData.hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize);
 
     printf("Press \"Enter\" to stop Audio Input \n");
     getchar();

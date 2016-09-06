@@ -137,6 +137,6 @@ AC_CONFIG_FILES([Makefile
                  src/streamOut/Makefile
                  src/streamIn/Makefile
                  tests/Makefile
-                 tests/streamOut/Makefile])
+                 tests/streamInOut/Makefile])
 
 AC_OUTPUT
