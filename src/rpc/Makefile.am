@@ -9,4 +9,5 @@ lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btmgr_iarm_external_interface.c
 libBTMgr_la_includedir = $(includedir)
 libBTMgr_la_include_HEADERS = ${top_srcdir}/include/btmgr.h
+include_HEADERS = ${top_srcdir}/src/rpc/btmgr_iarm_interface.h
 endif
