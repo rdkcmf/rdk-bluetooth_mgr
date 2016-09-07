@@ -153,11 +153,15 @@ int main()
             case 6:
                 {
                     unsigned char power_status = 0;
+                    unsigned char timeout = 0;
 
-                    printf ("Please set the timeout for the discoverable \t");
+                    printf ("Please enter 1 or 0 to Make it Discoverable ON or OFF \t");
                     power_status = (unsigned char) getUserSelection();
 
-                    rc = BTMGR_SetAdapterDiscoverable(0, power_status, 0);
+                    printf ("Please set the timeout for the discoverable \t");
+                    timeout = (unsigned char) getUserSelection();
+
+                    rc = BTMGR_SetAdapterDiscoverable(0, power_status, timeout);
                     if (BTMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
