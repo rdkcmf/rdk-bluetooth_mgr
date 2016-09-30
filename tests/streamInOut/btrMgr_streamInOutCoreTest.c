@@ -43,8 +43,9 @@ void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 static int streamOutTestMainAlternate (int argc, char* argv[]);
 static int streamOutLiveTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamInLiveTestMainAlternate (int fd_number, int MTU_size);
-static int acceptConnection = 0;
 
+
+static int acceptConnection = 0;
 static int connectedDeviceIndex=0;
 
 
@@ -144,12 +145,17 @@ sendSBCFileOverBT (
 
 int
 cb_connection_authentication (
-    stBTRCoreConnAuthCBInfo* apstConnAuthCbInfo
+    stBTRCoreConnCBInfo* apstConnCbInfo
 ) {
 #if 0
     printf("\n\nConnection attempt by: %s\n",path);
 #endif
-    printf("Choose 32 to accept the connection or 33 to deny the connection\n\n");
+    printf("Choose 35 to accept the connection/verify pin-passcode or 36 to deny the connection/discard pin-passcode\n\n");
+
+    if (apstConnCbInfo->ui32devPassKey) {
+        printf("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
+    }    
+
     do {
         usleep(20000);
     } while (acceptConnection == 0);
@@ -216,10 +222,12 @@ printMenu (
     printf("26. Send audio data from device to settop with BT\n");
     printf("30. install agent for accepting connections NoInputNoOutput\n");
     printf("31. install agent for accepting connections DisplayYesNo\n");
-    printf("32. Accept a connection request\n");
-    printf("33. Deny a connection request\n");
-    printf("34. Register connection callback to allow accepting or rejection of connections.\n");
-    printf("35. Uninstall agent - allows device-initiated pairing\n");
+    printf("32. Uninstall agent - allows device-initiated pairing\n");
+    printf("33. Register connection-in intimation callback.\n");
+    printf("34. Register connection authentication callback to allow accepting or rejection of connections.\n");
+    printf("35. Accept a connection request\n");
+    printf("36. Deny a connection request\n");
+
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -347,7 +355,7 @@ main (
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
                 printf("Show Known Devices...using BTRCore_GetListOfPairedDevices\n");
                 lstBTRCoreAdapter.adapter_number = myadapter;
-                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList); //TODO pass in a different structure for each adapter
             }
             break;
         case 7:
@@ -610,29 +618,33 @@ main (
              printf("Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
              streamInLiveTestMainAlternate(stAppData.iDataPath, stAppData.iDataReadMTU);
              break;
-       case 30:
+        case 30:
             printf("install agent - NoInputNoOutput\n");
             BTRCore_RegisterAgent(lhBTRCore, 0);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
             break;
-          case 31:
+        case 31:
             printf("install agent - DisplayYesNo\n");
             BTRCore_RegisterAgent(lhBTRCore, 1);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
             break;
-       case 32:
-            printf("accept the connection\n");
-            acceptConnection = 1;
+        case 32:
+            printf("uninstall agent - DisplayYesNo\n");
+            BTRCore_UnregisterAgent(lhBTRCore);
             break;
         case 33:
-            printf("deny the connection\n");
-            acceptConnection = 2;//anything but 1 means do not connect
+            printf("register connection-in Intimation CB\n");
+            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_authentication, NULL);
             break;
         case 34:
             printf("register authentication CB\n");
             BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
             break;
-         case 35:
-            printf("uninstall agent - DisplayYesNo\n");
-            BTRCore_UnregisterAgent(lhBTRCore);
+        case 35:
+            printf("accept the connection\n");
+            acceptConnection = 1;
+            break;
+        case 36:
+            printf("deny the connection\n");
+            acceptConnection = 2;//anything but 1 means do not connect
             break;
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);
