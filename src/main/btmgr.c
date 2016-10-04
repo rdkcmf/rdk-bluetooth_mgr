@@ -840,6 +840,9 @@ BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandl
                     /*  Post a callback */
                     m_eventCallbackFunction (newEvent);
                 }
+
+                /* Update the Paired Device List */
+                BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
             }
         }
         else
