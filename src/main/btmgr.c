@@ -856,7 +856,6 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     enBTRCoreRet halrc = enBTRCoreSuccess;
     stBTRCorePairedDevicesCount listOfDevices;
-    stBTRCoreSupportedServiceList serviceList;
 
     if (NULL == gBTRCoreHandle)
     {
@@ -890,29 +889,19 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
                 pPairedDevices->m_numOfDevices = listOfDevices.numberOfDevices;
                 for (i = 0; i < listOfDevices.numberOfDevices; i++)
                 {
-                    memset (&serviceList, 0, sizeof(stBTRCoreSupportedServiceList));
                     ptr = &pPairedDevices->m_deviceProperty[i];
                     strncpy(ptr->m_name, listOfDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                     strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
                     ptr->m_deviceHandle = listOfDevices.devices[i].deviceId;
                     ptr->m_deviceType = btmgr_MapDeviceTypeFromCore (listOfDevices.devices[i].device_type);
-
-                    halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, ptr->m_deviceHandle, &serviceList);
-                    if (enBTRCoreSuccess == halrc)
+                    ptr->m_serviceInfo.m_numOfService = listOfDevices.devices[i].device_profile.numberOfService;
+                    for (j = 0; j < listOfDevices.devices[i].device_profile.numberOfService; j++)
                     {
-                        ptr->m_serviceInfo.m_numOfService = serviceList.numberOfService;
-                        for (j = 0; j < serviceList.numberOfService; j++)
-                        {
-                            BTMGRLOG_INFO ("%s : Profile ID = %u; Profile Name = %s \n", __FUNCTION__, serviceList.profile[j].uuid_value, serviceList.profile[j].profile_name);
-                            ptr->m_serviceInfo.m_profileInfo[j].m_uuid = serviceList.profile[j].uuid_value;
-                            strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, serviceList.profile[j].profile_name);
-                        }
+                        BTMGRLOG_INFO ("%s : Profile ID = %u; Profile Name = %s \n", __FUNCTION__, listOfDevices.devices[i].device_profile.profile[j].uuid_value,
+                                                                                                   listOfDevices.devices[i].device_profile.profile[j].profile_name);
+                        ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfDevices.devices[i].device_profile.profile[j].uuid_value;
+                        strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfDevices.devices[i].device_profile.profile[j].profile_name);
                     }
-                    else
-                    {
-                        BTMGRLOG_ERROR ("%s : Failed to Get the Supported Services\n", __FUNCTION__);
-                    }
-
 
                     if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == ptr->m_deviceHandle))
                         ptr->m_isConnected = 1;
@@ -1155,9 +1144,8 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
     enBTRCoreRet halrc = enBTRCoreSuccess;
     stBTRCorePairedDevicesCount listOfPDevices;
     stBTRCoreScannedDevicesCount listOfSDevices;
-    stBTRCoreSupportedServiceList serviceList;
     unsigned char isFound = 0;
-    int i = 0;
+    int i = 0, j = 0;
 
     if (NULL == gBTRCoreHandle)
     {
@@ -1172,7 +1160,6 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
     else
     {
         /* Reset the values to 0 */
-        memset (&serviceList, 0, sizeof(stBTRCoreSupportedServiceList));
         memset (&listOfPDevices, 0, sizeof(listOfPDevices));
         memset (&listOfSDevices, 0, sizeof(listOfSDevices));
         memset (pDeviceProperty, 0, sizeof(BTMGR_DevicesProperty_t));
@@ -1192,6 +1179,16 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                         pDeviceProperty->m_isPaired = 1;
                         strncpy(pDeviceProperty->m_name, listOfPDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                         strncpy(pDeviceProperty->m_deviceAddress, listOfPDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
+
+                        pDeviceProperty->m_serviceInfo.m_numOfService = listOfPDevices.devices[i].device_profile.numberOfService;
+                        for (j = 0; j < listOfPDevices.devices[i].device_profile.numberOfService; j++)
+                        {
+                            BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, listOfPDevices.devices[i].device_profile.profile[j].uuid_value,
+                                                                                                       listOfPDevices.devices[i].device_profile.profile[j].profile_name);
+                            pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].device_profile.profile[j].uuid_value;
+                            strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].device_profile.profile[j].profile_name, BTMGR_NAME_LEN_MAX);
+                        }
+
                         if (gCurStreamingDevHandle == handle)
                             pDeviceProperty->m_isConnected = 1;
 
@@ -1203,27 +1200,6 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
             else
                 BTMGRLOG_WARN("No Device is paired yet\n");
         }
-
-        /* If and Only if the device found in paired device list, we can get the supported profile list */
-        if (isFound)
-        {
-            halrc = BTRCore_GetSupportedServices (gBTRCoreHandle, handle, &serviceList);
-            if (enBTRCoreSuccess == halrc)
-            {
-                pDeviceProperty->m_serviceInfo.m_numOfService = serviceList.numberOfService;
-                for (i = 0; i < serviceList.numberOfService; i++)
-                {
-                    BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, serviceList.profile[i].uuid_value, serviceList.profile[i].profile_name);
-                    pDeviceProperty->m_serviceInfo.m_profileInfo[i].m_uuid = serviceList.profile[i].uuid_value;
-                    strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[i].m_profile, serviceList.profile[i].profile_name, BTMGR_NAME_LEN_MAX);
-                }
-            }
-            else
-            {
-                BTMGRLOG_ERROR ("%s : Failed to Get the Supported Services\n", __FUNCTION__);
-            }
-        }
-
 
         halrc = BTRCore_GetListOfScannedDevices (gBTRCoreHandle, &listOfSDevices);
         if (enBTRCoreSuccess == halrc)
@@ -1241,6 +1217,15 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                             pDeviceProperty->m_vendorID = listOfSDevices.devices[i].vendor_id;
                             strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].device_name, (BTMGR_NAME_LEN_MAX - 1));
                             strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].device_address, (BTMGR_NAME_LEN_MAX - 1));
+
+                            pDeviceProperty->m_serviceInfo.m_numOfService = listOfSDevices.devices[i].device_profile.numberOfService;
+                            for (j = 0; j < listOfSDevices.devices[i].device_profile.numberOfService; j++)
+                            {
+                                BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, listOfSDevices.devices[i].device_profile.profile[j].uuid_value,
+                                                                                                           listOfSDevices.devices[i].device_profile.profile[j].profile_name);
+                                pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = listOfSDevices.devices[i].device_profile.profile[j].uuid_value;
+                                strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfSDevices.devices[i].device_profile.profile[j].profile_name, BTMGR_NAME_LEN_MAX);
+                            }
                         }
                         pDeviceProperty->m_signalLevel = listOfSDevices.devices[i].RSSI;
                         isFound = 1;
