@@ -945,6 +945,17 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
 
         if (1 == btmgr_IsThisPairedDevice(handle))
         {
+            /* Check whether the requested device is connected n playing. */
+            if (gCurStreamingDevHandle == handle)
+            {
+                /* This will internall stops the playback as well as disconnects. */
+                rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
+                if (enBTRCoreSuccess != halrc)
+                {
+                    BTMGRLOG_ERROR ("BTMGR_UnpairDevice :This device is being Connected n Playing. Failed to stop Playback. Going Ahead to unpair.\n");
+                }
+            }
+
             halrc = BTRCore_UnPairDevice(gBTRCoreHandle, handle);
             if (enBTRCoreSuccess != halrc)
             {
