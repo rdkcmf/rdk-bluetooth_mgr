@@ -41,8 +41,10 @@ typedef struct appDataStruct{
 //test func
 void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 static int streamOutTestMainAlternate (int argc, char* argv[]);
-static int streamOutLiveTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
-static int streamInLiveTestMainAlternate (int fd_number, int MTU_size);
+static int streamOutLiveTestMainAlternateStart (int argc, char* argv[], appDataStruct *pstAppData);
+static int streamOutLiveTestMainAlternateStop (appDataStruct *pstAppData);
+static int streamInLiveTestMainAlternateStart (int fd_number, int MTU_size, appDataStruct *pstAppData);
+static int streamInLiveTestMainAlternateStop (appDataStruct *pstAppData);
 
 
 static int acceptConnection = 0;
@@ -53,6 +55,10 @@ static void
 GetTransport (
     appDataStruct* pstAppData
 ) {
+    pstAppData->iDataPath = 0;
+    pstAppData->iDataReadMTU = 0;
+    pstAppData->iDataWriteMTU = 0;
+
     BTRCore_AcquireDeviceDataPath ( pstAppData->hBTRCore, 
                                     connectedDeviceIndex,
                                     enBTRCoreMobileAudioIn,
@@ -218,8 +224,10 @@ printMenu (
     printf("22. Release Connected Dev Data path\n");
     printf("23. Send SBC data to BT Headset/Speakers\n");
     printf("24. Send WAV to BT Headset/Speakers - btrMgrStreamOutTest\n");
-    printf("25. Send Live Audio to BT Headset/Speakers\n");
-    printf("26. Send audio data from device to settop with BT\n");
+    printf("25. Start Send Live Audio to BT Headset/Speakers\n");
+    printf("26. Start Send audio data from device to settop with BT\n");
+    printf("27. Stop Send Live Audio to BT Headset/Speakers\n");
+    printf("28. Stop Send audio data from device to settop with BT\n");
     printf("30. install agent for accepting connections NoInputNoOutput\n");
     printf("31. install agent for accepting connections DisplayYesNo\n");
     printf("32. Uninstall agent - allows device-initiated pairing\n");
@@ -227,6 +235,8 @@ printMenu (
     printf("34. Register connection authentication callback to allow accepting or rejection of connections.\n");
     printf("35. Accept a connection request\n");
     printf("36. Deny a connection request\n");
+    printf("37. Increase Device Volume of External BT Device\n");
+    printf("38. Skip to Next track on External BT Device\n");
 
     printf("88. debug test\n");
     printf("99. Exit\n");
@@ -555,7 +565,13 @@ main (
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
+
+                stAppData.iDataPath = 0;
+                stAppData.iDataReadMTU = 0;
+                stAppData.iDataWriteMTU = 0;
+
                 BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
+
                 printf("Device Data Path = %d \n", stAppData.iDataPath);
                 printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
                 printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
@@ -602,7 +618,7 @@ main (
             }
             break;
         case 25:
-            printf("Sending Live to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
+            printf("Start Sending Live to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
             {
                 char cliDataPath[4] = {'\0'};
                 char cliDataWriteMTU[8] = {'\0'};
@@ -610,13 +626,21 @@ main (
                 snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
                 {
                     char *streamOutLiveTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
-                    streamOutLiveTestMainAlternate(5, streamOutLiveTestMainAlternateArgs, &stAppData);
+                    streamOutLiveTestMainAlternateStart(5, streamOutLiveTestMainAlternateArgs, &stAppData);
                 }
             }
             break;
-      case 26:
-             printf("Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
-             streamInLiveTestMainAlternate(stAppData.iDataPath, stAppData.iDataReadMTU);
+        case 26:
+             printf("Start Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
+             streamInLiveTestMainAlternateStart(stAppData.iDataPath, stAppData.iDataReadMTU, &stAppData);
+             break;
+        case 27:
+            printf("Stop Sending Live to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
+            streamOutLiveTestMainAlternateStop(&stAppData);
+            break;
+        case 28:
+             printf("Stop Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
+             streamInLiveTestMainAlternateStop(&stAppData);
              break;
         case 30:
             printf("install agent - NoInputNoOutput\n");
@@ -646,6 +670,24 @@ main (
             printf("deny the connection\n");
             acceptConnection = 2;//anything but 1 means do not connect
             break;
+        case 37:
+            {
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                printf("Pick a Device to increase volume...\n");
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                BTRCore_MediaPlayControl(lhBTRCore, devnum, enBTRCoreSpeakers, enBTRCoreMediaVolumeUp);
+            }
+            break; 
+        case 38:
+            {
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                printf("Pick a Device to Go to Next track...\n");
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                BTRCore_MediaPlayControl(lhBTRCore, devnum, enBTRCoreMobileAudioIn, enBTRCoreMediaNext);
+            }
+            break; 
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
@@ -1113,7 +1155,7 @@ cbBufferReady (
 
 
 static int 
-streamOutLiveTestMainAlternate (
+streamOutLiveTestMainAlternateStart (
     int             argc, 
     char*           argv[],
     appDataStruct*  pstAppData
@@ -1165,10 +1207,17 @@ streamOutLiveTestMainAlternate (
         goto err_open;
     }
 
+    printf("BT AUDIO OUT - STARTED \n");
 
-    printf("Press \"Enter\" to stop Audio Capture \n");
-    getchar();
+err_open:
+    return 0;
+}
 
+
+static int 
+streamOutLiveTestMainAlternateStop (
+    appDataStruct*  pstAppData
+)  {
     RMF_AudioCapture_Stop(pstAppData->hAudCap);
 
     BTRMgr_SO_SendEOS(pstAppData->hBTRMgrSoHdl);
@@ -1178,45 +1227,51 @@ streamOutLiveTestMainAlternate (
     RMF_AudioCapture_Close(pstAppData->hAudCap);
     BTRMgr_SO_DeInit(pstAppData->hBTRMgrSoHdl);
 
+    printf("BT AUDIO OUT - STOPPED\n");
 
-err_open:
     return 0;
 }
 
 
 static int
-streamInLiveTestMainAlternate (
-    int fd_number,
-    int MTU_size
+streamInLiveTestMainAlternateStart (
+    int             fd_number,
+    int             MTU_size,
+    appDataStruct*  pstAppData
 ) {
 
     int     inBytesToEncode= IN_BUF_SIZE;
     int     inFileFd       = fd_number;
     int     inMTUSize      = MTU_size;
 
-    appDataStruct appData;
 
-    memset(&appData, 0, sizeof(appData));
 
-    BTRMgr_SI_Init(&appData.hBTRMgrSiHdl);
+    BTRMgr_SI_Init(&pstAppData->hBTRMgrSiHdl);
 
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
-    appData.bitsPerSample = 16;
-    appData.samplerate = 48000;
-    appData.channels = 2;
+    pstAppData->bitsPerSample = 16;
+    pstAppData->samplerate = 48000;
+    pstAppData->channels = 2;
 
 
-    BTRMgr_SI_Start(appData.hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize);
+    BTRMgr_SI_Start(pstAppData->hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize);
 
-    printf("Press \"Enter\" to stop Audio Input \n");
-    getchar();
-
-    BTRMgr_SI_SendEOS(appData.hBTRMgrSiHdl);
-    BTRMgr_SI_Stop(appData.hBTRMgrSiHdl);
-
-    BTRMgr_SI_DeInit(appData.hBTRMgrSiHdl);
+    printf("BT AUDIO IN - STARTED \n");
 
     return 0;
 }
 
 
+static int
+streamInLiveTestMainAlternateStop (
+    appDataStruct*  pstAppData
+) {
+    BTRMgr_SI_SendEOS(pstAppData->hBTRMgrSiHdl);
+    BTRMgr_SI_Stop(pstAppData->hBTRMgrSiHdl);
+
+    BTRMgr_SI_DeInit(pstAppData->hBTRMgrSiHdl);
+
+    printf("BT AUDIO IN - STOPPED\n");
+
+    return 0;
+}
