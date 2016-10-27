@@ -810,7 +810,7 @@ void _EventCallback(BTMGR_EventMessage_t events)
     }
     else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE)
     {
-        BTMGRLOG_WARN ("Post Device Connection Complete event\n");
+        BTMGRLOG_WARN ("Post Device Connection disconnected event\n");
         IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, (void *)&eventData, sizeof(eventData));
     }
     else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_OUT_OF_RANGE)

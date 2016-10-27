@@ -133,53 +133,53 @@ BTMGR_DeviceType_t btmgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type
     BTMGR_DeviceType_t type = BTMGR_DEVICE_TYPE_UNKNOWN;
     switch (device_type)
     {
-        case enBTRCoreAV_WearableHeadset:
+        case enBTRCore_DC_WearableHeadset:
             type = BTMGR_DEVICE_TYPE_WEARABLE_HEADSET;
             break;
-        case enBTRCoreAV_Handsfree:
+        case enBTRCore_DC_Handsfree:
             type = BTMGR_DEVICE_TYPE_HANDSFREE;
             break;
-        case enBTRCoreAV_Microphone:
+        case enBTRCore_DC_Microphone:
             type = BTMGR_DEVICE_TYPE_MICROPHONE;
             break;
-        case enBTRCoreAV_Loudspeaker:
+        case enBTRCore_DC_Loudspeaker:
             type = BTMGR_DEVICE_TYPE_LOUDSPEAKER;
             break;
-        case enBTRCoreAV_Headphones:
+        case enBTRCore_DC_Headphones:
             type = BTMGR_DEVICE_TYPE_HEADPHONES;
             break;
-        case enBTRCoreAV_PortableAudio:
+        case enBTRCore_DC_PortableAudio:
             type = BTMGR_DEVICE_TYPE_PORTABLE_AUDIO;
             break;
-        case enBTRCoreAV_CarAudio:
+        case enBTRCore_DC_CarAudio:
             type = BTMGR_DEVICE_TYPE_CAR_AUDIO;
             break;
-        case enBTRCoreAV_STB:
+        case enBTRCore_DC_STB:
             type = BTMGR_DEVICE_TYPE_STB;
             break;
-        case enBTRCoreAV_HIFIAudioDevice:
+        case enBTRCore_DC_HIFIAudioDevice:
             type = BTMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE;
             break;
-        case enBTRCoreAV_VCR:
+        case enBTRCore_DC_VCR:
             type = BTMGR_DEVICE_TYPE_VCR;
             break;
-        case enBTRCoreAV_VideoCamera:
+        case enBTRCore_DC_VideoCamera:
             type = BTMGR_DEVICE_TYPE_VIDEO_CAMERA;
             break;
-        case enBTRCoreAV_Camcoder:
+        case enBTRCore_DC_Camcoder:
             type = BTMGR_DEVICE_TYPE_CAMCODER;
             break;
-        case enBTRCoreAV_VideoMonitor:
+        case enBTRCore_DC_VideoMonitor:
             type = BTMGR_DEVICE_TYPE_VIDEO_MONITOR;
             break;
-        case enBTRCoreAV_TV:
+        case enBTRCore_DC_TV:
             type = BTMGR_DEVICE_TYPE_TV;
             break;
-        case enBTRCoreAV_VideoConference:
+        case enBTRCore_DC_VideoConference:
             type = BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE;
             break;
-        case enBTRCoreAV_Reserved:
-        case enBTRCoreAV_Unknown:
+        case enBTRCore_DC_Reserved:
+        case enBTRCore_DC_Unknown:
             type = BTMGR_DEVICE_TYPE_UNKNOWN;
             break;
     }
@@ -228,6 +228,37 @@ void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevices devicefound)
 
 void btmgr_DeviceStatusCallback (stBTRCoreDevStateCBInfo* p_StatusCB,  void* apvUserData)
 {
+    BTMGR_EventMessage_t newEvent;
+    memset (&newEvent, 0, sizeof(newEvent));
+
+    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+    BTMGRLOG_ERROR ("btmgr_DeviceStatusCallback: Received status callback\n");
+    if ((p_StatusCB) && (m_eventCallbackFunction))
+    {
+        if (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Connected)
+        {
+            newEvent.m_eventType = BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
+            /*  Post a callback */
+            m_eventCallbackFunction (newEvent);
+        }
+        else if (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Disconnected)
+        {
+            newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE;
+
+            /*  Post a callback */
+            m_eventCallbackFunction (newEvent);
+
+            if (gCurStreamingDevHandle != 0)
+            {
+                /* update the flags as the device is NOT Connected */
+                gIsDeviceConnected = 0;
+
+                /* Stop the playback which already stopped internally but to free up the memory */
+                BTMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+            }
+        }
+    }
     return;
 }
 
@@ -1025,7 +1056,7 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
         {
             BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Connected Successfully\n");
             gIsDeviceConnected = 1;
-
+#if 0
             if(m_eventCallbackFunction)
             {
                 BTMGR_EventMessage_t newEvent;
@@ -1038,6 +1069,7 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
                 /*  Post a callback */
                 m_eventCallbackFunction (newEvent);
             }
+#endif
         }
     }
     return rc;
@@ -1084,7 +1116,7 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
         {
             BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Disconnected  Successfully\n");
             gIsDeviceConnected = 0;
-
+#if 0
             if(m_eventCallbackFunction)
             {
                 BTMGR_EventMessage_t newEvent;
@@ -1097,6 +1129,7 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
                 /*  Post a callback */
                 m_eventCallbackFunction (newEvent);
             }
+#endif
         }
     }
     return rc;
