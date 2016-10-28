@@ -501,6 +501,18 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
     }
     else
     {
+        /* Check whether the requested device is connected n playing. */
+        if ((gCurStreamingDevHandle) && (power_status == 0))
+        {
+            /* This will internall stops the playback as well as disconnects. */
+            rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
+            if (enBTRCoreSuccess != halrc)
+            {
+                BTMGRLOG_ERROR ("BTMGR_SetAdapterPowerStatus : This device is being Connected n Playing. Failed to stop Playback. Going Ahead to power off Adapter.\n");
+            }
+        }
+
+
         const char* pAdapterPath = getAdaptherPath (index_of_adapter);
         if (pAdapterPath)
         {
