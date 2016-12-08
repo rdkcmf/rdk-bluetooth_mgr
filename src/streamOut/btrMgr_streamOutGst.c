@@ -50,7 +50,7 @@
 /* Local defines */
 #define BTR_MGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
 #define BTR_MGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
-#define BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS 16  // Number of blocks in the internal queue
+#define BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS 8   // Number of blocks in the internal queue
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 

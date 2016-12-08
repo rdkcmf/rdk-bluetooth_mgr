@@ -62,46 +62,123 @@ BTMGR_DeviceType_t btmgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type
 rmf_Error cbBufferReady (void *pContext, void* pInDataBuf, unsigned int inBytesToEncode)
 {
     BTMGR_StreamingHandles *data = (BTMGR_StreamingHandles*) pContext;
-    BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, pInDataBuf, inBytesToEncode);
+    
+    if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, pInDataBuf, inBytesToEncode)) {
+            BTMGRLOG_INFO ("cbBufferReady: BTRMgr_SO_SendBuffer FAILED\n");
+    }
 
     data->bytesWritten += inBytesToEncode;
     return RMF_SUCCESS;
 }
 
-BTMGR_Result_t btmgr_StartCastingAudio (int outFileFd, int outMTUSize)
-{
-    int inBytesToEncode = 2048;
+BTMGR_Result_t
+btmgr_StartCastingAudio (
+    int outFileFd, 
+    int outMTUSize
+) {
     RMF_AudioCapture_Settings settings;
+    stBTRMgrSOInASettings     lstBtrMgrSoInASettings;
+    stBTRMgrSOOutASettings    lstBtrMgrSoOutASettings;
 
-    if (0 == gCurStreamingDevHandle)
-    {
+    int inBytesToEncode = 3072; // Corresponds to MTU size of 895
+
+    if (0 == gCurStreamingDevHandle) {
         /* Reset the buffer */
         memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
         memset(&settings, 0, sizeof(settings));
 
         /* Init StreamOut module - Create Pipeline */
-        BTRMgr_SO_Init(&gStreamCaptureSettings.hBTRMgrSoHdl);
+        if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&gStreamCaptureSettings.hBTRMgrSoHdl)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Init FAILED\n");
+            return BTMGR_RESULT_GENERIC_FAILURE;
+        }
 
         /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
         gStreamCaptureSettings.bitsPerSample = 16;
         gStreamCaptureSettings.samplerate = 48000;
         gStreamCaptureSettings.channels = 2;
 
-        if (RMF_AudioCapture_Open(&gStreamCaptureSettings.hAudCap))
-        {
+        if (RMF_AudioCapture_Open(&gStreamCaptureSettings.hAudCap)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: RMF_AudioCapture_Open FAILED\n");
             return BTMGR_RESULT_GENERIC_FAILURE;
         }
 
         RMF_AudioCapture_GetDefaultSettings(&settings);
         settings.cbBufferReady      = cbBufferReady;
         settings.cbBufferReadyParm  = &gStreamCaptureSettings;
-        settings.fifoSize           = 16 * inBytesToEncode;
+        settings.fifoSize           = 8 * inBytesToEncode;
         settings.threshold          = inBytesToEncode;
 
-        BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
+        switch (settings.format) {
+        case racFormat_e16BitStereo:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+            break;
+        case racFormat_e24BitStereo:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+            break;
+        case racFormat_e16BitMonoLeft:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
+            break;
+        case racFormat_e16BitMonoRight:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
+            break;
+        case racFormat_e16BitMono:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
+            break;
+        case racFormat_e24Bit5_1:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChan5_1;
+            break;
+        case racFormat_eMax:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmtUnknown;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanUnknown;
+            break;
+        default:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+            break;
+        }
 
-        if (RMF_AudioCapture_Start(gStreamCaptureSettings.hAudCap, &settings))
-        {
+        switch (settings.samplingFreq) {
+        case racFreq_e16000:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq16K;
+            break;
+        case racFreq_e32000:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq32K;
+            break;
+        case racFreq_e44100:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq44_1K;
+            break;
+        case racFreq_e48000:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
+            break;
+        case racFreq_eMax:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreqUnknown;
+            break;
+        default:
+            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
+            break;
+        }
+
+        lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+        lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
+
+        lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+        lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
+        lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
+
+        if (eBTRMgrSOSuccess != BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Start FAILED\n");
+            return BTMGR_RESULT_GENERIC_FAILURE;
+        }
+
+        if (RMF_AudioCapture_Start(gStreamCaptureSettings.hAudCap, &settings)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: RMF_AudioCapture_Start FAILED\n");
             return BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -115,11 +192,19 @@ void btmgr_StopCastingAudio ()
     {
         RMF_AudioCapture_Stop(gStreamCaptureSettings.hAudCap);
 
-        BTRMgr_SO_SendEOS(gStreamCaptureSettings.hBTRMgrSoHdl);
-        BTRMgr_SO_Stop(gStreamCaptureSettings.hBTRMgrSoHdl);
+        if (eBTRMgrSOSuccess != BTRMgr_SO_SendEOS(gStreamCaptureSettings.hBTRMgrSoHdl)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_SendEOS FAILED\n");
+        }
+
+        if (eBTRMgrSOSuccess != BTRMgr_SO_Stop(gStreamCaptureSettings.hBTRMgrSoHdl)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Stop FAILED\n");
+        }
 
         RMF_AudioCapture_Close(gStreamCaptureSettings.hAudCap);
-        BTRMgr_SO_DeInit(gStreamCaptureSettings.hBTRMgrSoHdl);
+
+        if (eBTRMgrSOSuccess != BTRMgr_SO_DeInit(gStreamCaptureSettings.hBTRMgrSoHdl)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_DeInit FAILED\n");
+        }
     }
 
     return;

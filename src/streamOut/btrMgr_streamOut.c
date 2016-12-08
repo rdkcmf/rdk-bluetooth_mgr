@@ -189,10 +189,9 @@ BTRMgr_SO_GetStatus (
 
 eBTRMgrSORet
 BTRMgr_SO_Start (
-    tBTRMgrSoHdl    hBTRMgrSoHdl,
-    int             aiInBufMaxSize,
-    int             aiBTDevFd,
-    int             aiBTDevMTU
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    stBTRMgrSOInASettings*  apstBtrMgrSoInASettings,
+    stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings
 ) {
     eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
@@ -205,8 +204,15 @@ BTRMgr_SO_Start (
         return eBTRMgrSONotInitialized;
     }
 
+    if ((apstBtrMgrSoInASettings == NULL) || (apstBtrMgrSoOutASettings == NULL)) {
+        return eBTRMgrSOFailInArg;
+    }
+
 #ifdef USE_GST1
-    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStart(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, aiInBufMaxSize, aiBTDevFd, aiBTDevMTU)) != eBTRMgrSOGstSuccess) {
+    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStart( pstBtrMgrSoHdl->hBTRMgrSoGstHdl,
+                                                apstBtrMgrSoInASettings->iBtrMgrSoInBufMaxSize,
+                                                apstBtrMgrSoOutASettings->iBtrMgrSoDevFd,
+                                                apstBtrMgrSoOutASettings->iBtrMgrSoDevMtu)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrSOFailure;
     }

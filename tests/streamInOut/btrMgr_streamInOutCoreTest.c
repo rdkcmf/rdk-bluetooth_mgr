@@ -737,7 +737,7 @@ main (
 
 
 /* Local Defines */
-#define IN_BUF_SIZE     2048
+#define IN_BUF_SIZE     3072 // Corresponds to MTU size of 895
 #define OUT_MTU_SIZE    1024
 
 
@@ -984,7 +984,10 @@ doDataCapture (
         printf("inBytesToEncode = %d sleeptime = %lf Processing =%lu\n", inBytesToEncode, (inBytesToEncode * 1000000.0/192000.0) - 1666.666667, currTime - prevTime);
         prevTime = currTime;
 
-        BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
+        if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
+            fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
+        }
+
         inFileBytesLeft -= inBytesToEncode;
         usleep((inBytesToEncode * 1000000.0/192000.0) - 1666.666667);
     }
@@ -1012,6 +1015,9 @@ streamOutTestMainAlternate (
     FILE*   outFileFp       = NULL;
     int     outFileFd       = 0;
     int     outMTUSize      = OUT_MTU_SIZE;
+
+    stBTRMgrSOInASettings   lstBtrMgrSoInASettings;
+    stBTRMgrSOOutASettings  lstBtrMgrSoOutASettings;
 
 #if 0
     struct timeval tv;
@@ -1077,12 +1083,31 @@ streamOutTestMainAlternate (
     }
 #endif
 
-    BTRMgr_SO_Init(&hBTRMgrSoHdl);
+    if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
+        return -1;
+    }
 
     inDataBuf = (char*)malloc(inBufSize * sizeof(char));
     inBytesToEncode = inBufSize;
 
-    BTRMgr_SO_Start(hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
+    /* TODO: Choose these valus based on information parsed from the wav file */
+    lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+    lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+    lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
+
+    lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+    lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
+
+    lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+    lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
+    lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
+
+
+    if (eBTRMgrSOSuccess != BTRMgr_SO_Start(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+        fprintf(stderr, "BTRMgr_SO_Start - FAILED\n");
+        return -1;
+    }
 
 #if 0
     while (inFileBytesLeft) {
@@ -1098,7 +1123,11 @@ streamOutTestMainAlternate (
         prevTime = currTime;
 
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
-        BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
+
+        if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
+            fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
+        }
+
         inFileBytesLeft -= inBytesToEncode;
     }
 #else
@@ -1123,13 +1152,19 @@ streamOutTestMainAlternate (
     (void)penDataCapThreadExitStatus;
 #endif
 
-    BTRMgr_SO_SendEOS(hBTRMgrSoHdl);
+    if (eBTRMgrSOSuccess != BTRMgr_SO_SendEOS(hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_SendEOS - FAILED\n");
+    }
 
-    BTRMgr_SO_Stop(hBTRMgrSoHdl);
+    if (eBTRMgrSOSuccess != BTRMgr_SO_Stop(hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_Stop - FAILED\n");
+    }
 
     free(inDataBuf);
 
-    BTRMgr_SO_DeInit(hBTRMgrSoHdl);
+    if (eBTRMgrSOSuccess != BTRMgr_SO_DeInit(hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_DeInit - FAILED\n");
+    }
 
     if (streamOutMode == 1)
         fclose(outFileFp);
@@ -1159,7 +1194,9 @@ cbBufferReady (
 #endif
 
     appDataStruct *data = (appDataStruct*) context;
-    BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, inDataBuf, inBytesToEncode);
+    if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
+        fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
+    }
 
     data->bytesWritten += inBytesToEncode;
 #if 0
@@ -1199,12 +1236,15 @@ streamOutLiveTestMainAlternateStart (
 
 
     RMF_AudioCapture_Settings settings;
+    stBTRMgrSOInASettings     lstBtrMgrSoInASettings;
+    stBTRMgrSOOutASettings    lstBtrMgrSoOutASettings;
 
+    if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl))) {
+        fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
+        return -1;
+    }
 
-
-    BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl));
-
-    /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
+    /* could get defaults from audio capture, but for the sample app we want to write a the wav header first */
     pstAppData->bitsPerSample = 16;
     pstAppData->samplerate = 48000;
     pstAppData->channels = 2;
@@ -1217,11 +1257,76 @@ streamOutLiveTestMainAlternateStart (
     settings.cbBufferReady      = cbBufferReady;
     settings.cbBufferReadyParm  = pstAppData;
 
-    settings.fifoSize = 16 * inBytesToEncode;
+    settings.fifoSize = 8 * inBytesToEncode;
     settings.threshold= inBytesToEncode;
 
+    switch (settings.format) {
+    case racFormat_e16BitStereo:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+        break;
+    case racFormat_e24BitStereo:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+        break;
+    case racFormat_e16BitMonoLeft:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
+        break;
+    case racFormat_e16BitMonoRight:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
+        break;
+    case racFormat_e16BitMono:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
+        break;
+    case racFormat_e24Bit5_1:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChan5_1;
+        break;
+    case racFormat_eMax:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmtUnknown;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanUnknown;
+        break;
+    default:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
+        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
+        break;
+    }
 
-    BTRMgr_SO_Start(pstAppData->hBTRMgrSoHdl, inBytesToEncode, outFileFd, outMTUSize);
+    switch (settings.samplingFreq) {
+    case racFreq_e16000:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq16K;
+        break;
+    case racFreq_e32000:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq32K;
+        break;
+    case racFreq_e44100:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq44_1K;
+        break;
+    case racFreq_e48000:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
+        break;
+    case racFreq_eMax:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreqUnknown;
+        break;
+    default:
+        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
+        break;
+    }
+
+    lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+    lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
+
+    lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+    lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
+    lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
+
+    if (eBTRMgrSOSuccess != BTRMgr_SO_Start(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+        fprintf(stderr, "BTRMgr_SO_Start - FAILED\n");
+        return -1;
+    }
 
     if (RMF_AudioCapture_Start(pstAppData->hAudCap, &settings)) {
         goto err_open;
@@ -1240,12 +1345,23 @@ streamOutLiveTestMainAlternateStop (
 )  {
     RMF_AudioCapture_Stop(pstAppData->hAudCap);
 
-    BTRMgr_SO_SendEOS(pstAppData->hBTRMgrSoHdl);
-    BTRMgr_SO_Stop(pstAppData->hBTRMgrSoHdl);
+    if (eBTRMgrSOSuccess != BTRMgr_SO_SendEOS(pstAppData->hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_SendEOS - FAILED\n");
+        return -1;
+    }
+
+    if (eBTRMgrSOSuccess != BTRMgr_SO_Stop(pstAppData->hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_Stop - FAILED\n");
+        return -1;
+    }
 
 
     RMF_AudioCapture_Close(pstAppData->hAudCap);
-    BTRMgr_SO_DeInit(pstAppData->hBTRMgrSoHdl);
+
+    if (eBTRMgrSOSuccess != BTRMgr_SO_DeInit(pstAppData->hBTRMgrSoHdl)) {
+        fprintf(stderr, "BTRMgr_SO_DeInit - FAILED\n");
+        return -1;
+    }
 
     printf("BT AUDIO OUT - STOPPED\n");
 
