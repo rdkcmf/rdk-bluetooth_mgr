@@ -48,13 +48,14 @@ typedef enum _eBTRMgrSOState {
 
 typedef enum _eBTRMgrSOAType {
     eBTRMgrSOATypePCM,
-    eBTRMgrSOATypeMPEG,
     eBTRMgrSOATypeSBC,
+    eBTRMgrSOATypeMPEG,
     eBTRMgrSOATypeAAC,
     eBTRMgrSOATypeUnknown
 } eBTRMgrSOAType;
 
 typedef enum _eBTRMgrSOSFreq {
+    eBTRMgrSOSFreq8K,
     eBTRMgrSOSFreq16K,
     eBTRMgrSOSFreq32K,
     eBTRMgrSOSFreq44_1K,
@@ -63,6 +64,7 @@ typedef enum _eBTRMgrSOSFreq {
 } eBTRMgrSOSFreq;
 
 typedef enum _eBTRMgrSOSFmt {
+    eBTRMgrSOSFmt8bit,
     eBTRMgrSOSFmt16bit,
     eBTRMgrSOSFmt24bit,
     eBTRMgrSOSFmt32bit,
@@ -71,22 +73,51 @@ typedef enum _eBTRMgrSOSFmt {
 
 typedef enum _eBTRMgrSOAChan {
     eBTRMgrSOAChanMono,
+    eBTRMgrSOAChanDualChannel,
     eBTRMgrSOAChanStereo,
     eBTRMgrSOAChanJStereo,
     eBTRMgrSOAChan5_1,
+    eBTRMgrSOAChan7_1,
     eBTRMgrSOAChanUnknown
 } eBTRMgrSOAChan;
 
+typedef struct _stBTRMgrSOPCMInfo {
+    eBTRMgrSOSFreq  eBtrMgrSoSFreq;
+    eBTRMgrSOSFmt   eBtrMgrSoSFmt;
+    eBTRMgrSOAChan  eBtrMgrSoAChan;
+} stBTRMgrSOPCMInfo;
+
+typedef struct _stBTRMgrSOSBCInfo {
+    eBTRMgrSOSFreq  eBtrMgrSoSbcSFreq;      // frequency
+    eBTRMgrSOAChan  eBtrMgrSoSbcAChan;      // channel_mode
+    unsigned char   ui8SbcAllocMethod;      // allocation_method
+    unsigned char   ui8SbcSubbands;         // subbands
+    unsigned char   ui8SbcBlockLength;      // block_length
+    unsigned char   ui8SbcMinBitpool;       // min_bitpool
+    unsigned char   ui8SbcMaxBitpool;       // max_bitpool
+    unsigned short  ui16SbcFrameLen;        // frameLength
+    unsigned short  ui16SbcBitrate;         // bitrate
+} stBTRMgrSOSBCInfo;
+
+typedef struct _stBTRMgrSOMPEGInfo {
+    eBTRMgrSOSFreq  eBtrMgrSoMpegSFreq;     // frequency
+    eBTRMgrSOAChan  eBtrMgrSoMpegAChan;     // channel_mode
+    unsigned char   ui8MpegCrc;             // crc
+    unsigned char   ui8MpegLayer;           // layer
+    unsigned char   ui8MpegMpf;             // mpf
+    unsigned char   ui8MpegRfa;             // rfa
+    unsigned short  ui16MpegBitrate;        // bitrate
+} stBTRMgrSOMPEGInfo;
+
 typedef struct _stBTRMgrSOInASettings {
     eBTRMgrSOAType  eBtrMgrSoInAType;
-    eBTRMgrSOSFreq  eBtrMgrSoInSFreq;
-    eBTRMgrSOSFmt   eBtrMgrSoInSFmt;
-    eBTRMgrSOAChan  eBtrMgrSoInAChan;
+    void*           pstBtrMgrSoInCodecInfo;
     int             iBtrMgrSoInBufMaxSize;
 } stBTRMgrSOInASettings;
 
 typedef struct _stBTRMgrSOOutASettings {
     eBTRMgrSOAType  eBtrMgrSoOutAType;
+    void*           pstBtrMgrSoOutCodecInfo;
     int             iBtrMgrSoDevFd;
     int             iBtrMgrSoDevMtu;
 } stBTRMgrSOOutASettings;

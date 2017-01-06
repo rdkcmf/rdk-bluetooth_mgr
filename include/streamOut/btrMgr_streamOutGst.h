@@ -27,6 +27,18 @@
 
 typedef void* tBTRMgrSoGstHdl;
 
+#define BTRMGR_AUDIO_SFMT_SIGNED_8BIT       "S8"
+#define BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT   "S16LE"
+#define BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT   "S24LE"
+#define BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT   "S32LE"
+// Add additional sampling formats as supported by Gst SO layer
+
+#define BTRMGR_AUDIO_CHANNELMODE_MONO       "mono"
+#define BTRMGR_AUDIO_CHANNELMODE_DUAL       "dual"
+#define BTRMGR_AUDIO_CHANNELMODE_STEREO     "stereo"
+#define BTRMGR_AUDIO_CHANNELMODE_JSTEREO    "joint"
+// Add additional chennel modes as supported by Gst SO layer
+
 typedef enum _eBTRMgrSOGstRet {
    eBTRMgrSOGstFailure,
    eBTRMgrSOGstFailInArg,
@@ -36,7 +48,21 @@ typedef enum _eBTRMgrSOGstRet {
 /* Interfaces */
 eBTRMgrSOGstRet BTRMgr_SO_GstInit (tBTRMgrSoGstHdl* phBTRMgrSoGstHdl);
 eBTRMgrSOGstRet BTRMgr_SO_GstDeInit (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
-eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU);
+eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, 
+                                    int ai32InBufMaxSize,
+                                    const char* apcInFmt,
+                                    int ai32InRate,
+                                    int ai32InChannels,
+                                    int ai32OutRate,
+                                    int ai32OutChannels,
+                                    const char* apcOutChannelMode,
+                                    unsigned char aui8SbcAllocMethod,
+                                    unsigned char aui8SbcSubbands,
+                                    unsigned char aui8SbcBlockLength,
+                                    unsigned char aui8SbcMinBitpool,
+                                    unsigned char aui8SbcMaxBitpool,
+                                    int ai32BTDevFd,
+                                    int ai32BTDevMTU);
 eBTRMgrSOGstRet BTRMgr_SO_GstStop (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSOGstRet BTRMgr_SO_GstPause (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSOGstRet BTRMgr_SO_GstResume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);

@@ -48,9 +48,9 @@
 
 
 /* Local defines */
-#define BTR_MGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
-#define BTR_MGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
-#define BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS 16  // Number of blocks in the internal queue
+#define BTRMGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
+#define BTRMGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
+#define BTRMGR_MAX_INTERNAL_QUEUE_ELEMENTS 16  // Number of blocks in the internal queue
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 
@@ -128,7 +128,7 @@ btrMgr_SI_validateStateWithTimeout (
 ) {
     GstState    gst_current;
     GstState    gst_pending;
-    float       timeout = BTR_MGR_WAIT_TIMEOUT_MS;
+    float       timeout = BTRMGR_WAIT_TIMEOUT_MS;
     gint        gstGetStateCnt = GST_ELEMENT_GET_STATE_RETRY_CNT_MAX;
 
     do { 
@@ -212,7 +212,7 @@ BTRMgr_SI_GstInit (
 
         
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTR_MGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
@@ -304,7 +304,7 @@ BTRMgr_SI_GstStart (
     (void)busWatchId;
 
     /* Check if we are in correct state */
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
         g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
@@ -329,7 +329,7 @@ BTRMgr_SI_GstStart (
 
     /* start play back and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) { 
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) { 
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
@@ -361,7 +361,7 @@ BTRMgr_SI_GstStop (
 
     /* stop play back */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
         g_print ("%s:%d:%s - - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
@@ -395,14 +395,14 @@ BTRMgr_SI_GstPause (
     (void)busWatchId;
 
     /* Check if we are in correct state */
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
         g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
 
     /* pause playback and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     } 
@@ -433,14 +433,14 @@ BTRMgr_SI_GstResume (
     (void)busWatchId;
 
     /* Check if we are in correct state */
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
         g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }
 
     /* Resume playback and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
+    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSIGstFailure;
     }

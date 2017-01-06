@@ -28,6 +28,7 @@ tBTRCoreHandle gBTRCoreHandle = NULL;
 BTMgrDeviceHandle gCurStreamingDevHandle = 0;
 stBTRCoreAdapter gDefaultAdapterContext;
 stBTRCoreListAdapters gListOfAdapters;
+stBTRCoreDevMediaInfo gstBtrCoreDevMediaInfo;
 
 
 BTMGR_PairedDevicesList_t gListOfPairedDevices;
@@ -76,9 +77,10 @@ btmgr_StartCastingAudio (
     int outFileFd, 
     int outMTUSize
 ) {
-    RMF_AudioCapture_Settings settings;
-    stBTRMgrSOInASettings     lstBtrMgrSoInASettings;
-    stBTRMgrSOOutASettings    lstBtrMgrSoOutASettings;
+    RMF_AudioCapture_Settings   settings;
+    stBTRMgrSOInASettings       lstBtrMgrSoInASettings;
+    stBTRMgrSOOutASettings      lstBtrMgrSoOutASettings;
+    BTMGR_Result_t              eBtrMgrResult = BTMGR_RESULT_SUCCESS;
 
     int inBytesToEncode = 3072; // Corresponds to MTU size of 895
 
@@ -86,6 +88,8 @@ btmgr_StartCastingAudio (
         /* Reset the buffer */
         memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
         memset(&settings, 0, sizeof(settings));
+        memset(&lstBtrMgrSoInASettings, 0, sizeof(lstBtrMgrSoInASettings));
+        memset(&lstBtrMgrSoOutASettings, 0, sizeof(lstBtrMgrSoOutASettings));
 
         /* Init StreamOut module - Create Pipeline */
         if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&gStreamCaptureSettings.hBTRMgrSoHdl)) {
@@ -109,81 +113,165 @@ btmgr_StartCastingAudio (
         settings.fifoSize           = 8 * inBytesToEncode;
         settings.threshold          = inBytesToEncode;
 
-        switch (settings.format) {
-        case racFormat_e16BitStereo:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-            break;
-        case racFormat_e24BitStereo:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-            break;
-        case racFormat_e16BitMonoLeft:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
-            break;
-        case racFormat_e16BitMonoRight:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
-            break;
-        case racFormat_e16BitMono:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
-            break;
-        case racFormat_e24Bit5_1:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChan5_1;
-            break;
-        case racFormat_eMax:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmtUnknown;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanUnknown;
-            break;
-        default:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-            lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-            break;
+        lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ?
+                                                                        (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
+        lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+                                                                        (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+        if (!(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: MEMORY ALLOC FAILED\n");
+            return BTMGR_RESULT_GENERIC_FAILURE;
         }
 
-        switch (settings.samplingFreq) {
-        case racFreq_e16000:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq16K;
-            break;
-        case racFreq_e32000:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq32K;
-            break;
-        case racFreq_e44100:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq44_1K;
-            break;
-        case racFreq_e48000:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
-            break;
-        case racFreq_eMax:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreqUnknown;
-            break;
-        default:
-            lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
-            break;
-        }
-
+        //TODO: Get the format capture format from RMF_AudioCapture Settings
         lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+
+        if (lstBtrMgrSoInASettings.eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
+             stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+
+            switch (settings.format) {
+            case racFormat_e16BitStereo:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+                break;
+            case racFormat_e24BitStereo:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt24bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+                break;
+            case racFormat_e16BitMonoLeft:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
+                break;
+            case racFormat_e16BitMonoRight:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
+                break;
+            case racFormat_e16BitMono:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
+                break;
+            case racFormat_e24Bit5_1:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt24bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChan5_1;
+                break;
+            case racFormat_eMax:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmtUnknown;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanUnknown;
+                break;
+            default:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+                break;
+            }
+
+            switch (settings.samplingFreq) {
+            case racFreq_e16000:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq16K;
+                break;
+            case racFreq_e32000:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq32K;
+                break;
+            case racFreq_e44100:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq44_1K;
+                break;
+            case racFreq_e48000:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
+                break;
+            case racFreq_eMax:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreqUnknown;
+                break;
+            default:
+                pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
+                break;
+            }
+        }
+
         lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
 
-        lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+        if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+            stBTRMgrSOSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSOSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo));
+            stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo = ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
+
+            lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+            if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
+
+                if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq8K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq16K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq32K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq44_1K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq48K;
+                }
+                else {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreqUnknown;
+                }
+
+
+                switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
+                case eBTRCoreDevMediaAChanMono:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanMono;
+                    break;
+                case eBTRCoreDevMediaAChanDualChannel:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanDualChannel;
+                    break;
+                case eBTRCoreDevMediaAChanStereo:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanStereo;
+                    break;
+                case eBTRCoreDevMediaAChanJointStereo:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanJStereo;
+                    break;
+                case eBTRCoreDevMediaAChan5_1:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan5_1;
+                    break;
+                case eBTRCoreDevMediaAChan7_1:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan7_1;
+                    break;
+                case eBTRCoreDevMediaAChanUnknown:
+                default:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanUnknown;
+                    break;
+                }
+
+                pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
+                pstBtrMgrSoOutSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
+                pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
+                pstBtrMgrSoOutSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
+                pstBtrMgrSoOutSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
+                pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
+                pstBtrMgrSoOutSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
+            }
+        }
+
         lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
         lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
 
         if (eBTRMgrSOSuccess != BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
             BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Start FAILED\n");
-            return BTMGR_RESULT_GENERIC_FAILURE;
+            eBtrMgrResult = BTMGR_RESULT_GENERIC_FAILURE;
         }
 
-        if (RMF_AudioCapture_Start(gStreamCaptureSettings.hAudCap, &settings)) {
+        if ((eBtrMgrResult == BTMGR_RESULT_SUCCESS) && RMF_AudioCapture_Start(gStreamCaptureSettings.hAudCap, &settings)) {
             BTMGRLOG_ERROR ("btmgr_StartCastingAudio: RMF_AudioCapture_Start FAILED\n");
-            return BTMGR_RESULT_GENERIC_FAILURE;
+            eBtrMgrResult = BTMGR_RESULT_GENERIC_FAILURE;
         }
+
+        if (lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)
+            free(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo);
+
+        if (lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo)
+            free(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+
     }
 
-    return BTMGR_RESULT_SUCCESS;
+    return eBtrMgrResult;
 }
 
 void btmgr_StopCastingAudio ()
@@ -414,6 +502,7 @@ BTMGR_Result_t BTMGR_Init()
         memset (&gListOfAdapters, 0, sizeof(gListOfAdapters));
         memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
         memset (&gListOfPairedDevices, 0, sizeof(gListOfPairedDevices));
+        memset(&gstBtrCoreDevMediaInfo, 0, sizeof(gstBtrCoreDevMediaInfo));
         gIsDiscoveryInProgress = 0;
 
         /* Init the mutex */
@@ -1643,6 +1732,28 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
 
                     if (BTMGR_RESULT_SUCCESS == rc)
                     {
+                        if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+                            free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
+                            gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
+                        }
+
+                        gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+                        halrc = BTRCore_GetDeviceMediaInfo(gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &gstBtrCoreDevMediaInfo);
+                        if (enBTRCoreSuccess == halrc) {
+                            if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+                                BTMGRLOG_WARN("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+                                BTMGRLOG_WARN("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+                                BTMGRLOG_WARN("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+                                BTMGRLOG_WARN("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+                                BTMGRLOG_WARN("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+                                BTMGRLOG_WARN("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+                                BTMGRLOG_WARN("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+                                BTMGRLOG_WARN("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+                                BTMGRLOG_WARN("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+                            }
+                        }
+                        
                         /* Aquire Device Data Path to start the audio casting */
                         halrc = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
 
@@ -1705,6 +1816,11 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
         BTMGRLOG_WARN("%s : Sleep for few sec as alternate to async callback; temp change\n",__FUNCTION__);
         sleep(2);
         BTMGRLOG_WARN("%s : Slept for few sec as alternate to async callback; temp change\n",__FUNCTION__);
+
+        if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+            free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
+            gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
+        }
 
         /* We had Reset the gCurStreamingDevHandle to avoid recursion/looping; so no worries */
         rc = BTMGR_DisconnectFromDevice(index_of_adapter, handle);

@@ -40,13 +40,14 @@
 
 typedef struct appDataStruct{
     tBTRCoreHandle          hBTRCore;
+    stBTRCoreDevMediaInfo   stBtrCoreDevMediaInfo;
     RMF_AudioCaptureHandle  hAudCap;
     tBTRMgrSoHdl            hBTRMgrSoHdl;
     tBTRMgrSiHdl            hBTRMgrSiHdl;
     unsigned long           bytesWritten;
-    unsigned int            samplerate;
-    unsigned int            channels;
-    unsigned int            bitsPerSample;
+    unsigned int            inSampleRate;
+    unsigned int            inChannels;
+    unsigned int            inBitsPerSample;
     int                     iDataPath;
     int                     iDataReadMTU;
     int                     iDataWriteMTU;
@@ -58,7 +59,7 @@ typedef struct appDataStruct{
 
 //test func
 void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
-static int streamOutTestMainAlternate (int argc, char* argv[]);
+static int streamOutTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStart (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStop (appDataStruct *pstAppData);
 static int streamInLiveTestMainAlternateStart (int fd_number, int MTU_size, appDataStruct *pstAppData);
@@ -73,6 +74,12 @@ static void
 GetTransport (
     appDataStruct* pstAppData
 ) {
+
+	if (!pstAppData)
+		return;
+
+    BTRCore_GetDeviceMediaInfo ( pstAppData->hBTRCore, connectedDeviceIndex, enBTRCoreMobileAudioIn, &pstAppData->stBtrCoreDevMediaInfo);
+
     pstAppData->iDataPath = 0;
     pstAppData->iDataReadMTU = 0;
     pstAppData->iDataWriteMTU = 0;
@@ -87,6 +94,20 @@ GetTransport (
     printf("Device Data Path = %d \n",      pstAppData->iDataPath);
     printf("Device Data Read MTU = %d \n",  pstAppData->iDataReadMTU);
     printf("Device Data Write MTU= %d \n",  pstAppData->iDataWriteMTU);
+
+    if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+		if (pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+        	printf("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+        	printf("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+        	printf("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+        	printf("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+        	printf("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+        	printf("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+        	printf("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+        	printf("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+        	printf("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+		}
+    }
 }
 
 
@@ -313,6 +334,8 @@ main (
     stAppData.hBTRCore = lhBTRCore;
     //register callback for unsolicted events, such as powering off a bluetooth device
     BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
+
+    stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
 
     //display a menu of choices
     printMenu();
@@ -586,6 +609,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
 
+                BTRCore_GetDeviceMediaInfo(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.stBtrCoreDevMediaInfo);
+
                 stAppData.iDataPath = 0;
                 stAppData.iDataReadMTU = 0;
                 stAppData.iDataWriteMTU = 0;
@@ -595,6 +620,20 @@ main (
                 printf("Device Data Path = %d \n", stAppData.iDataPath);
                 printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
                 printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
+
+                if (stAppData.stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+					if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+                    	printf("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+                    	printf("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+                    	printf("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+                    	printf("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+                    	printf("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+                    	printf("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+                    	printf("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+                    	printf("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+                    	printf("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+					}
+                }
             }
             break;
         case 22:
@@ -633,7 +672,7 @@ main (
                 snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
                 {
                     char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
-                    streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs);
+                    streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs, &stAppData);
                 }
             }
             break;
@@ -723,6 +762,10 @@ main (
         }
     } while (1);
 
+
+    if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo)
+        free(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
+
     return 0;
 }
 
@@ -737,7 +780,7 @@ main (
 
 
 /* Local Defines */
-#define IN_BUF_SIZE     3072 // Corresponds to MTU size of 895
+#define IN_BUF_SIZE     3072 // Corresponds to MTU size of 895 TODO: Arrive at this value by calculating
 #define OUT_MTU_SIZE    1024
 
 
@@ -928,11 +971,14 @@ helpMenu (
 typedef void*  tBTRMgrCapSoHandle;
 
 typedef struct _stBTRMgrCapSoHdl {
-    FILE*   inFileFp;
-    char*   inDataBuf;     
-    int     inFileBytesLeft; 
-    int     inBytesToEncode;
-    int     inBufSize;      
+    FILE*           inFileFp;
+    char*           inDataBuf;     
+    int             inFileBytesLeft; 
+    int             inBytesToEncode;
+    int             inBufSize;      
+    unsigned int    inSampleRate;
+    unsigned int    inChannels;
+    unsigned int    inBitsPerSample;
     tBTRMgrSoHdl hBTRMgrSoHdl;
 } stBTRMgrCapSoHdl;
 
@@ -944,15 +990,20 @@ doDataCapture (
     tBTRMgrCapSoHandle  hBTRMgrSoCap = NULL;
     int*                penCapThreadExitStatus = malloc(sizeof(int));
 
-    FILE*   inFileFp        = NULL;
-    char*   inDataBuf      = NULL;
-    int     inFileBytesLeft = 0;
-    int     inBytesToEncode = 0;
-    int     inBufSize       = IN_BUF_SIZE;
+    FILE*           inFileFp        = NULL;
+    char*           inDataBuf       = NULL;
+    int             inFileBytesLeft = 0;
+    int             inBytesToEncode = 0;
+    int             inBufSize       = IN_BUF_SIZE;
+    unsigned int    inSampleRate    = 0;
+    unsigned int    inChannels      = 0;
+    unsigned int    inBitsPerSample = 0;
+
     tBTRMgrSoHdl hBTRMgrSoHdl;
 
     struct timeval tv;
     unsigned long int    prevTime = 0, currTime = 0;
+    unsigned long int    sleepTime = 0;
 
     hBTRMgrSoCap = (stBTRMgrCapSoHdl*) ptr;
     printf("%s \n", "Capture Thread Started");
@@ -968,9 +1019,19 @@ doDataCapture (
     inFileBytesLeft = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inFileBytesLeft;
     inBytesToEncode = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inBytesToEncode;
     inBufSize       = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inBufSize;
+    inSampleRate    = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inSampleRate;
+    inChannels      = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inChannels;
+    inBitsPerSample = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->inBitsPerSample;
     hBTRMgrSoHdl    = ((stBTRMgrCapSoHdl*)hBTRMgrSoCap)->hBTRMgrSoHdl;
 
+    if (inSampleRate && inChannels && inBitsPerSample)
+        sleepTime = inBytesToEncode * 1000000.0/((float)inSampleRate * inChannels * inBitsPerSample/8);
+    else
+        sleepTime = 0;
+
     while (inFileBytesLeft) {
+        gettimeofday(&tv,NULL);
+        prevTime = (1000000 * tv.tv_sec) + tv.tv_usec;
 
         if (inFileBytesLeft < inBufSize)
             inBytesToEncode = inFileBytesLeft;
@@ -979,17 +1040,20 @@ doDataCapture (
 
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
       
-        gettimeofday(&tv,NULL);
-        currTime = (1000000 * tv.tv_sec) + tv.tv_usec;
-        printf("inBytesToEncode = %d sleeptime = %lf Processing =%lu\n", inBytesToEncode, (inBytesToEncode * 1000000.0/192000.0) - 1666.666667, currTime - prevTime);
-        prevTime = currTime;
-
         if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
             fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
         }
 
         inFileBytesLeft -= inBytesToEncode;
-        usleep((inBytesToEncode * 1000000.0/192000.0) - 1666.666667);
+
+        gettimeofday(&tv,NULL);
+        currTime = (1000000 * tv.tv_sec) + tv.tv_usec;
+        
+
+        printf("inBytesToEncode = %d sleeptime = %lu Processing =%lu\n", inBytesToEncode, sleepTime - (currTime - prevTime), currTime - prevTime);
+
+        if (sleepTime > (currTime - prevTime))
+            usleep(sleepTime - (currTime - prevTime));
     }
 
     *penCapThreadExitStatus = 0;
@@ -1000,8 +1064,9 @@ doDataCapture (
 
 static int 
 streamOutTestMainAlternate (
-    int     argc,
-    char*   argv[]
+    int             argc,
+    char*           argv[],
+    appDataStruct*  pstAppData
 ) {
 
     char    *inDataBuf      = NULL;
@@ -1018,6 +1083,9 @@ streamOutTestMainAlternate (
 
     stBTRMgrSOInASettings   lstBtrMgrSoInASettings;
     stBTRMgrSOOutASettings  lstBtrMgrSoOutASettings;
+
+    lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = NULL;
+    lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = NULL;
 
 #if 0
     struct timeval tv;
@@ -1083,23 +1151,105 @@ streamOutTestMainAlternate (
     }
 #endif
 
+    inDataBuf = (char*)malloc(inBufSize * sizeof(char));
+    lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ? 
+                                                                    (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
+    lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+                                                                    (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+    if (!inDataBuf || !(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
+        fprintf(stderr, "BTRMgr_SO_Init - MEMORY ALLOC FAILED\n");
+        return -1;
+    }
+
+
     if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
         return -1;
     }
 
-    inDataBuf = (char*)malloc(inBufSize * sizeof(char));
     inBytesToEncode = inBufSize;
 
     /* TODO: Choose these valus based on information parsed from the wav file */
-    lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-    lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-    lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
-
     lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+
+    if (lstBtrMgrSoInASettings.eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
+        stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+
+        /* TODO: Set these valus based on information parsed from the wav file */
+        pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+        pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+        pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
+    }
+
     lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
 
-    lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+
+    if (pstAppData) {
+        if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+            stBTRMgrSOSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSOSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo));
+            stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo = ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
+            
+            lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+            if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
+
+                if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq8K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq16K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq32K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq44_1K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq48K;
+                }
+                else {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreqUnknown;
+                }
+
+
+                switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
+                case eBTRCoreDevMediaAChanMono:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanMono;
+                    break;
+                case eBTRCoreDevMediaAChanDualChannel:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanDualChannel;
+                    break;
+                case eBTRCoreDevMediaAChanStereo:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanStereo;
+                    break;
+                case eBTRCoreDevMediaAChanJointStereo:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanJStereo;
+                    break;
+                case eBTRCoreDevMediaAChan5_1:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan5_1;
+                    break;
+                case eBTRCoreDevMediaAChan7_1:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan7_1;
+                    break;
+                case eBTRCoreDevMediaAChanUnknown:
+                default:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanUnknown;
+                    break;
+                }
+
+                pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
+                pstBtrMgrSoOutSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
+                pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
+                pstBtrMgrSoOutSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
+                pstBtrMgrSoOutSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
+                pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
+                pstBtrMgrSoOutSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
+            }
+        }
+    }
+
+
     lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
     lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
 
@@ -1141,6 +1291,9 @@ streamOutTestMainAlternate (
     lstBTRMgrCapSoHdl.inFileBytesLeft = inFileBytesLeft;
     lstBTRMgrCapSoHdl.inBytesToEncode = inBytesToEncode;
     lstBTRMgrCapSoHdl.inBufSize       = inBufSize;
+    lstBTRMgrCapSoHdl.inBitsPerSample = 16;     //Get from Wav file
+    lstBTRMgrCapSoHdl.inChannels      = 2;      //Get from Wav file
+    lstBTRMgrCapSoHdl.inSampleRate    = 48000;  //Get from Wav file
     lstBTRMgrCapSoHdl.hBTRMgrSoHdl    = hBTRMgrSoHdl;
 
     if((dataCapThread = g_thread_new(NULL, doDataCapture, (void*)&lstBTRMgrCapSoHdl)) == NULL) {
@@ -1160,7 +1313,15 @@ streamOutTestMainAlternate (
         fprintf(stderr, "BTRMgr_SO_Stop - FAILED\n");
     }
 
-    free(inDataBuf);
+
+    if (lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)
+        free(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo);
+
+    if (lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo)
+        free(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+
+    if (inDataBuf)
+        free(inDataBuf);
 
     if (eBTRMgrSOSuccess != BTRMgr_SO_DeInit(hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_DeInit - FAILED\n");
@@ -1239,15 +1400,27 @@ streamOutLiveTestMainAlternateStart (
     stBTRMgrSOInASettings     lstBtrMgrSoInASettings;
     stBTRMgrSOOutASettings    lstBtrMgrSoOutASettings;
 
+    lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ? 
+                                                                    (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
+    lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+                                                                    (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+    if (!(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
+        fprintf(stderr, "BTRMgr_SO_Init - MEMORY ALLOC FAILED\n");
+        return -1;
+    }
+
     if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl))) {
         fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
         return -1;
     }
 
+#if 0
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first */
     pstAppData->bitsPerSample = 16;
     pstAppData->samplerate = 48000;
     pstAppData->channels = 2;
+#endif
 
     if (RMF_AudioCapture_Open(&(pstAppData->hAudCap))) {
         goto err_open;
@@ -1260,66 +1433,135 @@ streamOutLiveTestMainAlternateStart (
     settings.fifoSize = 8 * inBytesToEncode;
     settings.threshold= inBytesToEncode;
 
-    switch (settings.format) {
-    case racFormat_e16BitStereo:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-        break;
-    case racFormat_e24BitStereo:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-        break;
-    case racFormat_e16BitMonoLeft:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
-        break;
-    case racFormat_e16BitMonoRight:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
-        break;
-    case racFormat_e16BitMono:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanMono;
-        break;
-    case racFormat_e24Bit5_1:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt24bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChan5_1;
-        break;
-    case racFormat_eMax:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmtUnknown;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanUnknown;
-        break;
-    default:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFmt  = eBTRMgrSOSFmt16bit;
-        lstBtrMgrSoInASettings.eBtrMgrSoInAChan = eBTRMgrSOAChanStereo;
-        break;
-    }
-
-    switch (settings.samplingFreq) {
-    case racFreq_e16000:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq16K;
-        break;
-    case racFreq_e32000:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq32K;
-        break;
-    case racFreq_e44100:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq44_1K;
-        break;
-    case racFreq_e48000:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
-        break;
-    case racFreq_eMax:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreqUnknown;
-        break;
-    default:
-        lstBtrMgrSoInASettings.eBtrMgrSoInSFreq = eBTRMgrSOSFreq48K;
-        break;
-    }
-
+    //TODO: Get the format capture format from RMF_AudioCapture Settings
     lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+
+    if (lstBtrMgrSoInASettings.eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
+        stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+
+        switch (settings.format) {
+        case racFormat_e16BitStereo:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+            break;
+        case racFormat_e24BitStereo:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt24bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+            break;
+        case racFormat_e16BitMonoLeft:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
+            break;
+        case racFormat_e16BitMonoRight:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
+            break;
+        case racFormat_e16BitMono:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
+            break;
+        case racFormat_e24Bit5_1:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt24bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChan5_1;
+            break;
+        case racFormat_eMax:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmtUnknown;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanUnknown;
+            break;
+        default:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
+            break;
+        }    
+
+        switch (settings.samplingFreq) {
+        case racFreq_e16000:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq16K;
+            break;
+        case racFreq_e32000:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq32K;
+            break;
+        case racFreq_e44100:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq44_1K;
+            break;
+        case racFreq_e48000:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
+            break;
+        case racFreq_eMax:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreqUnknown;
+            break;
+        default:
+            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
+            break;
+        }
+    }
+
     lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
 
-    lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+    if (pstAppData) {
+        if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+            stBTRMgrSOSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSOSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo));
+            stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo = ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
+            
+            lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+            if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
+
+                if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq8K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq16K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq32K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq44_1K;
+                }
+                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq48K;
+                }
+                else {
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreqUnknown;
+                }
+
+
+                switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
+                case eBTRCoreDevMediaAChanMono:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanMono;
+                    break;
+                case eBTRCoreDevMediaAChanDualChannel:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanDualChannel;
+                    break;
+                case eBTRCoreDevMediaAChanStereo:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanStereo;
+                    break;
+                case eBTRCoreDevMediaAChanJointStereo:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanJStereo;
+                    break;
+                case eBTRCoreDevMediaAChan5_1:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan5_1;
+                    break;
+                case eBTRCoreDevMediaAChan7_1:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan7_1;
+                    break;
+                case eBTRCoreDevMediaAChanUnknown:
+                default:
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanUnknown;
+                    break;
+                }
+
+                pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
+                pstBtrMgrSoOutSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
+                pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
+                pstBtrMgrSoOutSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
+                pstBtrMgrSoOutSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
+                pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
+                pstBtrMgrSoOutSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
+            }
+        }
+    }
+
     lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
     lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
 
@@ -1333,6 +1575,13 @@ streamOutLiveTestMainAlternateStart (
     }
 
     printf("BT AUDIO OUT - STARTED \n");
+
+    if (lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)
+        free(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo);
+
+    if (lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo)
+        free(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+
 
 err_open:
     return 0;
@@ -1384,11 +1633,12 @@ streamInLiveTestMainAlternateStart (
 
     BTRMgr_SI_Init(&pstAppData->hBTRMgrSiHdl);
 
+#if 0
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
     pstAppData->bitsPerSample = 16;
     pstAppData->samplerate = 48000;
     pstAppData->channels = 2;
-
+#endif
 
     BTRMgr_SI_Start(pstAppData->hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize);
 

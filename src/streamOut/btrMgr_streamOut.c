@@ -196,6 +196,28 @@ BTRMgr_SO_Start (
     eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
+    eBTRMgrSOSFmt   leBtrMgrSoInSFmt  = eBTRMgrSOSFmtUnknown;
+    eBTRMgrSOAChan  leBtrMgrSoInAChan = eBTRMgrSOAChanUnknown;
+    eBTRMgrSOSFreq  leBtrMgrSoInSFreq = eBTRMgrSOSFreqUnknown;
+
+    eBTRMgrSOAChan  leBtrMgrSoOutAChan = eBTRMgrSOAChanUnknown;
+    eBTRMgrSOSFreq  leBtrMgrSoOutSFreq = eBTRMgrSOSFreqUnknown;
+
+    const char*  lpcBtrMgrInSoSFmt = NULL;
+    unsigned int lui32BtrMgrInSoAChan;
+    unsigned int lui32BtrMgrInSoSFreq;
+
+    const char*  lpcBtrMgrOutSoAChanMode = NULL;
+    unsigned int lui32BtrMgrOutSoAChan;
+    unsigned int lui32BtrMgrOutSoSFreq;
+
+    unsigned char   lui8SbcAllocMethod  = 0;
+    unsigned char   lui8SbcSubbands     = 0;   
+    unsigned char   lui8SbcBlockLength  = 0;
+    unsigned char   lui8SbcMinBitpool   = 0; 
+    unsigned char   lui8SbcMaxBitpool   = 0; 
+
+
 #ifdef USE_GST1
     eBTRMgrSOGstRet leBtrMgrSoGstRet = eBTRMgrSOGstSuccess;
 #endif
@@ -204,13 +226,159 @@ BTRMgr_SO_Start (
         return eBTRMgrSONotInitialized;
     }
 
-    if ((apstBtrMgrSoInASettings == NULL) || (apstBtrMgrSoOutASettings == NULL)) {
+    if ((apstBtrMgrSoInASettings == NULL) || (apstBtrMgrSoOutASettings == NULL) ||
+        (apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo == NULL) || (apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo == NULL)) {
         return eBTRMgrSOFailInArg;
     }
 
+    if (apstBtrMgrSoInASettings->eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
+        leBtrMgrSoInSFmt  = ((stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo))->eBtrMgrSoSFmt;
+        leBtrMgrSoInAChan = ((stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo))->eBtrMgrSoAChan;
+        leBtrMgrSoInSFreq = ((stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo))->eBtrMgrSoSFreq;
+    }
+
+
+    if (apstBtrMgrSoOutASettings->eBtrMgrSoOutAType == eBTRMgrSOATypeSBC) {
+        leBtrMgrSoOutAChan = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->eBtrMgrSoSbcAChan;
+        leBtrMgrSoOutSFreq = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->eBtrMgrSoSbcSFreq;
+        lui8SbcAllocMethod = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcAllocMethod;
+        lui8SbcSubbands    = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcSubbands;
+        lui8SbcBlockLength = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcBlockLength;
+        lui8SbcMinBitpool  = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcMinBitpool;
+        lui8SbcMaxBitpool  = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcMaxBitpool;
+    }
+
+
 #ifdef USE_GST1
+    switch (leBtrMgrSoInSFmt) {
+    case eBTRMgrSOSFmt8bit:
+        lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_8BIT;
+        break;
+    case eBTRMgrSOSFmt16bit:
+        lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT;
+        break;
+    case eBTRMgrSOSFmt24bit:
+        lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT;
+        break;
+    case eBTRMgrSOSFmt32bit:
+        lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT;
+        break;
+    case eBTRMgrSOSFmtUnknown:
+    default:
+        lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT;
+        break;
+    }
+
+    switch (leBtrMgrSoInAChan) {
+    case eBTRMgrSOAChanMono:
+        lui32BtrMgrInSoAChan = 1;
+        break;
+    case eBTRMgrSOAChanDualChannel:
+        lui32BtrMgrInSoAChan = 2;
+        break;
+    case eBTRMgrSOAChanStereo:
+        lui32BtrMgrInSoAChan = 2;
+        break;
+    case eBTRMgrSOAChanJStereo:
+        lui32BtrMgrInSoAChan = 2;
+        break;
+    case eBTRMgrSOAChan5_1:
+        lui32BtrMgrInSoAChan = 6;
+        break;
+    case eBTRMgrSOAChan7_1:
+        lui32BtrMgrInSoAChan = 8;
+        break;
+    case eBTRMgrSOAChanUnknown:
+    default:
+        lui32BtrMgrInSoAChan = 2;
+        break;
+    }
+
+    switch (leBtrMgrSoInSFreq) {
+    case eBTRMgrSOSFreq8K:
+        lui32BtrMgrInSoSFreq = 8000;
+    case eBTRMgrSOSFreq16K:
+        lui32BtrMgrInSoSFreq = 16000;
+        break;
+    case eBTRMgrSOSFreq32K:
+        lui32BtrMgrInSoSFreq = 32000;
+        break;
+    case eBTRMgrSOSFreq44_1K:
+        lui32BtrMgrInSoSFreq = 44100;
+        break;
+    case eBTRMgrSOSFreq48K:
+        lui32BtrMgrInSoSFreq = 48000;
+        break;
+    case eBTRMgrSOSFreqUnknown:
+    default:
+        lui32BtrMgrInSoSFreq = 48000;
+        break;
+    }
+
+    switch (leBtrMgrSoOutAChan) {
+    case eBTRMgrSOAChanMono:
+        lui32BtrMgrOutSoAChan   = 1;
+        lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_MONO;
+        break;
+    case eBTRMgrSOAChanDualChannel:
+        lui32BtrMgrOutSoAChan   = 2;
+        lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_DUAL;
+        break;
+    case eBTRMgrSOAChanStereo:
+        lui32BtrMgrOutSoAChan   = 2;
+        lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_STEREO;
+        break;
+    case eBTRMgrSOAChanJStereo:
+        lui32BtrMgrOutSoAChan   = 2;
+        lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_JSTEREO;
+        break;
+    case eBTRMgrSOAChan5_1:
+        lui32BtrMgrOutSoAChan   = 6;
+        break;
+    case eBTRMgrSOAChan7_1:
+        lui32BtrMgrOutSoAChan   = 8;
+        break;
+    case eBTRMgrSOAChanUnknown:
+    default:
+        lui32BtrMgrOutSoAChan   = 2;
+        lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_STEREO;
+        break;
+    }
+
+    switch (leBtrMgrSoOutSFreq) {
+    case eBTRMgrSOSFreq8K:
+        lui32BtrMgrOutSoSFreq = 8000;
+    case eBTRMgrSOSFreq16K:
+        lui32BtrMgrOutSoSFreq = 16000;
+        break;
+    case eBTRMgrSOSFreq32K:
+        lui32BtrMgrOutSoSFreq = 32000;
+        break;
+    case eBTRMgrSOSFreq44_1K:
+        lui32BtrMgrOutSoSFreq = 44100;
+        break;
+    case eBTRMgrSOSFreq48K:
+        lui32BtrMgrOutSoSFreq = 48000;
+        break;
+    case eBTRMgrSOSFreqUnknown:
+    default:
+        lui32BtrMgrOutSoSFreq = 48000;
+        break;
+    }
+
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStart( pstBtrMgrSoHdl->hBTRMgrSoGstHdl,
                                                 apstBtrMgrSoInASettings->iBtrMgrSoInBufMaxSize,
+                                                lpcBtrMgrInSoSFmt,
+                                                lui32BtrMgrInSoSFreq,
+                                                lui32BtrMgrInSoAChan,
+                                                lui32BtrMgrOutSoSFreq,
+                                                lui32BtrMgrOutSoAChan,
+                                                lpcBtrMgrOutSoAChanMode,
+                                                lui8SbcAllocMethod,
+                                                lui8SbcSubbands,
+                                                lui8SbcBlockLength,
+                                                lui8SbcMinBitpool,
+                                                lui8SbcMaxBitpool,
                                                 apstBtrMgrSoOutASettings->iBtrMgrSoDevFd,
                                                 apstBtrMgrSoOutASettings->iBtrMgrSoDevMtu)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);

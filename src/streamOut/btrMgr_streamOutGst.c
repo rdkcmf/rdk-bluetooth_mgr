@@ -48,9 +48,9 @@
 
 
 /* Local defines */
-#define BTR_MGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
-#define BTR_MGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
-#define BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS 8   // Number of blocks in the internal queue
+#define BTRMGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
+#define BTRMGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
+#define BTRMGR_MAX_INTERNAL_QUEUE_ELEMENTS 8   // Number of blocks in the internal queue
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 
@@ -126,7 +126,7 @@ btrMgr_SO_validateStateWithTimeout (
 ) {
     GstState    gst_current;
     GstState    gst_pending;
-    float       timeout = BTR_MGR_WAIT_TIMEOUT_MS;
+    float       timeout = BTRMGR_WAIT_TIMEOUT_MS;
     gint        gstGetStateCnt = GST_ELEMENT_GET_STATE_RETRY_CNT_MAX;
 
     do { 
@@ -211,7 +211,7 @@ BTRMgr_SO_GstInit (
 
         
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTR_MGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
@@ -276,13 +276,24 @@ BTRMgr_SO_GstDeInit (
 eBTRMgrSOGstRet
 BTRMgr_SO_GstStart (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
-    int aiInBufMaxSize,
-    int aiBTDevFd,
-    int aiBTDevMTU
+    int             ai32InBufMaxSize,
+    const char*     apcInFmt,
+    int             ai32InRate,
+    int             ai32InChannels,
+    int             ai32OutRate,
+    int             ai32OutChannels,
+    const char*     apcOutChannelMode,
+    unsigned char   aui8SbcAllocMethod,
+    unsigned char   aui8SbcSubbands,
+    unsigned char   aui8SbcBlockLength,
+    unsigned char   aui8SbcMinBitpool,
+    unsigned char   aui8SbcMaxBitpool,
+    int             ai32BTDevFd,
+    int             ai32BTDevMTU
 ) {
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
-    if (!pstBtrMgrSoGst) {
+    if (!pstBtrMgrSoGst || !apcInFmt) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
@@ -298,13 +309,15 @@ BTRMgr_SO_GstStart (
     GstCaps* appsrcSrcCaps  = NULL;
     GstCaps* audEncSrcCaps  = NULL;
 
+    unsigned int lui32InBitsPSample = 0;
+
     (void)pipeline;
     (void)appsrc;
     (void)audenc;
     (void)busWatchId;
 
     /* Check if we are in correct state */
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
         g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
@@ -312,36 +325,51 @@ BTRMgr_SO_GstStart (
     pstBtrMgrSoGst->gstClkTStamp = 0;
     pstBtrMgrSoGst->inBufOffset  = 0;
 
+    if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_8BIT))
+        lui32InBitsPSample = 8;
+    else if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT))
+        lui32InBitsPSample = 16;
+    else if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT))
+        lui32InBitsPSample = 24;
+    else if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT))
+        lui32InBitsPSample = 32;
+    else
+        lui32InBitsPSample = 16;
+
+
     /*TODO: Set the caps dynamically based on input arguments to Start */
     appsrcSrcCaps = gst_caps_new_simple ("audio/x-raw",
-                                         "format", G_TYPE_STRING, GST_AUDIO_NE (S16),
+                                         "format", G_TYPE_STRING, apcInFmt,
                                          "layout", G_TYPE_STRING, "interleaved",
-                                         "rate", G_TYPE_INT, 48000,
-                                         "channels", G_TYPE_INT, 2,
+                                         "rate", G_TYPE_INT, ai32InRate,
+                                         "channels", G_TYPE_INT, ai32InChannels,
                                           NULL);
+
+    (void)aui8SbcAllocMethod;
+    (void)aui8SbcMinBitpool;
 
     /*TODO: Set the Encoder ouput caps dynamically based on input arguments to Start */
     audEncSrcCaps = gst_caps_new_simple ("audio/x-sbc",
-                                         "rate", G_TYPE_INT, 48000,
-                                         "channels", G_TYPE_INT, 2,
-                                         "channel-mode", G_TYPE_STRING, "joint",
-                                         "blocks", G_TYPE_INT, 16,
-                                         "subbands", G_TYPE_INT, 8,
+                                         "rate", G_TYPE_INT, ai32OutRate,
+                                         "channels", G_TYPE_INT, ai32OutChannels,
+                                         "channel-mode", G_TYPE_STRING, apcOutChannelMode,
+                                         "blocks", G_TYPE_INT, aui8SbcBlockLength,
+                                         "subbands", G_TYPE_INT, aui8SbcSubbands,
                                          "allocation-method", G_TYPE_STRING, "loudness",
-                                         "bitpool", G_TYPE_INT, 51,
+                                         "bitpool", G_TYPE_INT, aui8SbcMaxBitpool,
                                           NULL);
 
     g_object_set (appsrc, "caps", appsrcSrcCaps, NULL);
-    g_object_set (appsrc, "blocksize", aiInBufMaxSize, NULL);
+    g_object_set (appsrc, "blocksize", ai32InBufMaxSize, NULL);
 
-    g_object_set (appsrc, "max-bytes", BTR_MGR_MAX_INTERNAL_QUEUE_ELEMENTS * aiInBufMaxSize, NULL);
+    g_object_set (appsrc, "max-bytes", BTRMGR_MAX_INTERNAL_QUEUE_ELEMENTS * ai32InBufMaxSize, NULL);
     g_object_set (appsrc, "is-live", 1, NULL);
     g_object_set (appsrc, "block", 1, NULL);
 
 #if 0
     g_object_set (appsrc, "do-timestamp", 1, NULL);
 #endif
-    g_object_set (appsrc, "min-latency", GST_USECOND * (aiInBufMaxSize * 1000)/(48 * (16/8) * 2), NULL);
+    g_object_set (appsrc, "min-latency", GST_USECOND * (ai32InBufMaxSize * 1000)/((ai32InRate/1000.0) * (lui32InBitsPSample/8) * ai32InChannels), NULL);
     g_object_set (appsrc, "stream-type", 0, NULL);
     g_object_set (appsrc, "format", GST_FORMAT_TIME, NULL);
 
@@ -349,11 +377,11 @@ BTRMgr_SO_GstStart (
 
     g_object_set (aecapsfilter, "caps", audEncSrcCaps, NULL);
 
-    g_object_set (rtpaudpay, "mtu", aiBTDevMTU, NULL);
+    g_object_set (rtpaudpay, "mtu", ai32BTDevMTU, NULL);
     g_object_set (rtpaudpay, "min-frames", -1, NULL);
     g_object_set (rtpaudpay, "perfect-rtptime", 1, NULL);
 
-    g_object_set (fdsink, "fd", aiBTDevFd, NULL);
+    g_object_set (fdsink, "fd", ai32BTDevFd, NULL);
     g_object_set (fdsink, "sync", FALSE, NULL);
 
 
@@ -362,7 +390,7 @@ BTRMgr_SO_GstStart (
 
     /* start play back and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) { 
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) { 
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
@@ -394,7 +422,7 @@ BTRMgr_SO_GstStop (
 
     /* stop play back */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
         g_print ("%s:%d:%s - - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
@@ -428,14 +456,14 @@ BTRMgr_SO_GstPause (
     (void)busWatchId;
 
     /* Check if we are in correct state */
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
         g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
     /* pause playback and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     } 
@@ -466,14 +494,14 @@ BTRMgr_SO_GstResume (
     (void)busWatchId;
 
     /* Check if we are in correct state */
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
         g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
     /* Resume playback and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTR_MGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
