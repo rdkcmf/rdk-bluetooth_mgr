@@ -1002,7 +1002,7 @@ doDataCapture (
     tBTRMgrSoHdl hBTRMgrSoHdl;
 
     struct timeval tv;
-    unsigned long int    prevTime = 0, currTime = 0;
+    unsigned long int    prevTime = 0, currTime = 0, processingTime = 0;
     unsigned long int    sleepTime = 0;
 
     hBTRMgrSoCap = (stBTRMgrCapSoHdl*) ptr;
@@ -1036,8 +1036,6 @@ doDataCapture (
         if (inFileBytesLeft < inBufSize)
             inBytesToEncode = inFileBytesLeft;
 
-        g_thread_yield();
-
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
       
         if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
@@ -1049,11 +1047,11 @@ doDataCapture (
         gettimeofday(&tv,NULL);
         currTime = (1000000 * tv.tv_sec) + tv.tv_usec;
         
+        processingTime = currTime - prevTime;
+        printf("inBytesToEncode = %d sleeptime = %lu Processing =%lu\n", inBytesToEncode, sleepTime - processingTime, processingTime);
 
-        printf("inBytesToEncode = %d sleeptime = %lu Processing =%lu\n", inBytesToEncode, sleepTime - (currTime - prevTime), currTime - prevTime);
-
-        if (sleepTime > (currTime - prevTime))
-            usleep(sleepTime - (currTime - prevTime));
+        if (sleepTime > processingTime)
+            usleep(sleepTime - processingTime);
     }
 
     *penCapThreadExitStatus = 0;
@@ -1151,13 +1149,12 @@ streamOutTestMainAlternate (
     }
 #endif
 
-    inDataBuf = (char*)malloc(inBufSize * sizeof(char));
     lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ? 
                                                                     (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
     lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
                                                                     (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
 
-    if (!inDataBuf || !(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
+    if (!(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
         fprintf(stderr, "BTRMgr_SO_Init - MEMORY ALLOC FAILED\n");
         return -1;
     }
@@ -1181,8 +1178,6 @@ streamOutTestMainAlternate (
         pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
         pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
     }
-
-    lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
 
 
     if (pstAppData) {
@@ -1250,9 +1245,20 @@ streamOutTestMainAlternate (
     }
 
 
-    lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
-    lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
+    lstBtrMgrSoOutASettings.i32BtrMgrSoDevFd      = outFileFd;
+    lstBtrMgrSoOutASettings.i32BtrMgrSoDevMtu     = outMTUSize;
 
+
+    if (eBTRMgrSOSuccess != BTRMgr_SO_GetEstimatedInABufSize(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+        fprintf(stderr, "BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
+        lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize = inBytesToEncode;
+    }
+    else {
+        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize;
+    }
+
+    inBufSize = inBytesToEncode ;
+    inDataBuf = (char*)malloc(inBytesToEncode * sizeof(char));
 
     if (eBTRMgrSOSuccess != BTRMgr_SO_Start(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
         fprintf(stderr, "BTRMgr_SO_Start - FAILED\n");
@@ -1291,9 +1297,9 @@ streamOutTestMainAlternate (
     lstBTRMgrCapSoHdl.inFileBytesLeft = inFileBytesLeft;
     lstBTRMgrCapSoHdl.inBytesToEncode = inBytesToEncode;
     lstBTRMgrCapSoHdl.inBufSize       = inBufSize;
-    lstBTRMgrCapSoHdl.inBitsPerSample = 16;     //Get from Wav file
-    lstBTRMgrCapSoHdl.inChannels      = 2;      //Get from Wav file
-    lstBTRMgrCapSoHdl.inSampleRate    = 48000;  //Get from Wav file
+    lstBTRMgrCapSoHdl.inBitsPerSample = 16;     //TODO: Get from Wav file
+    lstBTRMgrCapSoHdl.inChannels      = 2;      //TODO: Get from Wav file
+    lstBTRMgrCapSoHdl.inSampleRate    = 48000;  //TODO: Get from Wav file
     lstBTRMgrCapSoHdl.hBTRMgrSoHdl    = hBTRMgrSoHdl;
 
     if((dataCapThread = g_thread_new(NULL, doDataCapture, (void*)&lstBTRMgrCapSoHdl)) == NULL) {
@@ -1427,11 +1433,10 @@ streamOutLiveTestMainAlternateStart (
     }
 
     RMF_AudioCapture_GetDefaultSettings(&settings);
-    settings.cbBufferReady      = cbBufferReady;
-    settings.cbBufferReadyParm  = pstAppData;
 
-    settings.fifoSize = 8 * inBytesToEncode;
-    settings.threshold= inBytesToEncode;
+    fprintf(stderr, "AudioCapture - Default CBBufferReady = %p\n", settings.cbBufferReady);
+    fprintf(stderr, "AudioCapture - Default Fifosize      = %d\n", settings.fifoSize);
+    fprintf(stderr, "AudioCapture - Default Threshold     = %d\n", settings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
@@ -1496,7 +1501,6 @@ streamOutLiveTestMainAlternateStart (
         }
     }
 
-    lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
 
     if (pstAppData) {
         if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
@@ -1562,8 +1566,24 @@ streamOutLiveTestMainAlternateStart (
         }
     }
 
-    lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
-    lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
+    lstBtrMgrSoOutASettings.i32BtrMgrSoDevFd      = outFileFd;
+    lstBtrMgrSoOutASettings.i32BtrMgrSoDevMtu     = outMTUSize;
+
+
+    if (eBTRMgrSOSuccess != BTRMgr_SO_GetEstimatedInABufSize(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+        fprintf(stderr, "BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
+        lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize = inBytesToEncode;
+    }
+    else {
+        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize;
+    }
+
+
+    settings.cbBufferReady      = cbBufferReady;
+    settings.cbBufferReadyParm  = pstAppData;
+    settings.fifoSize = 8 * inBytesToEncode;
+    settings.threshold= inBytesToEncode;
+
 
     if (eBTRMgrSOSuccess != BTRMgr_SO_Start(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
         fprintf(stderr, "BTRMgr_SO_Start - FAILED\n");

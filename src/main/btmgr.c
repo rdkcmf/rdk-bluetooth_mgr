@@ -108,10 +108,12 @@ btmgr_StartCastingAudio (
         }
 
         RMF_AudioCapture_GetDefaultSettings(&settings);
-        settings.cbBufferReady      = cbBufferReady;
-        settings.cbBufferReadyParm  = &gStreamCaptureSettings;
-        settings.fifoSize           = 8 * inBytesToEncode;
-        settings.threshold          = inBytesToEncode;
+
+
+        BTMGRLOG_WARN("btmgr_StartCastingAudio! AudioCapture - Default CBBufferReady = %d\n", settings.cbBufferReady);
+        BTMGRLOG_WARN("btmgr_StartCastingAudio! AudioCapture - Default Fifosize      = %d\n", settings.fifoSize);
+        BTMGRLOG_WARN("btmgr_StartCastingAudio! AudioCapture - Default Threshold     = %d\n", settings.threshold);
+
 
         lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ?
                                                                         (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
@@ -186,7 +188,6 @@ btmgr_StartCastingAudio (
             }
         }
 
-        lstBtrMgrSoInASettings.iBtrMgrSoInBufMaxSize= inBytesToEncode;
 
         if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
             stBTRMgrSOSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSOSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo));
@@ -250,8 +251,22 @@ btmgr_StartCastingAudio (
             }
         }
 
-        lstBtrMgrSoOutASettings.iBtrMgrSoDevFd      = outFileFd;
-        lstBtrMgrSoOutASettings.iBtrMgrSoDevMtu     = outMTUSize;
+        lstBtrMgrSoOutASettings.i32BtrMgrSoDevFd      = outFileFd;
+        lstBtrMgrSoOutASettings.i32BtrMgrSoDevMtu     = outMTUSize;
+
+
+        if (eBTRMgrSOSuccess != BTRMgr_SO_GetEstimatedInABufSize(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
+            lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize = inBytesToEncode;
+        }
+        else {
+            inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize;
+        }
+
+        settings.cbBufferReady      = cbBufferReady;
+        settings.cbBufferReadyParm  = &gStreamCaptureSettings;
+        settings.fifoSize           = 8 * inBytesToEncode;
+        settings.threshold          = inBytesToEncode;
 
         if (eBTRMgrSOSuccess != BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
             BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Start FAILED\n");

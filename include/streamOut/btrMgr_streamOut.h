@@ -112,14 +112,14 @@ typedef struct _stBTRMgrSOMPEGInfo {
 typedef struct _stBTRMgrSOInASettings {
     eBTRMgrSOAType  eBtrMgrSoInAType;
     void*           pstBtrMgrSoInCodecInfo;
-    int             iBtrMgrSoInBufMaxSize;
+    int             i32BtrMgrSoInBufMaxSize;
 } stBTRMgrSOInASettings;
 
 typedef struct _stBTRMgrSOOutASettings {
     eBTRMgrSOAType  eBtrMgrSoOutAType;
     void*           pstBtrMgrSoOutCodecInfo;
-    int             iBtrMgrSoDevFd;
-    int             iBtrMgrSoDevMtu;
+    int             i32BtrMgrSoDevFd;
+    int             i32BtrMgrSoDevMtu;
 } stBTRMgrSOOutASettings;
 
 typedef struct _stBTRMgrSOStatus {
@@ -138,6 +138,7 @@ eBTRMgrSORet BTRMgr_SO_DeInit (tBTRMgrSoHdl hBTRMgrSoHdl);
 eBTRMgrSORet BTRMgr_SO_GetDefaultSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
 eBTRMgrSORet BTRMgr_SO_GetCurrentSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
 eBTRMgrSORet BTRMgr_SO_GetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrSOStatus* apstBtrMgrSoStatus);
+eBTRMgrSORet BTRMgr_SO_GetEstimatedInABufSize (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrSOInASettings* apstBtrMgrSoInASettings, stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings);
 eBTRMgrSORet BTRMgr_SO_Start (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrSOInASettings* apstBtrMgrSoInASettings, stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings);
 eBTRMgrSORet BTRMgr_SO_Stop (tBTRMgrSoHdl hBTRMgrSoHdl);
 eBTRMgrSORet BTRMgr_SO_Pause (tBTRMgrSoHdl hBTRMgrSoHdl);

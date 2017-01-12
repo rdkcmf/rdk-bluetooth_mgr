@@ -188,6 +188,138 @@ BTRMgr_SO_GetStatus (
 
 
 eBTRMgrSORet
+BTRMgr_SO_GetEstimatedInABufSize (
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    stBTRMgrSOInASettings*  apstBtrMgrSoInASettings,
+    stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings
+) {
+    eBTRMgrSORet        leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    stBTRMgrSOHdl*      pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
+
+    stBTRMgrSOPCMInfo*  pstBtrMgrSoInPcmInfo = NULL;
+    stBTRMgrSOSBCInfo*  pstBtrMgrSoOutSbcInfo = NULL;
+
+    unsigned int        lui32InBitsPerSample = 0;
+    unsigned int        lui32InNumAChan = 0;
+    unsigned int        lui32InSamplingFreq = 0;
+
+    unsigned short      lui16OutFrameLen = 0;
+    unsigned short      lui16OutBitrateKbps = 0;
+    unsigned short      lui16OutMtu = 0;
+
+    unsigned int        lui32InByteRate = 0;
+    unsigned int        lui32OutByteRate = 0;
+    float               lfOutMtuTimemSec = 0.0;
+
+    if (pstBtrMgrSoHdl == NULL) {
+        return eBTRMgrSONotInitialized;
+    }
+
+    if ((apstBtrMgrSoInASettings == NULL) || (apstBtrMgrSoOutASettings == NULL) ||
+        (apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo == NULL) || (apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo == NULL)) {
+        return eBTRMgrSOFailInArg;
+    }
+
+    if (apstBtrMgrSoInASettings->eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
+        pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo);
+
+        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq) {
+        case eBTRMgrSOSFreq8K:
+            lui32InSamplingFreq = 8000;
+        case eBTRMgrSOSFreq16K:
+            lui32InSamplingFreq = 16000;
+            break;
+        case eBTRMgrSOSFreq32K:
+            lui32InSamplingFreq = 32000;
+            break;
+        case eBTRMgrSOSFreq44_1K:
+            lui32InSamplingFreq = 44100;
+            break;
+        case eBTRMgrSOSFreq48K:
+            lui32InSamplingFreq = 48000;
+            break;
+        case eBTRMgrSOSFreqUnknown:
+        default:
+            lui32InSamplingFreq = 48000;
+            break;
+        }
+
+        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt) {
+        case eBTRMgrSOSFmt8bit:
+            lui32InBitsPerSample = 8;
+            break;
+        case eBTRMgrSOSFmt16bit:
+            lui32InBitsPerSample = 16;
+            break;
+        case eBTRMgrSOSFmt24bit:
+            lui32InBitsPerSample = 24;
+            break;
+        case eBTRMgrSOSFmt32bit:
+            lui32InBitsPerSample = 32;
+            break;
+        case eBTRMgrSOSFmtUnknown:
+        default:
+            lui32InBitsPerSample = 16;
+            break;
+        }
+
+        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan) {
+        case eBTRMgrSOAChanMono:
+            lui32InNumAChan = 1;
+            break;
+        case eBTRMgrSOAChanDualChannel:
+            lui32InNumAChan = 2;
+            break;
+        case eBTRMgrSOAChanStereo:
+            lui32InNumAChan = 2;
+            break;
+        case eBTRMgrSOAChanJStereo:
+            lui32InNumAChan = 2;
+            break;
+        case eBTRMgrSOAChan5_1:
+            lui32InNumAChan = 6;
+            break;
+        case eBTRMgrSOAChan7_1:
+            lui32InNumAChan = 8;
+            break;
+        case eBTRMgrSOAChanUnknown:
+        default:
+            lui32InNumAChan = 2;
+            break;
+        }
+
+    }
+
+    if (apstBtrMgrSoOutASettings->eBtrMgrSoOutAType == eBTRMgrSOATypeSBC) {
+        pstBtrMgrSoOutSbcInfo = (stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo);
+        lui16OutFrameLen    = pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen;
+        lui16OutBitrateKbps = pstBtrMgrSoOutSbcInfo->ui16SbcBitrate;
+        lui16OutMtu         = apstBtrMgrSoOutASettings->i32BtrMgrSoDevMtu;
+    }
+
+
+    lui16OutMtu = (lui16OutMtu/lui16OutFrameLen) * lui16OutFrameLen;
+    lui32OutByteRate = (lui16OutBitrateKbps * 1024) / 8;
+    lfOutMtuTimemSec = (lui16OutMtu * 1000.0) / lui32OutByteRate;
+    lui32InByteRate  = (lui32InBitsPerSample/8) * lui32InNumAChan * lui32InSamplingFreq;
+    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = (lui32InByteRate * lfOutMtuTimemSec)/1000;
+
+    // Align to multiple of 32
+    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize >> 5;
+    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize << 5;
+
+    g_print("%s:%d:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    g_print("Effective MTU = %d\n", lui16OutMtu);
+    g_print("OutByteRate = %d\n", lui32OutByteRate);
+    g_print("OutMtuTimemSec = %f\n", lfOutMtuTimemSec);
+    g_print("InByteRate = %d\n", lui32InByteRate);
+    g_print("InBufMaxSize = %d\n", apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize);
+
+    return leBtrMgrSoRet;
+}
+
+
+eBTRMgrSORet
 BTRMgr_SO_Start (
     tBTRMgrSoHdl            hBTRMgrSoHdl,
     stBTRMgrSOInASettings*  apstBtrMgrSoInASettings,
@@ -232,24 +364,47 @@ BTRMgr_SO_Start (
     }
 
     if (apstBtrMgrSoInASettings->eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
-        leBtrMgrSoInSFmt  = ((stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo))->eBtrMgrSoSFmt;
-        leBtrMgrSoInAChan = ((stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo))->eBtrMgrSoAChan;
-        leBtrMgrSoInSFreq = ((stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo))->eBtrMgrSoSFreq;
+        stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo);
+        leBtrMgrSoInSFmt  = pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt;
+        leBtrMgrSoInAChan = pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan;
+        leBtrMgrSoInSFreq = pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq;
     }
 
-
     if (apstBtrMgrSoOutASettings->eBtrMgrSoOutAType == eBTRMgrSOATypeSBC) {
-        leBtrMgrSoOutAChan = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->eBtrMgrSoSbcAChan;
-        leBtrMgrSoOutSFreq = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->eBtrMgrSoSbcSFreq;
-        lui8SbcAllocMethod = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcAllocMethod;
-        lui8SbcSubbands    = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcSubbands;
-        lui8SbcBlockLength = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcBlockLength;
-        lui8SbcMinBitpool  = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcMinBitpool;
-        lui8SbcMaxBitpool  = ((stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo))->ui8SbcMaxBitpool;
+        stBTRMgrSOSBCInfo* pstBtrMgrSoOutSbcInfo = (stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo);
+
+        leBtrMgrSoOutAChan = pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan;
+        leBtrMgrSoOutSFreq = pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq;
+        lui8SbcAllocMethod = pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod;
+        lui8SbcSubbands    = pstBtrMgrSoOutSbcInfo->ui8SbcSubbands;
+        lui8SbcBlockLength = pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength;
+        lui8SbcMinBitpool  = pstBtrMgrSoOutSbcInfo->ui8SbcMinBitpool;
+        lui8SbcMaxBitpool  = pstBtrMgrSoOutSbcInfo->ui8SbcMaxBitpool;
     }
 
 
 #ifdef USE_GST1
+    switch (leBtrMgrSoInSFreq) {
+    case eBTRMgrSOSFreq8K:
+        lui32BtrMgrInSoSFreq = 8000;
+    case eBTRMgrSOSFreq16K:
+        lui32BtrMgrInSoSFreq = 16000;
+        break;
+    case eBTRMgrSOSFreq32K:
+        lui32BtrMgrInSoSFreq = 32000;
+        break;
+    case eBTRMgrSOSFreq44_1K:
+        lui32BtrMgrInSoSFreq = 44100;
+        break;
+    case eBTRMgrSOSFreq48K:
+        lui32BtrMgrInSoSFreq = 48000;
+        break;
+    case eBTRMgrSOSFreqUnknown:
+    default:
+        lui32BtrMgrInSoSFreq = 48000;
+        break;
+    }
+
     switch (leBtrMgrSoInSFmt) {
     case eBTRMgrSOSFmt8bit:
         lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_8BIT;
@@ -294,26 +449,6 @@ BTRMgr_SO_Start (
         break;
     }
 
-    switch (leBtrMgrSoInSFreq) {
-    case eBTRMgrSOSFreq8K:
-        lui32BtrMgrInSoSFreq = 8000;
-    case eBTRMgrSOSFreq16K:
-        lui32BtrMgrInSoSFreq = 16000;
-        break;
-    case eBTRMgrSOSFreq32K:
-        lui32BtrMgrInSoSFreq = 32000;
-        break;
-    case eBTRMgrSOSFreq44_1K:
-        lui32BtrMgrInSoSFreq = 44100;
-        break;
-    case eBTRMgrSOSFreq48K:
-        lui32BtrMgrInSoSFreq = 48000;
-        break;
-    case eBTRMgrSOSFreqUnknown:
-    default:
-        lui32BtrMgrInSoSFreq = 48000;
-        break;
-    }
 
     switch (leBtrMgrSoOutAChan) {
     case eBTRMgrSOAChanMono:
@@ -367,7 +502,7 @@ BTRMgr_SO_Start (
     }
 
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStart( pstBtrMgrSoHdl->hBTRMgrSoGstHdl,
-                                                apstBtrMgrSoInASettings->iBtrMgrSoInBufMaxSize,
+                                                apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize,
                                                 lpcBtrMgrInSoSFmt,
                                                 lui32BtrMgrInSoSFreq,
                                                 lui32BtrMgrInSoAChan,
@@ -379,8 +514,8 @@ BTRMgr_SO_Start (
                                                 lui8SbcBlockLength,
                                                 lui8SbcMinBitpool,
                                                 lui8SbcMaxBitpool,
-                                                apstBtrMgrSoOutASettings->iBtrMgrSoDevFd,
-                                                apstBtrMgrSoOutASettings->iBtrMgrSoDevMtu)) != eBTRMgrSOGstSuccess) {
+                                                apstBtrMgrSoOutASettings->i32BtrMgrSoDevFd,
+                                                apstBtrMgrSoOutASettings->i32BtrMgrSoDevMtu)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrSOFailure;
     }
