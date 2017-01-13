@@ -268,6 +268,13 @@ btmgr_StartCastingAudio (
         settings.fifoSize           = 8 * inBytesToEncode;
         settings.threshold          = inBytesToEncode;
 
+        //TODO: Work on a intelligent way to arrive at this value. This is not good enough
+        if (settings.threshold > 4096)
+            settings.delayCompensation_ms = 240; 
+        else
+            settings.delayCompensation_ms = 200; 
+        //TODO: Bad hack above, need to modify before taking it to stable2
+
         if (eBTRMgrSOSuccess != BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
             BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Start FAILED\n");
             eBtrMgrResult = BTMGR_RESULT_GENERIC_FAILURE;
