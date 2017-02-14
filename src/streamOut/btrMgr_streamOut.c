@@ -304,9 +304,9 @@ BTRMgr_SO_GetEstimatedInABufSize (
     lui32InByteRate  = (lui32InBitsPerSample/8) * lui32InNumAChan * lui32InSamplingFreq;
     apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = (lui32InByteRate * lfOutMtuTimemSec)/1000;
 
-    // Align to multiple of 32
-    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize >> 5;
-    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize << 5;
+    // Align to multiple of 256
+    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize >> 8) + 1;
+    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize << 8;
 
     g_print("%s:%d:%s\n", __FILE__, __LINE__, __FUNCTION__);
     g_print("Effective MTU = %d\n", lui16OutMtu);
@@ -383,7 +383,6 @@ BTRMgr_SO_Start (
     }
 
 
-#ifdef USE_GST1
     switch (leBtrMgrSoInSFreq) {
     case eBTRMgrSOSFreq8K:
         lui32BtrMgrInSoSFreq = 8000;
@@ -501,6 +500,7 @@ BTRMgr_SO_Start (
         break;
     }
 
+#ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStart( pstBtrMgrSoHdl->hBTRMgrSoGstHdl,
                                                 apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize,
                                                 lpcBtrMgrInSoSFmt,

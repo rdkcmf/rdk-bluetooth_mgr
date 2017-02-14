@@ -68,13 +68,21 @@ typedef struct _stBTRMgrSOGst {
     guint        busWId;
     GstClockTime gstClkTStamp;
     guint64      inBufOffset;
+    int          i32InBufMaxSize;
+    int          i32InRate;
+    int          i32InChannels;
+    unsigned int ui32InBitsPSample;
 } stBTRMgrSOGst;
 
 
 /* Local function declarations */
 static gpointer btrMgr_SO_g_main_loop_run_context (gpointer user_data);
-static gboolean btrMgr_SO_gstBusCall (GstBus* bus, GstMessage* msg, gpointer data);
+static gboolean btrMgr_SO_gstBusCall (GstBus* bus, GstMessage* msg, gpointer user_data);
 static GstState btrMgr_SO_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
+
+/* Callbacks */
+static void btrMgr_SO_NeedData_cB (GstElement* appsrc, guint size, gpointer user_data);
+static void btrMgr_SO_EnoughData_cB (GstElement* appsrc, gpointer user_data);
 
 
 /* Local function definitions */
@@ -82,8 +90,15 @@ static gpointer
 btrMgr_SO_g_main_loop_run_context (
     gpointer user_data
 ) {
-  g_main_loop_run (user_data);
-  return NULL;
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+
+    if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
+        g_print ("%s:%d:%s - GMainLoop Running\n", __FILE__, __LINE__, __FUNCTION__);
+        g_main_loop_run (pstBtrMgrSoGst->pLoop);
+    }
+
+    g_print ("%s:%d:%s - GMainLoop Exiting\n", __FILE__, __LINE__, __FUNCTION__);
+    return NULL;
 }
 
 
@@ -91,25 +106,63 @@ static gboolean
 btrMgr_SO_gstBusCall (
     GstBus*     bus,
     GstMessage* msg,
-    gpointer    data
+    gpointer    user_data
 ) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+
     switch (GST_MESSAGE_TYPE (msg)) {
+
         case GST_MESSAGE_EOS: {
             g_print ("%s:%d:%s - End-of-stream\n", __FILE__, __LINE__, __FUNCTION__);
+            if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
+                g_main_loop_quit(pstBtrMgrSoGst->pLoop);
+                pstBtrMgrSoGst->pLoop = NULL;
+            }
             break;
-        }   
+        }
+
+        case GST_MESSAGE_STATE_CHANGED: {
+            if ((pstBtrMgrSoGst->pPipeline) && (GST_MESSAGE_SRC (msg) == GST_OBJECT (pstBtrMgrSoGst->pPipeline))) {
+                GstState prevState, currentState;
+
+                gst_message_parse_state_changed (msg, &prevState, &currentState, NULL);
+                g_print ("%s:%d:%s - From: %s -> To: %s\n", __FILE__, __LINE__, __FUNCTION__, 
+                            gst_element_state_get_name (prevState), gst_element_state_get_name (currentState));
+            }
+            break;
+        }
+
         case GST_MESSAGE_ERROR: {
-            gchar*  debug;
-            GError* err;
+            gchar*      debug;
+            GError*     err;
 
             gst_message_parse_error (msg, &err, &debug);
-            g_printerr ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
+            g_print ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
             g_free (debug);
 
-            g_print ("%s:%d:%s - Error: %s\n", __FILE__, __LINE__, __FUNCTION__, err->message);
+            g_printerr ("%s:%d:%s - Error: %s\n", __FILE__, __LINE__, __FUNCTION__, err->message);
             g_error_free (err);
+
+            if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
+                g_main_loop_quit(pstBtrMgrSoGst->pLoop);
+                pstBtrMgrSoGst->pLoop = NULL;
+            }
             break;
-        }   
+        }
+
+        case GST_MESSAGE_WARNING:{
+            gchar*    debug;
+            GError*   warn;
+
+            gst_message_parse_warning (msg, &warn, &debug);
+            g_print ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
+            g_free (debug);
+
+            g_printerr ("%s:%d:%s - Warning: %s\n", __FILE__, __LINE__, __FUNCTION__, warn->message);
+            g_error_free (warn);
+          break;
+        }
+
         default:
             break;
     }
@@ -196,27 +249,11 @@ BTRMgr_SO_GstInit (
 
     if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
         g_print ("%s:%d:%s - Gstreamer plugin missing for streamOut\n", __FILE__, __LINE__, __FUNCTION__);
+        free((void*)pstBtrMgrSoGst);
         return eBTRMgrSOGstFailure;
     }
 
-    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    busWatchId = gst_bus_add_watch (bus, btrMgr_SO_gstBusCall, loop);
-    g_object_unref (bus);
-
-    /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
-    gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
-
-    mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_run_context", btrMgr_SO_g_main_loop_run_context, loop);
-
-        
-    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
-        g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
-        return eBTRMgrSOGstFailure;
-    }
-
-
+    
     pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
@@ -224,10 +261,32 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pAECapsFilter   = (void*)aecapsfilter;
     pstBtrMgrSoGst->pRtpAudioPay    = (void*)rtpaudpay;
     pstBtrMgrSoGst->pLoop           = (void*)loop;
-    pstBtrMgrSoGst->pLoopThread     = (void*)mainLoopThread;
-    pstBtrMgrSoGst->busWId          = busWatchId;
     pstBtrMgrSoGst->gstClkTStamp    = 0;
     pstBtrMgrSoGst->inBufOffset     = 0;
+
+
+    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    busWatchId = gst_bus_add_watch (bus, btrMgr_SO_gstBusCall, pstBtrMgrSoGst);
+    pstBtrMgrSoGst->busWId          = busWatchId;
+    g_object_unref (bus);
+
+    /* setup */
+    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+
+
+    mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_run_context", btrMgr_SO_g_main_loop_run_context, pstBtrMgrSoGst);
+    pstBtrMgrSoGst->pLoopThread     = (void*)mainLoopThread;
+
+    g_signal_connect (appsrc, "need-data", G_CALLBACK(btrMgr_SO_NeedData_cB), pstBtrMgrSoGst);
+    g_signal_connect (appsrc, "enough-data", G_CALLBACK(btrMgr_SO_EnoughData_cB), pstBtrMgrSoGst);
+        
+    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
+        g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTRMgr_SO_GstDeInit((tBTRMgrSoGstHdl)pstBtrMgrSoGst);
+        return eBTRMgrSOGstFailure;
+    }
 
     *phBTRMgrSoGstHdl = (tBTRMgrSoGstHdl)pstBtrMgrSoGst;
 
@@ -247,23 +306,35 @@ BTRMgr_SO_GstDeInit (
     }
 
     GstElement* pipeline        = (GstElement*)pstBtrMgrSoGst->pPipeline;
-    GstElement* appsrc          = (GstElement*)pstBtrMgrSoGst->pSrc;
     GMainLoop*  loop            = (GMainLoop*)pstBtrMgrSoGst->pLoop;
     GThread*    mainLoopThread  = (GThread*)pstBtrMgrSoGst->pLoopThread;
     guint       busWatchId      = pstBtrMgrSoGst->busWId;
 
-    (void)pipeline;
-    (void)appsrc;
-    (void)loop;
-    (void)busWatchId;
-
     /* cleanup */
-    g_object_unref (GST_OBJECT(pipeline));
-    g_source_remove (busWatchId);
+    if (pipeline) {
+        g_object_unref(GST_OBJECT(pipeline));
+        pipeline = NULL;
+    }
 
-    g_main_loop_quit (loop);
-    g_thread_join (mainLoopThread);
-    g_main_loop_unref (loop);
+    if (busWatchId) {
+        g_source_remove(busWatchId);
+        busWatchId = 0;
+    }
+
+    if (loop) {
+        g_main_loop_quit(loop);
+        loop = NULL;
+    }
+
+    if (mainLoopThread) {
+        g_thread_join(mainLoopThread);
+        mainLoopThread = NULL;
+    }
+
+    if (loop) {
+        g_main_loop_unref(loop);
+        loop = NULL;
+    }
 
     memset((void*)pstBtrMgrSoGst, 0, sizeof(stBTRMgrSOGst));
     free((void*)pstBtrMgrSoGst);
@@ -369,8 +440,9 @@ BTRMgr_SO_GstStart (
 #if 0
     g_object_set (appsrc, "do-timestamp", 1, NULL);
 #endif
+    g_object_set (appsrc, "min-percent", 16, NULL);
     g_object_set (appsrc, "min-latency", GST_USECOND * (ai32InBufMaxSize * 1000)/((ai32InRate/1000.0) * (lui32InBitsPSample/8) * ai32InChannels), NULL);
-    g_object_set (appsrc, "stream-type", 0, NULL);
+    g_object_set (appsrc, "stream-type", GST_APP_STREAM_TYPE_STREAM, NULL);
     g_object_set (appsrc, "format", GST_FORMAT_TIME, NULL);
 
     g_object_set (audenc, "perfect-timestamp", 1, NULL);
@@ -394,6 +466,11 @@ BTRMgr_SO_GstStart (
         g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
+
+    pstBtrMgrSoGst->i32InBufMaxSize     = ai32InBufMaxSize;
+    pstBtrMgrSoGst->i32InRate           = ai32InRate;
+    pstBtrMgrSoGst->i32InChannels       = ai32InChannels;
+    pstBtrMgrSoGst->ui32InBitsPSample   = lui32InBitsPSample;
 
     return eBTRMgrSOGstSuccess;
 }
@@ -429,6 +506,11 @@ BTRMgr_SO_GstStop (
 
     pstBtrMgrSoGst->gstClkTStamp = 0;
     pstBtrMgrSoGst->inBufOffset  = 0;
+
+    pstBtrMgrSoGst->i32InBufMaxSize     = 0;
+    pstBtrMgrSoGst->i32InRate           = 0;
+    pstBtrMgrSoGst->i32InChannels       = 0;
+    pstBtrMgrSoGst->ui32InBitsPSample   = 0;
 
     return eBTRMgrSOGstSuccess;
 }
@@ -516,7 +598,8 @@ BTRMgr_SO_GstSendBuffer (
     char*   pcInBuf,
     int     aiInBufSize
 ) {
-    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
+    int             i32InBufOffset = 0;
 
     if (!pstBtrMgrSoGst) {
         g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
@@ -534,29 +617,64 @@ BTRMgr_SO_GstSendBuffer (
     (void)busWatchId;
 
     /* push Buffers */
+    while (aiInBufSize > pstBtrMgrSoGst->i32InBufMaxSize) {
+        GstBuffer *gstBuf;
+        GstMapInfo gstBufMap;
+
+        gstBuf = gst_buffer_new_and_alloc (pstBtrMgrSoGst->i32InBufMaxSize);
+        gst_buffer_set_size (gstBuf, pstBtrMgrSoGst->i32InBufMaxSize);
+
+        gst_buffer_map (gstBuf, &gstBufMap, GST_MAP_WRITE);
+
+        //TODO: Repalce memcpy and new_alloc if possible
+        memcpy (gstBufMap.data, pcInBuf + i32InBufOffset, pstBtrMgrSoGst->i32InBufMaxSize);
+
+        //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
+		// size of the incoming buffer (which represents the num of samples received at this instant)
+        GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
+        GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (pstBtrMgrSoGst->i32InBufMaxSize * 1000)/((pstBtrMgrSoGst->i32InRate/1000.0) * (pstBtrMgrSoGst->ui32InBitsPSample/8) * pstBtrMgrSoGst->i32InChannels);
+        pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
+
+        GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
+        pstBtrMgrSoGst->inBufOffset    += pstBtrMgrSoGst->i32InBufMaxSize;
+        GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
+
+        gst_buffer_unmap (gstBuf, &gstBufMap);
+
+        //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrSoGst->i32InBufMaxSize);
+        gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
+
+        aiInBufSize     -= pstBtrMgrSoGst->i32InBufMaxSize;
+        i32InBufOffset  += pstBtrMgrSoGst->i32InBufMaxSize;
+    }
+
+
     {
         GstBuffer *gstBuf;
         GstMapInfo gstBufMap;
 
         gstBuf = gst_buffer_new_and_alloc (aiInBufSize);
+        gst_buffer_set_size (gstBuf, aiInBufSize);
+
         gst_buffer_map (gstBuf, &gstBufMap, GST_MAP_WRITE);
 
         //TODO: Repalce memcpy and new_alloc if possible
-        memcpy (gstBufMap.data, pcInBuf, aiInBufSize);
+        memcpy (gstBufMap.data, pcInBuf + i32InBufOffset, aiInBufSize);
 
         //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
 		// size of the incoming buffer (which represents the num of samples received at this instant)
         GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
-        GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (aiInBufSize * 1000)/(48 * (16/8) * 2);
+        GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (aiInBufSize * 1000)/((pstBtrMgrSoGst->i32InRate/1000.0) * (pstBtrMgrSoGst->ui32InBitsPSample/8) * pstBtrMgrSoGst->i32InChannels);
         pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
 
         GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
         pstBtrMgrSoGst->inBufOffset    += aiInBufSize;
         GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
 
-        gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
-
         gst_buffer_unmap (gstBuf, &gstBufMap);
+
+        //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, aiInBufSize);
+        gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
     }
 
     return eBTRMgrSOGstSuccess;
@@ -588,5 +706,30 @@ BTRMgr_SO_GstSendEOS (
     gst_app_src_end_of_stream (GST_APP_SRC (appsrc));
 
     return eBTRMgrSOGstSuccess;
+}
+
+
+static void
+btrMgr_SO_NeedData_cB (
+    GstElement* appsrc,
+    guint       size,
+    gpointer    user_data
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+    
+    //g_print ("%s:%d:%s - NEED DATA = %d\n", __FILE__, __LINE__, __FUNCTION__, size);
+    (void)pstBtrMgrSoGst;
+}
+
+
+static void
+btrMgr_SO_EnoughData_cB (
+    GstElement* appsrc,
+    gpointer    user_data
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+    
+    //g_print ("%s:%d:%s - ENOUGH DATA\n", __FILE__, __LINE__, __FUNCTION__);
+    (void)pstBtrMgrSoGst;
 }
 

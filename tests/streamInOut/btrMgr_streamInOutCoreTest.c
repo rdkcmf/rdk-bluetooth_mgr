@@ -233,6 +233,13 @@ cb_unsolicited_bluetooth_status (
         }
     }
 
+    if ((p_StatusCB->eDevicePrevState == enBTRCore_DS_Playing) && (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Disconnected)) {
+        if ((p_StatusCB->eDeviceType == enBTRCoreSpeakers) || (p_StatusCB->eDeviceType == enBTRCoreHeadSet)) {
+            printf("DISCONNECTED WHILE PLAYING...\n");
+            streamOutLiveTestMainAlternateStop((appDataStruct*)apvUserData);
+        }
+    }
+
     return;
 }
 
@@ -1048,10 +1055,15 @@ doDataCapture (
         currTime = (1000000 * tv.tv_sec) + tv.tv_usec;
         
         processingTime = currTime - prevTime;
-        printf("inBytesToEncode = %d sleeptime = %lu Processing =%lu\n", inBytesToEncode, sleepTime - processingTime, processingTime);
 
-        if (sleepTime > processingTime)
+
+        if (sleepTime > processingTime) {
+            //printf("inBytesToEncode = %d sleeptime = %lu Processing =%lu\n", inBytesToEncode, sleepTime - processingTime, processingTime);
             usleep(sleepTime - processingTime);
+        }
+        else {
+            printf("inBytesToEncode = %d sleeptime = 0 Processing =%lu\n", inBytesToEncode, processingTime);
+        }
     }
 
     *penCapThreadExitStatus = 0;
