@@ -538,6 +538,13 @@ BTMGR_Result_t BTMGR_Init()
         }
         else
         {
+            char lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
+
+            if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion))
+                BTMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
+
+            BTMGRLOG_ERROR("BTR Bluetooth Version: %s\n", lpcBtVersion);
+
             if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters))
                 BTMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
 
