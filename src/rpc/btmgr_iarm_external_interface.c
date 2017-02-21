@@ -16,12 +16,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#include "btmgr_priv.h"
-#include "btmgr_iarm_interface.h"
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifdef BTMGR_ENABLE_IARM_INTERFACE
+#include "btmgr_priv.h"
+#include "btmgr_iarm_interface.h"
+
+
 static unsigned char isBTMGR_Inited = 0;
 static BTMGR_EventCallback m_eventCallbackFunction = NULL;
 
@@ -845,4 +846,3 @@ static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, voi
     }
 }
 
-#endif /* BTMGR_ENABLE_IARM_INTERFACE */

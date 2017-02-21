@@ -19,7 +19,6 @@
 #include "btmgr_priv.h"
 #include "btmgr_iarm_interface.h"
 
-#ifdef BTMGR_ENABLE_IARM_INTERFACE
 static unsigned char gIsBTMGR_Internal_Inited = 0;
 
 static IARM_Result_t _GetNumberOfAdapters(void *arg)
@@ -908,4 +907,3 @@ void btmgr_TermIARMMode()
     else
         BTMGRLOG_INFO ("IARM Interface Not Inited\n");
 }
-#endif /* BTMGR_ENABLE_IARM_INTERFACE */

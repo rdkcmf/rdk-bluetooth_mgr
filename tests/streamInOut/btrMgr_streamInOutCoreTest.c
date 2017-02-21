@@ -33,15 +33,16 @@
 #include "btrCore.h"            //basic RDK BT functions
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
 
+#include "btrMgr_mediaTypes.h"
 #include "btrMgr_streamOut.h"
 #include "btrMgr_streamIn.h"
+#include "btrMgr_audioCap.h"
 
-#include "rmfAudioCapture.h"
 
 typedef struct appDataStruct{
     tBTRCoreHandle          hBTRCore;
     stBTRCoreDevMediaInfo   stBtrCoreDevMediaInfo;
-    RMF_AudioCaptureHandle  hAudCap;
+    tBTRMgrAcHdl            hBTRMgrAcHdl;
     tBTRMgrSoHdl            hBTRMgrSoHdl;
     tBTRMgrSiHdl            hBTRMgrSiHdl;
     unsigned long           bytesWritten;
@@ -1045,7 +1046,7 @@ doDataCapture (
 
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
       
-        if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
+        if (eBTRMgrSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
             fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
         }
 
@@ -1091,11 +1092,11 @@ streamOutTestMainAlternate (
     int     outFileFd       = 0;
     int     outMTUSize      = OUT_MTU_SIZE;
 
-    stBTRMgrSOInASettings   lstBtrMgrSoInASettings;
-    stBTRMgrSOOutASettings  lstBtrMgrSoOutASettings;
+    stBTRMgrInASettings   lstBtrMgrSoInASettings;
+    stBTRMgrOutASettings  lstBtrMgrSoOutASettings;
 
-    lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = NULL;
-    lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = NULL;
+    lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo   = NULL;
+    lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo = NULL;
 
 #if 0
     struct timeval tv;
@@ -1161,18 +1162,18 @@ streamOutTestMainAlternate (
     }
 #endif
 
-    lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ? 
-                                                                    (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
-    lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+    lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo   = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ? 
+                                                                    (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
+    lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
                                                                     (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
 
-    if (!(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
+    if (!(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo)) {
         fprintf(stderr, "BTRMgr_SO_Init - MEMORY ALLOC FAILED\n");
         return -1;
     }
 
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Init(&hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
         return -1;
     }
@@ -1180,68 +1181,68 @@ streamOutTestMainAlternate (
     inBytesToEncode = inBufSize;
 
     /* TODO: Choose these valus based on information parsed from the wav file */
-    lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
+    lstBtrMgrSoInASettings.eBtrMgrInAType     = eBTRMgrATypePCM;
 
-    if (lstBtrMgrSoInASettings.eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
-        stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+    if (lstBtrMgrSoInASettings.eBtrMgrInAType == eBTRMgrATypePCM) {
+        stBTRMgrPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo);
 
         /* TODO: Set these valus based on information parsed from the wav file */
-        pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-        pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
-        pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
+        pstBtrMgrSoInPcmInfo->eBtrMgrSFmt  = eBTRMgrSFmt16bit;
+        pstBtrMgrSoInPcmInfo->eBtrMgrAChan = eBTRMgrAChanStereo;
+        pstBtrMgrSoInPcmInfo->eBtrMgrSFreq = eBTRMgrSFreq48K;
     }
 
 
     if (pstAppData) {
         if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
-            stBTRMgrSOSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSOSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo));
+            stBTRMgrSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo));
             stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo = ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
             
-            lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
+            lstBtrMgrSoOutASettings.eBtrMgrOutAType   = eBTRMgrATypeSBC;
             if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
 
                 if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq8K;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq8K;
                 }
                 else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq16K;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq16K;
                 }
                 else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq32K;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq32K;
                 }
                 else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq44_1K;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq44_1K;
                 }
                 else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq48K;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq48K;
                 }
                 else {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreqUnknown;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreqUnknown;
                 }
 
 
                 switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
                 case eBTRCoreDevMediaAChanMono:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanMono;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanMono;
                     break;
                 case eBTRCoreDevMediaAChanDualChannel:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanDualChannel;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanDualChannel;
                     break;
                 case eBTRCoreDevMediaAChanStereo:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanStereo;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanStereo;
                     break;
                 case eBTRCoreDevMediaAChanJointStereo:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanJStereo;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanJStereo;
                     break;
                 case eBTRCoreDevMediaAChan5_1:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan5_1;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan5_1;
                     break;
                 case eBTRCoreDevMediaAChan7_1:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan7_1;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan7_1;
                     break;
                 case eBTRCoreDevMediaAChanUnknown:
                 default:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanUnknown;
+                    pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanUnknown;
                     break;
                 }
 
@@ -1257,22 +1258,22 @@ streamOutTestMainAlternate (
     }
 
 
-    lstBtrMgrSoOutASettings.i32BtrMgrSoDevFd      = outFileFd;
-    lstBtrMgrSoOutASettings.i32BtrMgrSoDevMtu     = outMTUSize;
+    lstBtrMgrSoOutASettings.i32BtrMgrDevFd      = outFileFd;
+    lstBtrMgrSoOutASettings.i32BtrMgrDevMtu     = outMTUSize;
 
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_GetEstimatedInABufSize(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_GetEstimatedInABufSize(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
         fprintf(stderr, "BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
-        lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize = inBytesToEncode;
+        lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize = inBytesToEncode;
     }
     else {
-        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize;
+        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
     }
 
     inBufSize = inBytesToEncode ;
     inDataBuf = (char*)malloc(inBytesToEncode * sizeof(char));
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_Start(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Start(hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
         fprintf(stderr, "BTRMgr_SO_Start - FAILED\n");
         return -1;
     }
@@ -1292,7 +1293,7 @@ streamOutTestMainAlternate (
 
         fread (inDataBuf, 1, inBytesToEncode, inFileFp);
 
-        if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
+        if (eBTRMgrSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
             fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
         }
 
@@ -1323,25 +1324,25 @@ streamOutTestMainAlternate (
     (void)penDataCapThreadExitStatus;
 #endif
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_SendEOS(hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_SendEOS(hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_SendEOS - FAILED\n");
     }
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_Stop(hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Stop(hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_Stop - FAILED\n");
     }
 
 
-    if (lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)
-        free(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo);
+    if (lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo)
+        free(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo);
 
-    if (lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo)
-        free(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
+    if (lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo)
+        free(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo);
 
     if (inDataBuf)
         free(inDataBuf);
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_DeInit(hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_DeInit(hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_DeInit - FAILED\n");
     }
 
@@ -1354,13 +1355,13 @@ streamOutTestMainAlternate (
 }
 
 
-rmf_Error 
-cbBufferReady (
-    void*        context, 
-    void*        inDataBuf, 
-    unsigned int inBytesToEncode
+/*  Incoming Callbacks */
+static eBTRMgrRet
+btmgr_ACDataReadyCallback (
+    void*           apvAcDataBuf,
+    unsigned int    aui32AcDataLen,
+    void*           apvUserData
 ) {
-
 #if 0
     struct timeval tv;
     static unsigned long int prevCbTime = 0;
@@ -1372,21 +1373,24 @@ cbBufferReady (
     prevCbTime = currTime;
 #endif
 
-    appDataStruct *data = (appDataStruct*) context;
-    if (eBTRMgrSOSuccess != BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
+    eBTRMgrRet      leBtrMgrSoRet = eBTRMgrSuccess;
+    appDataStruct *data = (appDataStruct*)apvUserData;
+
+    if ((leBtrMgrSoRet = BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, apvAcDataBuf, aui32AcDataLen)) != eBTRMgrSuccess) {
         fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");
     }
 
-    data->bytesWritten += inBytesToEncode;
+    data->bytesWritten += aui32AcDataLen;
+
 #if 0
-    printf("audioCaptureCb size=%06d bytesWritten=%06lu\n", inBytesToEncode, data->bytesWritten);
+    printf("audioCaptureCb size=%06d bytesWritten=%06lu\n", aui32AcDataLen, data->bytesWritten);
     fflush(stdout);
 
     gettimeofday(&tv,NULL);
     printf("CB Time uSec =%lu\n", ((1000000 * tv.tv_sec) + tv.tv_usec) - currTime);
 #endif
 
-    return RMF_SUCCESS;
+    return leBtrMgrSoRet;
 }
 
 
@@ -1413,215 +1417,157 @@ streamOutLiveTestMainAlternateStart (
     outFileFd = atoi(argv[3]);
     outMTUSize  = atoi(argv[4]);
 
+    stBTRMgrOutASettings    lstBtrMgrAcOutASettings;
+    stBTRMgrInASettings     lstBtrMgrSoInASettings;
+    stBTRMgrOutASettings    lstBtrMgrSoOutASettings;
 
-    RMF_AudioCapture_Settings settings;
-    stBTRMgrSOInASettings     lstBtrMgrSoInASettings;
-    stBTRMgrSOOutASettings    lstBtrMgrSoOutASettings;
-
-    lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo   = (void*)malloc((sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) > sizeof(stBTRMgrSOMPEGInfo) ? 
-                                                                    (sizeof(stBTRMgrSOPCMInfo) > sizeof(stBTRMgrSOSBCInfo) ? sizeof(stBTRMgrSOPCMInfo) : sizeof(stBTRMgrSOSBCInfo)) : sizeof(stBTRMgrSOMPEGInfo));
-    lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+    lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ?
+                                                                    (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
+    lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo   = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ? 
+                                                                    (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
+    lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
                                                                     (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
 
-    if (!(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)) {
+    if (!(lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo) || !(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo)) {
         fprintf(stderr, "BTRMgr_SO_Init - MEMORY ALLOC FAILED\n");
         return -1;
     }
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl))) {
-        fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
-        return -1;
-    }
-
-#if 0
-    /* could get defaults from audio capture, but for the sample app we want to write a the wav header first */
-    pstAppData->bitsPerSample = 16;
-    pstAppData->samplerate = 48000;
-    pstAppData->channels = 2;
-#endif
-
-    if (RMF_AudioCapture_Open(&(pstAppData->hAudCap))) {
+    if (!pstAppData) {
+        fprintf(stderr, "Invalid Input argument FAILED\n");
         goto err_open;
     }
 
-    RMF_AudioCapture_GetDefaultSettings(&settings);
+    if (eBTRMgrSuccess != BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl))) {
+        fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
+        goto err_open;
+    }
 
-    fprintf(stderr, "AudioCapture - Default CBBufferReady = %p\n", settings.cbBufferReady);
-    fprintf(stderr, "AudioCapture - Default Fifosize      = %d\n", settings.fifoSize);
-    fprintf(stderr, "AudioCapture - Default Threshold     = %d\n", settings.threshold);
-
-    //TODO: Get the format capture format from RMF_AudioCapture Settings
-    lstBtrMgrSoInASettings.eBtrMgrSoInAType     = eBTRMgrSOATypePCM;
-
-    if (lstBtrMgrSoInASettings.eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
-        stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
-
-        switch (settings.format) {
-        case racFormat_e16BitStereo:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
-            break;
-        case racFormat_e24BitStereo:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt24bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
-            break;
-        case racFormat_e16BitMonoLeft:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
-            break;
-        case racFormat_e16BitMonoRight:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
-            break;
-        case racFormat_e16BitMono:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanMono;
-            break;
-        case racFormat_e24Bit5_1:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt24bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChan5_1;
-            break;
-        case racFormat_eMax:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmtUnknown;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanUnknown;
-            break;
-        default:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan = eBTRMgrSOAChanStereo;
-            break;
-        }    
-
-        switch (settings.samplingFreq) {
-        case racFreq_e16000:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq16K;
-            break;
-        case racFreq_e32000:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq32K;
-            break;
-        case racFreq_e44100:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq44_1K;
-            break;
-        case racFreq_e48000:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
-            break;
-        case racFreq_eMax:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreqUnknown;
-            break;
-        default:
-            pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
-            break;
-        }
+    if (eBTRMgrSuccess != BTRMgr_AC_Init(&(pstAppData->hBTRMgrAcHdl))) {
+        fprintf(stderr, "BTRMgr_AC_Init - FAILED\n");
+        goto err_open;
     }
 
 
-    if (pstAppData) {
-        if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
-            stBTRMgrSOSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSOSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo));
-            stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo = ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
-            
-            lstBtrMgrSoOutASettings.eBtrMgrSoOutAType   = eBTRMgrSOATypeSBC;
-            if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
-
-                if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq8K;
-                }
-                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq16K;
-                }
-                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq32K;
-                }
-                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq44_1K;
-                }
-                else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreq48K;
-                }
-                else {
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq  = eBTRMgrSOSFreqUnknown;
-                }
+    if (eBTRMgrSuccess != BTRMgr_AC_GetDefaultSettings(pstAppData->hBTRMgrAcHdl, &lstBtrMgrAcOutASettings)) {
+        fprintf(stderr, "BTRMgr_AC_GetDefaultSettings - FAILED\n");
+        goto err_open;
+    }
 
 
-                switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
-                case eBTRCoreDevMediaAChanMono:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanMono;
-                    break;
-                case eBTRCoreDevMediaAChanDualChannel:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanDualChannel;
-                    break;
-                case eBTRCoreDevMediaAChanStereo:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanStereo;
-                    break;
-                case eBTRCoreDevMediaAChanJointStereo:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanJStereo;
-                    break;
-                case eBTRCoreDevMediaAChan5_1:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan5_1;
-                    break;
-                case eBTRCoreDevMediaAChan7_1:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChan7_1;
-                    break;
-                case eBTRCoreDevMediaAChanUnknown:
-                default:
-                    pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan  = eBTRMgrSOAChanUnknown;
-                    break;
-                }
+    lstBtrMgrSoInASettings.eBtrMgrInAType     = lstBtrMgrAcOutASettings.eBtrMgrOutAType;
 
-                pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
-                pstBtrMgrSoOutSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
-                pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
-                pstBtrMgrSoOutSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
-                pstBtrMgrSoOutSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
-                pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
-                pstBtrMgrSoOutSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
+    if (lstBtrMgrSoInASettings.eBtrMgrInAType == eBTRMgrATypePCM) {
+        stBTRMgrPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrPCMInfo*)(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo);
+        stBTRMgrPCMInfo* pstBtrMgrAcOutPcmInfo = (stBTRMgrPCMInfo*)(lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo);
+
+        memcpy(pstBtrMgrSoInPcmInfo, pstBtrMgrAcOutPcmInfo, sizeof(stBTRMgrPCMInfo));
+    }
+
+
+    if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+        stBTRMgrSBCInfo*          pstBtrMgrSoOutSbcInfo = ((stBTRMgrSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo));
+        stBTRCoreDevMediaSbcInfo* pstBtrCoreDevMediaSbcInfo = ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
+        
+        lstBtrMgrSoOutASettings.eBtrMgrOutAType   = eBTRMgrATypeSBC;
+        if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
+
+            if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq8K;
             }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq16K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq32K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq44_1K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq48K;
+            }
+            else {
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreqUnknown;
+            }
+
+
+            switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
+            case eBTRCoreDevMediaAChanMono:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanMono;
+                break;
+            case eBTRCoreDevMediaAChanDualChannel:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanDualChannel;
+                break;
+            case eBTRCoreDevMediaAChanStereo:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanStereo;
+                break;
+            case eBTRCoreDevMediaAChanJointStereo:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanJStereo;
+                break;
+            case eBTRCoreDevMediaAChan5_1:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan5_1;
+                break;
+            case eBTRCoreDevMediaAChan7_1:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan7_1;
+                break;
+            case eBTRCoreDevMediaAChanUnknown:
+            default:
+                pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanUnknown;
+                break;
+            }
+
+            pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
+            pstBtrMgrSoOutSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
+            pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
+            pstBtrMgrSoOutSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
+            pstBtrMgrSoOutSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
+            pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
+            pstBtrMgrSoOutSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
         }
     }
 
-    lstBtrMgrSoOutASettings.i32BtrMgrSoDevFd      = outFileFd;
-    lstBtrMgrSoOutASettings.i32BtrMgrSoDevMtu     = outMTUSize;
+    lstBtrMgrSoOutASettings.i32BtrMgrDevFd      = outFileFd;
+    lstBtrMgrSoOutASettings.i32BtrMgrDevMtu     = outMTUSize;
 
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_GetEstimatedInABufSize(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_GetEstimatedInABufSize(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
         fprintf(stderr, "BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
-        lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize = inBytesToEncode;
+        lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize = inBytesToEncode;
     }
     else {
-        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrSoInBufMaxSize;
+        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
     }
 
 
-    settings.cbBufferReady      = cbBufferReady;
-    settings.cbBufferReadyParm  = pstAppData;
-    settings.fifoSize = 8 * inBytesToEncode;
-    settings.threshold= inBytesToEncode;
-
-    //TODO: Work on a intelligent way to arrive at this value. This is not good enough
-    if (settings.threshold > 4096)
-        settings.delayCompensation_ms = 240;
-    else
-        settings.delayCompensation_ms = 200;
-    //TODO: Bad hack above, need to modify before taking it to stable2
-
-    if (eBTRMgrSOSuccess != BTRMgr_SO_Start(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Start(pstAppData->hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
         fprintf(stderr, "BTRMgr_SO_Start - FAILED\n");
         return -1;
     }
 
-    if (RMF_AudioCapture_Start(pstAppData->hAudCap, &settings)) {
+
+    lstBtrMgrAcOutASettings.i32BtrMgrOutBufMaxSize = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
+
+    if (eBTRMgrSuccess != BTRMgr_AC_Start(pstAppData->hBTRMgrAcHdl,
+                                          &lstBtrMgrAcOutASettings,
+                                          btmgr_ACDataReadyCallback,
+                                          pstAppData
+                                         )) {
         goto err_open;
     }
 
     printf("BT AUDIO OUT - STARTED \n");
 
-    if (lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo)
-        free(lstBtrMgrSoOutASettings.pstBtrMgrSoOutCodecInfo);
-
-    if (lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo)
-        free(lstBtrMgrSoInASettings.pstBtrMgrSoInCodecInfo);
-
-
 err_open:
+    if (lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo)
+        free(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo);
+
+    if (lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo)
+        free(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo);
+
+    if (lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo)
+        free(lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo);
+
     return 0;
 }
 
@@ -1630,29 +1576,39 @@ static int
 streamOutLiveTestMainAlternateStop (
     appDataStruct*  pstAppData
 )  {
-    RMF_AudioCapture_Stop(pstAppData->hAudCap);
+    int ret = 0;
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_SendEOS(pstAppData->hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_AC_Stop(pstAppData->hBTRMgrAcHdl)) {
+        fprintf(stderr, "BTRMgr_AC_Stop - FAILED\n");
+        ret = -1;
+    }
+
+    if (eBTRMgrSuccess != BTRMgr_SO_SendEOS(pstAppData->hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_SendEOS - FAILED\n");
-        return -1;
+        ret = -1;
     }
 
-    if (eBTRMgrSOSuccess != BTRMgr_SO_Stop(pstAppData->hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Stop(pstAppData->hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_Stop - FAILED\n");
-        return -1;
+        ret = -1;
     }
 
+    if (eBTRMgrSuccess != BTRMgr_AC_DeInit(pstAppData->hBTRMgrAcHdl)) {
+        fprintf(stderr, "BTRMgr_AC_DeInit - FAILED\n");
+        ret = -1;
+    }
 
-    RMF_AudioCapture_Close(pstAppData->hAudCap);
-
-    if (eBTRMgrSOSuccess != BTRMgr_SO_DeInit(pstAppData->hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_DeInit(pstAppData->hBTRMgrSoHdl)) {
         fprintf(stderr, "BTRMgr_SO_DeInit - FAILED\n");
-        return -1;
+        ret = -1;
     }
+
+    pstAppData->hBTRMgrAcHdl = NULL;
+    pstAppData->hBTRMgrSoHdl = NULL;
 
     printf("BT AUDIO OUT - STOPPED\n");
 
-    return 0;
+    return ret;
 }
 
 

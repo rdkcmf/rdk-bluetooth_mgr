@@ -21,7 +21,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([btr-mgr], [1.0], [Chandresh_Pitty@cable.comcast.com])
-AC_CONFIG_MACRO_DIR([cfg])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([cfg])
 AM_INIT_AUTOMAKE([subdir-objects -Wall -Werror foreign no-dist-gzip dist-bzip2 1.9])
 
@@ -65,27 +65,60 @@ if test "$btrCore_ok" = yes; then
 fi
 AC_SUBST([BTRCORE_LIBS])
 
-AC_CHECK_LIB(rmfAudioCapture, RMF_AudioCapture_Open,
-                   rmfAudioCapture_ok=yes, rmfAudioCapture_ok=no
-                   AC_MSG_ERROR([RMFAUDIOCAPTURE library (librmfAudioCapture) not found]))
-if test "$rmfAudioCapture_ok" = yes; then
-   AC_MSG_CHECKING([for rmfAudioCapture])
-   AC_TRY_COMPILE(
-[#include <stdio.h>
-#undef PACKAGE
-#undef VERSION
-#undef HAVE_STDLIB_H
-#include "rmfAudioCapture.h"],,
-         rmfAudioCapture_ok=yes,
-         rmfAudioCapture_ok=no)
-   AC_MSG_RESULT($rmfAudioCapture_ok)
-   if test "$rmfAudioCapture_ok" = yes; then
-      RMFAUDIOCAPTURE_LIBS="-lrmfAudioCapture"
-   else
-      AC_MSG_ERROR([RMFAUDIOCAPTURE library (librmfAudioCapture) not found])
-   fi
-fi
-AC_SUBST([RMFAUDIOCAPTURE_LIBS])
+
+AC_ARG_ENABLE(acm,
+              AS_HELP_STRING([--enable-acm],
+                             [Use Audio Capture Manager (default is no)]),
+                             [enable_acm=$enableval],
+                             [enable_acm=no])
+
+AS_IF([test "x$enable_acm" = "xno"], [
+    AC_CHECK_LIB(rmfAudioCapture, RMF_AudioCapture_Open,
+                       rmfAudioCapture_ok=yes, rmfAudioCapture_ok=no
+                       AC_MSG_ERROR([RMFAUDIOCAPTURE library (librmfAudioCapture) not found]))
+    if test "$rmfAudioCapture_ok" = yes; then
+       AC_MSG_CHECKING([for rmfAudioCapture])
+       AC_TRY_COMPILE(
+    [#include <stdio.h>
+    #undef PACKAGE
+    #undef VERSION
+    #undef HAVE_STDLIB_H
+    #include "rmfAudioCapture.h"],,
+             rmfAudioCapture_ok=yes,
+             rmfAudioCapture_ok=no)
+       AC_MSG_RESULT($rmfAudioCapture_ok)
+       if test "$rmfAudioCapture_ok" = yes; then
+          AUDIOCAPTURE_LIBS="-lrmfAudioCapture"
+       else
+          AC_MSG_ERROR([AUDIOCAPTURE library (librmfAudioCapture) not found])
+       fi
+    fi
+], [])
+
+AS_IF([test "x$enable_acm" = "xyes"], [
+       AC_MSG_CHECKING([for audioCaptureMgr])
+       AC_TRY_COMPILE(
+    [#include <stdio.h>
+    #include <stdbool.h>
+    #undef PACKAGE
+    #undef VERSION
+    #undef HAVE_STDLIB_H
+    #include "basic_types.h"
+    #include "audiocapturemgr_iarm.h"],,
+             audioCaptureMgr_ok=yes,
+             audioCaptureMgr_ok=no)
+       AC_MSG_RESULT($audioCaptureMgr_ok)
+       if test "$audioCaptureMgr_ok" = yes; then
+          AUDIOCAPTURE_LIBS=" "
+       else
+          AC_MSG_ERROR([AUDIOCAPTURE Interface (audiocapturemgr_iarm.h) not found])
+       fi
+], [])
+
+
+AM_CONDITIONAL(USE_ACM, test "x$enable_acm" = xyes)
+AC_SUBST([AUDIOCAPTURE_LIBS])
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_avMedia.h])
@@ -105,23 +138,23 @@ AS_IF([test "x$enable_gstreamer1" = "xyes"], [
 
   AS_IF([test "x$have_gst1" = "xyes"], [
     PKG_CHECK_MODULES([GSTBASE], [gstreamer-base-1.0 >= 1.4])
-    AC_DEFINE(USE_GST1, 1, [Build with GStreamer 1.x])
   ], [])
 ], [])
+
+AM_CONDITIONAL(USE_GSTREAMER1, test "x$enable_gstreamer1" = "xyes" -a "x$have_gst1" = "xyes")
+
 
 AS_IF([test "x$enable_gstreamer1" = "xyes" -a "x$have_gst1" != "xyes"], [
    AC_MSG_ERROR([Could not find GStreamer 1.x dependencies:
 $GST_PKG_ERRORS])], [])
 
-AM_CONDITIONAL(USE_GST1, test "x$enable_gstreamer1" = "xyes" -a "x$have_gst1" = "xyes")
 
 RPC_ENABLE="" #true"
-RPC_FLAGS="" #-DBTMGR_ENABLE_IARM_INTERFACE"
 AC_ARG_ENABLE([rpc],
               AS_HELP_STRING([--enable-rpc],[enable rpc plugin (default is no)]),
               [
       		case "${enableval}" in
-        	 yes) RPC_FLAGS="-DBTMGR_ENABLE_IARM_INTERFACE" RPC_ENABLE=true;;
+        	 yes) RPC_ENABLE=true ;;
         	 no)  RPC_ENABLE=false AC_MSG_ERROR([rpc plugin is disabled]) ;;
         	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-rpc]) ;;
        		esac
@@ -143,7 +176,6 @@ AC_SUBST(plugindir)
 AC_SUBST(GST_MAJORMINOR)
 AC_SUBST(BTR_MGR_SRC)
 AC_SUBST(BTR_MGR_TEST)
-AC_SUBST(RPC_FLAGS)
 
 # Checks for library functions.
 
@@ -152,6 +184,7 @@ AC_CONFIG_FILES([Makefile
                  src/main/Makefile
                  src/rpc/Makefile
                  src/ctrl/Makefile
+                 src/audioCap/Makefile
                  src/streamOut/Makefile
                  src/streamIn/Makefile
                  tests/Makefile

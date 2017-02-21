@@ -16,9 +16,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#ifdef BTMGR_ENABLE_IARM_INTERFACE
 #include "libIBus.h"
 #include "libIARM.h"
+
+#ifndef __BT_MGR_IARM_INTERFACE_H__
+#define __BT_MGR_IARM_INTERFACE_H__
+
 
 #define IARM_BUS_BTMGR_NAME        "BTMgrBus"
 
@@ -107,4 +110,4 @@ typedef struct _BTMGR_IARMStreamingType_t {
 void btmgr_BeginIARMMode();
 void btmgr_TermIARMMode();
 
-#endif /* BTMGR_ENABLE_IARM_INTERFACE */
+#endif /* __BT_MGR_IARM_INTERFACE_H__ */

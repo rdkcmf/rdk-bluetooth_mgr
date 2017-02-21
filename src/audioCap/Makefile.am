@@ -16,26 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = 
+SUBDIRS =
 
 INCLUDE_FILES =
 
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/streamOut
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap
 AM_LDFLAGS =
 
-if USE_GSTREAMER1
-AM_CPPFLAGS += $(GST_CFLAGS) -DUSE_GST1
-AM_LDFLAGS += $(GST_LIBS) -lgstapp-1.0
+if !USE_ACM
+AM_CPPFLAGS += -DUSE_AC_RMF
 endif
 
-lib_LTLIBRARIES = libbtrMgrStreamOut.la
-libbtrMgrStreamOut_la_SOURCES = btrMgr_streamOut.c
-libbtrMgrStreamOut_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
-libbtrMgrStreamOut_la_LIBADD = $(GLIB_LIBS)
+lib_LTLIBRARIES = libbtrMgrAudioCapture.la
+libbtrMgrAudioCapture_la_SOURCES = btrMgr_audioCap.c
+libbtrMgrAudioCapture_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
+libbtrMgrAudioCapture_la_LIBADD = $(GLIB_LIBS) $(AUDIOCAPTURE_LIBS)
 
-if USE_GSTREAMER1
-libbtrMgrStreamOut_la_SOURCES += btrMgr_streamOutGst.c
-endif
-
-include_HEADERS = $(top_srcdir)/include/streamOut/btrMgr_streamOut.h
-
+include_HEADERS = $(top_srcdir)/include/audioCap/btrMgr_audioCap.h

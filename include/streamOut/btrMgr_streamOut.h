@@ -28,122 +28,19 @@
 
 typedef void* tBTRMgrSoHdl;
 
-typedef enum _eBTRMgrSORet {
-    eBTRMgrSOFailure,
-    eBTRMgrSOInitFailure,
-    eBTRMgrSONotInitialized,
-    eBTRMgrSOFailInArg,
-    eBTRMgrSOSuccess
-} eBTRMgrSORet;
-
-typedef enum _eBTRMgrSOState {
-    eBTRMgrSOStateInitialized,
-    eBTRMgrSOStateDeInitialized,
-    eBTRMgrSOStatePaused,
-    eBTRMgrSOStatePlaying,
-    eBTRMgrSOStateCompleted,
-    eBTRMgrSOStateStopped,
-    eBTRMgrSOStateUnknown
-} eBTRMgrSOState;
-
-typedef enum _eBTRMgrSOAType {
-    eBTRMgrSOATypePCM,
-    eBTRMgrSOATypeSBC,
-    eBTRMgrSOATypeMPEG,
-    eBTRMgrSOATypeAAC,
-    eBTRMgrSOATypeUnknown
-} eBTRMgrSOAType;
-
-typedef enum _eBTRMgrSOSFreq {
-    eBTRMgrSOSFreq8K,
-    eBTRMgrSOSFreq16K,
-    eBTRMgrSOSFreq32K,
-    eBTRMgrSOSFreq44_1K,
-    eBTRMgrSOSFreq48K,
-    eBTRMgrSOSFreqUnknown
-} eBTRMgrSOSFreq;
-
-typedef enum _eBTRMgrSOSFmt {
-    eBTRMgrSOSFmt8bit,
-    eBTRMgrSOSFmt16bit,
-    eBTRMgrSOSFmt24bit,
-    eBTRMgrSOSFmt32bit,
-    eBTRMgrSOSFmtUnknown
-} eBTRMgrSOSFmt;
-
-typedef enum _eBTRMgrSOAChan {
-    eBTRMgrSOAChanMono,
-    eBTRMgrSOAChanDualChannel,
-    eBTRMgrSOAChanStereo,
-    eBTRMgrSOAChanJStereo,
-    eBTRMgrSOAChan5_1,
-    eBTRMgrSOAChan7_1,
-    eBTRMgrSOAChanUnknown
-} eBTRMgrSOAChan;
-
-typedef struct _stBTRMgrSOPCMInfo {
-    eBTRMgrSOSFreq  eBtrMgrSoSFreq;
-    eBTRMgrSOSFmt   eBtrMgrSoSFmt;
-    eBTRMgrSOAChan  eBtrMgrSoAChan;
-} stBTRMgrSOPCMInfo;
-
-typedef struct _stBTRMgrSOSBCInfo {
-    eBTRMgrSOSFreq  eBtrMgrSoSbcSFreq;      // frequency
-    eBTRMgrSOAChan  eBtrMgrSoSbcAChan;      // channel_mode
-    unsigned char   ui8SbcAllocMethod;      // allocation_method
-    unsigned char   ui8SbcSubbands;         // subbands
-    unsigned char   ui8SbcBlockLength;      // block_length
-    unsigned char   ui8SbcMinBitpool;       // min_bitpool
-    unsigned char   ui8SbcMaxBitpool;       // max_bitpool
-    unsigned short  ui16SbcFrameLen;        // frameLength
-    unsigned short  ui16SbcBitrate;         // bitrate
-} stBTRMgrSOSBCInfo;
-
-typedef struct _stBTRMgrSOMPEGInfo {
-    eBTRMgrSOSFreq  eBtrMgrSoMpegSFreq;     // frequency
-    eBTRMgrSOAChan  eBtrMgrSoMpegAChan;     // channel_mode
-    unsigned char   ui8MpegCrc;             // crc
-    unsigned char   ui8MpegLayer;           // layer
-    unsigned char   ui8MpegMpf;             // mpf
-    unsigned char   ui8MpegRfa;             // rfa
-    unsigned short  ui16MpegBitrate;        // bitrate
-} stBTRMgrSOMPEGInfo;
-
-typedef struct _stBTRMgrSOInASettings {
-    eBTRMgrSOAType  eBtrMgrSoInAType;
-    void*           pstBtrMgrSoInCodecInfo;
-    int             i32BtrMgrSoInBufMaxSize;
-} stBTRMgrSOInASettings;
-
-typedef struct _stBTRMgrSOOutASettings {
-    eBTRMgrSOAType  eBtrMgrSoOutAType;
-    void*           pstBtrMgrSoOutCodecInfo;
-    int             i32BtrMgrSoDevFd;
-    int             i32BtrMgrSoDevMtu;
-} stBTRMgrSOOutASettings;
-
-typedef struct _stBTRMgrSOStatus {
-    eBTRMgrSOState  eBtrMgrSoState;
-    eBTRMgrSOSFreq  eBtrMgrSoSFreq;
-    eBTRMgrSOSFmt   eBtrMgrSoSFmt;
-    eBTRMgrSOAChan  eBtrMgrSoAChan;
-    unsigned int    ui32OverFlowCnt;
-    unsigned int    ui32UnderFlowCnt;
-} stBTRMgrSOStatus;
-
 
 /* Interfaces */
-eBTRMgrSORet BTRMgr_SO_Init (tBTRMgrSoHdl* phBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_DeInit (tBTRMgrSoHdl hBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_GetDefaultSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_GetCurrentSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_GetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrSOStatus* apstBtrMgrSoStatus);
-eBTRMgrSORet BTRMgr_SO_GetEstimatedInABufSize (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrSOInASettings* apstBtrMgrSoInASettings, stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings);
-eBTRMgrSORet BTRMgr_SO_Start (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrSOInASettings* apstBtrMgrSoInASettings, stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings);
-eBTRMgrSORet BTRMgr_SO_Stop (tBTRMgrSoHdl hBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_Pause (tBTRMgrSoHdl hBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_Resume (tBTRMgrSoHdl hBTRMgrSoHdl);
-eBTRMgrSORet BTRMgr_SO_SendBuffer (tBTRMgrSoHdl hBTRMgrSoHdl, char* pcInBuf, int aiInBufSize);
-eBTRMgrSORet BTRMgr_SO_SendEOS (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_Init (tBTRMgrSoHdl* phBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_DeInit (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_GetDefaultSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_GetCurrentSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_GetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrMediaStatus* apstBtrMgrSoStatus);
+eBTRMgrRet BTRMgr_SO_GetEstimatedInABufSize (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrInASettings* apstBtrMgrSoInASettings, stBTRMgrOutASettings* apstBtrMgrSoOutASettings);
+eBTRMgrRet BTRMgr_SO_Start (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrInASettings* apstBtrMgrSoInASettings, stBTRMgrOutASettings* apstBtrMgrSoOutASettings);
+eBTRMgrRet BTRMgr_SO_Stop (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_Pause (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_Resume (tBTRMgrSoHdl hBTRMgrSoHdl);
+eBTRMgrRet BTRMgr_SO_SendBuffer (tBTRMgrSoHdl hBTRMgrSoHdl, char* pcInBuf, int aiInBufSize);
+eBTRMgrRet BTRMgr_SO_SendEOS (tBTRMgrSoHdl hBTRMgrSoHdl);
 
 #endif /* __BTR_MGR_STREAMOUT_H__ */

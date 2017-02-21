@@ -34,16 +34,18 @@
 #include <glib.h>
 
 /* Interface lib Headers */
-#include "btrMgr_streamOut.h"
+
 
 /* Local Headers */
+#include "btrMgr_mediaTypes.h"
+#include "btrMgr_streamOut.h"
 #ifdef USE_GST1
 #include "btrMgr_streamOutGst.h"
 #endif
 
 /* Local types */
 typedef struct _stBTRMgrSOHdl {
-    stBTRMgrSOStatus    lstBtrMgrSoStatus;
+    stBTRMgrMediaStatus lstBtrMgrSoStatus;
 #ifdef USE_GST1
     tBTRMgrSoGstHdl     hBTRMgrSoGstHdl;
 #endif
@@ -51,11 +53,11 @@ typedef struct _stBTRMgrSOHdl {
 
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_Init (
     tBTRMgrSoHdl*   phBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = NULL;
 
 #ifdef USE_GST1
@@ -64,27 +66,27 @@ BTRMgr_SO_Init (
 
     if ((pstBtrMgrSoHdl = (stBTRMgrSOHdl*)g_malloc0 (sizeof(stBTRMgrSOHdl))) == NULL) {
         g_print ("%s:%d:%s - Unable to allocate memory\n", __FILE__, __LINE__, __FUNCTION__);
-        return eBTRMgrSOInitFailure;
+        return eBTRMgrInitFailure;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstInit(&(pstBtrMgrSoHdl->hBTRMgrSoGstHdl))) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOInitFailure;
+        leBtrMgrSoRet = eBTRMgrInitFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    if (leBtrMgrSoRet != eBTRMgrSOSuccess) {
+    if (leBtrMgrSoRet != eBTRMgrSuccess) {
         BTRMgr_SO_DeInit((tBTRMgrSoHdl)pstBtrMgrSoHdl);
         return leBtrMgrSoRet;
     }
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState = eBTRMgrSOStateInitialized;
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoSFreq = eBTRMgrSOSFreq48K;
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoSFmt  = eBTRMgrSOSFmt16bit;
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoAChan = eBTRMgrSOAChanJStereo;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState = eBTRMgrStateInitialized;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFreq = eBTRMgrSFreq48K;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFmt  = eBTRMgrSFmt16bit;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrAChan = eBTRMgrAChanJStereo;
 
     *phBTRMgrSoHdl = (tBTRMgrSoHdl)pstBtrMgrSoHdl;
 
@@ -92,11 +94,11 @@ BTRMgr_SO_Init (
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_DeInit (
     tBTRMgrSoHdl    hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -104,20 +106,20 @@ BTRMgr_SO_DeInit (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstDeInit(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
     pstBtrMgrSoHdl->hBTRMgrSoGstHdl = NULL;
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState  = eBTRMgrSOStateDeInitialized;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStateDeInitialized;
 
     g_free((void*)pstBtrMgrSoHdl);
     pstBtrMgrSoHdl = NULL;
@@ -126,11 +128,11 @@ BTRMgr_SO_DeInit (
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_GetDefaultSettings (
     tBTRMgrSoHdl hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -139,18 +141,18 @@ BTRMgr_SO_GetDefaultSettings (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     return leBtrMgrSoRet;
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_GetCurrentSettings (
     tBTRMgrSoHdl hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -159,19 +161,19 @@ BTRMgr_SO_GetCurrentSettings (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     return leBtrMgrSoRet;
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_GetStatus (
-    tBTRMgrSoHdl      hBTRMgrSoHdl,
-    stBTRMgrSOStatus* apstBtrMgrSoStatus
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    stBTRMgrMediaStatus*    apstBtrMgrSoStatus
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -180,24 +182,24 @@ BTRMgr_SO_GetStatus (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     return leBtrMgrSoRet;
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_GetEstimatedInABufSize (
     tBTRMgrSoHdl            hBTRMgrSoHdl,
-    stBTRMgrSOInASettings*  apstBtrMgrSoInASettings,
-    stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings
+    stBTRMgrInASettings*    apstBtrMgrSoInASettings,
+    stBTRMgrOutASettings*   apstBtrMgrSoOutASettings
 ) {
-    eBTRMgrSORet        leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet          leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*      pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
-    stBTRMgrSOPCMInfo*  pstBtrMgrSoInPcmInfo = NULL;
-    stBTRMgrSOSBCInfo*  pstBtrMgrSoOutSbcInfo = NULL;
+    stBTRMgrPCMInfo*    pstBtrMgrSoInPcmInfo = NULL;
+    stBTRMgrSBCInfo*    pstBtrMgrSoOutSbcInfo = NULL;
 
     unsigned int        lui32InBitsPerSample = 0;
     unsigned int        lui32InNumAChan = 0;
@@ -212,77 +214,77 @@ BTRMgr_SO_GetEstimatedInABufSize (
     float               lfOutMtuTimemSec = 0.0;
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     if ((apstBtrMgrSoInASettings == NULL) || (apstBtrMgrSoOutASettings == NULL) ||
-        (apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo == NULL) || (apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo == NULL)) {
-        return eBTRMgrSOFailInArg;
+        (apstBtrMgrSoInASettings->pstBtrMgrInCodecInfo == NULL) || (apstBtrMgrSoOutASettings->pstBtrMgrOutCodecInfo == NULL)) {
+        return eBTRMgrFailInArg;
     }
 
-    if (apstBtrMgrSoInASettings->eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
-        pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo);
+    if (apstBtrMgrSoInASettings->eBtrMgrInAType == eBTRMgrATypePCM) {
+        pstBtrMgrSoInPcmInfo = (stBTRMgrPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrInCodecInfo);
 
-        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq) {
-        case eBTRMgrSOSFreq8K:
+        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSFreq) {
+        case eBTRMgrSFreq8K:
             lui32InSamplingFreq = 8000;
-        case eBTRMgrSOSFreq16K:
+        case eBTRMgrSFreq16K:
             lui32InSamplingFreq = 16000;
             break;
-        case eBTRMgrSOSFreq32K:
+        case eBTRMgrSFreq32K:
             lui32InSamplingFreq = 32000;
             break;
-        case eBTRMgrSOSFreq44_1K:
+        case eBTRMgrSFreq44_1K:
             lui32InSamplingFreq = 44100;
             break;
-        case eBTRMgrSOSFreq48K:
+        case eBTRMgrSFreq48K:
             lui32InSamplingFreq = 48000;
             break;
-        case eBTRMgrSOSFreqUnknown:
+        case eBTRMgrSFreqUnknown:
         default:
             lui32InSamplingFreq = 48000;
             break;
         }
 
-        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt) {
-        case eBTRMgrSOSFmt8bit:
+        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSFmt) {
+        case eBTRMgrSFmt8bit:
             lui32InBitsPerSample = 8;
             break;
-        case eBTRMgrSOSFmt16bit:
+        case eBTRMgrSFmt16bit:
             lui32InBitsPerSample = 16;
             break;
-        case eBTRMgrSOSFmt24bit:
+        case eBTRMgrSFmt24bit:
             lui32InBitsPerSample = 24;
             break;
-        case eBTRMgrSOSFmt32bit:
+        case eBTRMgrSFmt32bit:
             lui32InBitsPerSample = 32;
             break;
-        case eBTRMgrSOSFmtUnknown:
+        case eBTRMgrSFmtUnknown:
         default:
             lui32InBitsPerSample = 16;
             break;
         }
 
-        switch (pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan) {
-        case eBTRMgrSOAChanMono:
+        switch (pstBtrMgrSoInPcmInfo->eBtrMgrAChan) {
+        case eBTRMgrAChanMono:
             lui32InNumAChan = 1;
             break;
-        case eBTRMgrSOAChanDualChannel:
+        case eBTRMgrAChanDualChannel:
             lui32InNumAChan = 2;
             break;
-        case eBTRMgrSOAChanStereo:
+        case eBTRMgrAChanStereo:
             lui32InNumAChan = 2;
             break;
-        case eBTRMgrSOAChanJStereo:
+        case eBTRMgrAChanJStereo:
             lui32InNumAChan = 2;
             break;
-        case eBTRMgrSOAChan5_1:
+        case eBTRMgrAChan5_1:
             lui32InNumAChan = 6;
             break;
-        case eBTRMgrSOAChan7_1:
+        case eBTRMgrAChan7_1:
             lui32InNumAChan = 8;
             break;
-        case eBTRMgrSOAChanUnknown:
+        case eBTRMgrAChanUnknown:
         default:
             lui32InNumAChan = 2;
             break;
@@ -290,11 +292,11 @@ BTRMgr_SO_GetEstimatedInABufSize (
 
     }
 
-    if (apstBtrMgrSoOutASettings->eBtrMgrSoOutAType == eBTRMgrSOATypeSBC) {
-        pstBtrMgrSoOutSbcInfo = (stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo);
+    if (apstBtrMgrSoOutASettings->eBtrMgrOutAType == eBTRMgrATypeSBC) {
+        pstBtrMgrSoOutSbcInfo = (stBTRMgrSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrOutCodecInfo);
         lui16OutFrameLen    = pstBtrMgrSoOutSbcInfo->ui16SbcFrameLen;
         lui16OutBitrateKbps = pstBtrMgrSoOutSbcInfo->ui16SbcBitrate;
-        lui16OutMtu         = apstBtrMgrSoOutASettings->i32BtrMgrSoDevMtu;
+        lui16OutMtu         = apstBtrMgrSoOutASettings->i32BtrMgrDevMtu;
     }
 
 
@@ -302,38 +304,38 @@ BTRMgr_SO_GetEstimatedInABufSize (
     lui32OutByteRate = (lui16OutBitrateKbps * 1024) / 8;
     lfOutMtuTimemSec = (lui16OutMtu * 1000.0) / lui32OutByteRate;
     lui32InByteRate  = (lui32InBitsPerSample/8) * lui32InNumAChan * lui32InSamplingFreq;
-    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = (lui32InByteRate * lfOutMtuTimemSec)/1000;
+    apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (lui32InByteRate * lfOutMtuTimemSec)/1000;
 
     // Align to multiple of 256
-    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize >> 8) + 1;
-    apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize << 8;
+    apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize >> 8) + 1;
+    apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize << 8;
 
     g_print("%s:%d:%s\n", __FILE__, __LINE__, __FUNCTION__);
     g_print("Effective MTU = %d\n", lui16OutMtu);
     g_print("OutByteRate = %d\n", lui32OutByteRate);
     g_print("OutMtuTimemSec = %f\n", lfOutMtuTimemSec);
     g_print("InByteRate = %d\n", lui32InByteRate);
-    g_print("InBufMaxSize = %d\n", apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize);
+    g_print("InBufMaxSize = %d\n", apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize);
 
     return leBtrMgrSoRet;
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_Start (
     tBTRMgrSoHdl            hBTRMgrSoHdl,
-    stBTRMgrSOInASettings*  apstBtrMgrSoInASettings,
-    stBTRMgrSOOutASettings* apstBtrMgrSoOutASettings
+    stBTRMgrInASettings*  apstBtrMgrSoInASettings,
+    stBTRMgrOutASettings* apstBtrMgrSoOutASettings
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet    leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
-    eBTRMgrSOSFmt   leBtrMgrSoInSFmt  = eBTRMgrSOSFmtUnknown;
-    eBTRMgrSOAChan  leBtrMgrSoInAChan = eBTRMgrSOAChanUnknown;
-    eBTRMgrSOSFreq  leBtrMgrSoInSFreq = eBTRMgrSOSFreqUnknown;
+    eBTRMgrSFmt   leBtrMgrSoInSFmt  = eBTRMgrSFmtUnknown;
+    eBTRMgrAChan  leBtrMgrSoInAChan = eBTRMgrAChanUnknown;
+    eBTRMgrSFreq  leBtrMgrSoInSFreq = eBTRMgrSFreqUnknown;
 
-    eBTRMgrSOAChan  leBtrMgrSoOutAChan = eBTRMgrSOAChanUnknown;
-    eBTRMgrSOSFreq  leBtrMgrSoOutSFreq = eBTRMgrSOSFreqUnknown;
+    eBTRMgrAChan  leBtrMgrSoOutAChan = eBTRMgrAChanUnknown;
+    eBTRMgrSFreq  leBtrMgrSoOutSFreq = eBTRMgrSFreqUnknown;
 
     const char*  lpcBtrMgrInSoSFmt = NULL;
     unsigned int lui32BtrMgrInSoAChan;
@@ -355,26 +357,26 @@ BTRMgr_SO_Start (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     if ((apstBtrMgrSoInASettings == NULL) || (apstBtrMgrSoOutASettings == NULL) ||
-        (apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo == NULL) || (apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo == NULL)) {
-        return eBTRMgrSOFailInArg;
+        (apstBtrMgrSoInASettings->pstBtrMgrInCodecInfo == NULL) || (apstBtrMgrSoOutASettings->pstBtrMgrOutCodecInfo == NULL)) {
+        return eBTRMgrFailInArg;
     }
 
-    if (apstBtrMgrSoInASettings->eBtrMgrSoInAType == eBTRMgrSOATypePCM) {
-        stBTRMgrSOPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrSOPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrSoInCodecInfo);
-        leBtrMgrSoInSFmt  = pstBtrMgrSoInPcmInfo->eBtrMgrSoSFmt;
-        leBtrMgrSoInAChan = pstBtrMgrSoInPcmInfo->eBtrMgrSoAChan;
-        leBtrMgrSoInSFreq = pstBtrMgrSoInPcmInfo->eBtrMgrSoSFreq;
+    if (apstBtrMgrSoInASettings->eBtrMgrInAType == eBTRMgrATypePCM) {
+        stBTRMgrPCMInfo* pstBtrMgrSoInPcmInfo = (stBTRMgrPCMInfo*)(apstBtrMgrSoInASettings->pstBtrMgrInCodecInfo);
+        leBtrMgrSoInSFmt  = pstBtrMgrSoInPcmInfo->eBtrMgrSFmt;
+        leBtrMgrSoInAChan = pstBtrMgrSoInPcmInfo->eBtrMgrAChan;
+        leBtrMgrSoInSFreq = pstBtrMgrSoInPcmInfo->eBtrMgrSFreq;
     }
 
-    if (apstBtrMgrSoOutASettings->eBtrMgrSoOutAType == eBTRMgrSOATypeSBC) {
-        stBTRMgrSOSBCInfo* pstBtrMgrSoOutSbcInfo = (stBTRMgrSOSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrSoOutCodecInfo);
+    if (apstBtrMgrSoOutASettings->eBtrMgrOutAType == eBTRMgrATypeSBC) {
+        stBTRMgrSBCInfo* pstBtrMgrSoOutSbcInfo = (stBTRMgrSBCInfo*)(apstBtrMgrSoOutASettings->pstBtrMgrOutCodecInfo);
 
-        leBtrMgrSoOutAChan = pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcAChan;
-        leBtrMgrSoOutSFreq = pstBtrMgrSoOutSbcInfo->eBtrMgrSoSbcSFreq;
+        leBtrMgrSoOutAChan = pstBtrMgrSoOutSbcInfo->eBtrMgrSbcAChan;
+        leBtrMgrSoOutSFreq = pstBtrMgrSoOutSbcInfo->eBtrMgrSbcSFreq;
         lui8SbcAllocMethod = pstBtrMgrSoOutSbcInfo->ui8SbcAllocMethod;
         lui8SbcSubbands    = pstBtrMgrSoOutSbcInfo->ui8SbcSubbands;
         lui8SbcBlockLength = pstBtrMgrSoOutSbcInfo->ui8SbcBlockLength;
@@ -384,65 +386,65 @@ BTRMgr_SO_Start (
 
 
     switch (leBtrMgrSoInSFreq) {
-    case eBTRMgrSOSFreq8K:
+    case eBTRMgrSFreq8K:
         lui32BtrMgrInSoSFreq = 8000;
-    case eBTRMgrSOSFreq16K:
+    case eBTRMgrSFreq16K:
         lui32BtrMgrInSoSFreq = 16000;
         break;
-    case eBTRMgrSOSFreq32K:
+    case eBTRMgrSFreq32K:
         lui32BtrMgrInSoSFreq = 32000;
         break;
-    case eBTRMgrSOSFreq44_1K:
+    case eBTRMgrSFreq44_1K:
         lui32BtrMgrInSoSFreq = 44100;
         break;
-    case eBTRMgrSOSFreq48K:
+    case eBTRMgrSFreq48K:
         lui32BtrMgrInSoSFreq = 48000;
         break;
-    case eBTRMgrSOSFreqUnknown:
+    case eBTRMgrSFreqUnknown:
     default:
         lui32BtrMgrInSoSFreq = 48000;
         break;
     }
 
     switch (leBtrMgrSoInSFmt) {
-    case eBTRMgrSOSFmt8bit:
+    case eBTRMgrSFmt8bit:
         lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_8BIT;
         break;
-    case eBTRMgrSOSFmt16bit:
+    case eBTRMgrSFmt16bit:
         lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT;
         break;
-    case eBTRMgrSOSFmt24bit:
+    case eBTRMgrSFmt24bit:
         lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT;
         break;
-    case eBTRMgrSOSFmt32bit:
+    case eBTRMgrSFmt32bit:
         lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT;
         break;
-    case eBTRMgrSOSFmtUnknown:
+    case eBTRMgrSFmtUnknown:
     default:
         lpcBtrMgrInSoSFmt = BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT;
         break;
     }
 
     switch (leBtrMgrSoInAChan) {
-    case eBTRMgrSOAChanMono:
+    case eBTRMgrAChanMono:
         lui32BtrMgrInSoAChan = 1;
         break;
-    case eBTRMgrSOAChanDualChannel:
+    case eBTRMgrAChanDualChannel:
         lui32BtrMgrInSoAChan = 2;
         break;
-    case eBTRMgrSOAChanStereo:
+    case eBTRMgrAChanStereo:
         lui32BtrMgrInSoAChan = 2;
         break;
-    case eBTRMgrSOAChanJStereo:
+    case eBTRMgrAChanJStereo:
         lui32BtrMgrInSoAChan = 2;
         break;
-    case eBTRMgrSOAChan5_1:
+    case eBTRMgrAChan5_1:
         lui32BtrMgrInSoAChan = 6;
         break;
-    case eBTRMgrSOAChan7_1:
+    case eBTRMgrAChan7_1:
         lui32BtrMgrInSoAChan = 8;
         break;
-    case eBTRMgrSOAChanUnknown:
+    case eBTRMgrAChanUnknown:
     default:
         lui32BtrMgrInSoAChan = 2;
         break;
@@ -450,29 +452,29 @@ BTRMgr_SO_Start (
 
 
     switch (leBtrMgrSoOutAChan) {
-    case eBTRMgrSOAChanMono:
+    case eBTRMgrAChanMono:
         lui32BtrMgrOutSoAChan   = 1;
         lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_MONO;
         break;
-    case eBTRMgrSOAChanDualChannel:
+    case eBTRMgrAChanDualChannel:
         lui32BtrMgrOutSoAChan   = 2;
         lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_DUAL;
         break;
-    case eBTRMgrSOAChanStereo:
+    case eBTRMgrAChanStereo:
         lui32BtrMgrOutSoAChan   = 2;
         lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_STEREO;
         break;
-    case eBTRMgrSOAChanJStereo:
+    case eBTRMgrAChanJStereo:
         lui32BtrMgrOutSoAChan   = 2;
         lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_JSTEREO;
         break;
-    case eBTRMgrSOAChan5_1:
+    case eBTRMgrAChan5_1:
         lui32BtrMgrOutSoAChan   = 6;
         break;
-    case eBTRMgrSOAChan7_1:
+    case eBTRMgrAChan7_1:
         lui32BtrMgrOutSoAChan   = 8;
         break;
-    case eBTRMgrSOAChanUnknown:
+    case eBTRMgrAChanUnknown:
     default:
         lui32BtrMgrOutSoAChan   = 2;
         lpcBtrMgrOutSoAChanMode = BTRMGR_AUDIO_CHANNELMODE_STEREO;
@@ -480,21 +482,21 @@ BTRMgr_SO_Start (
     }
 
     switch (leBtrMgrSoOutSFreq) {
-    case eBTRMgrSOSFreq8K:
+    case eBTRMgrSFreq8K:
         lui32BtrMgrOutSoSFreq = 8000;
-    case eBTRMgrSOSFreq16K:
+    case eBTRMgrSFreq16K:
         lui32BtrMgrOutSoSFreq = 16000;
         break;
-    case eBTRMgrSOSFreq32K:
+    case eBTRMgrSFreq32K:
         lui32BtrMgrOutSoSFreq = 32000;
         break;
-    case eBTRMgrSOSFreq44_1K:
+    case eBTRMgrSFreq44_1K:
         lui32BtrMgrOutSoSFreq = 44100;
         break;
-    case eBTRMgrSOSFreq48K:
+    case eBTRMgrSFreq48K:
         lui32BtrMgrOutSoSFreq = 48000;
         break;
-    case eBTRMgrSOSFreqUnknown:
+    case eBTRMgrSFreqUnknown:
     default:
         lui32BtrMgrOutSoSFreq = 48000;
         break;
@@ -502,7 +504,7 @@ BTRMgr_SO_Start (
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStart( pstBtrMgrSoHdl->hBTRMgrSoGstHdl,
-                                                apstBtrMgrSoInASettings->i32BtrMgrSoInBufMaxSize,
+                                                apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize,
                                                 lpcBtrMgrInSoSFmt,
                                                 lui32BtrMgrInSoSFreq,
                                                 lui32BtrMgrInSoAChan,
@@ -514,16 +516,16 @@ BTRMgr_SO_Start (
                                                 lui8SbcBlockLength,
                                                 lui8SbcMinBitpool,
                                                 lui8SbcMaxBitpool,
-                                                apstBtrMgrSoOutASettings->i32BtrMgrSoDevFd,
-                                                apstBtrMgrSoOutASettings->i32BtrMgrSoDevMtu)) != eBTRMgrSOGstSuccess) {
+                                                apstBtrMgrSoOutASettings->i32BtrMgrDevFd,
+                                                apstBtrMgrSoOutASettings->i32BtrMgrDevMtu)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState  = eBTRMgrSOStatePlaying;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStatePlaying;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32OverFlowCnt = 0;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32UnderFlowCnt= 0;
 
@@ -531,11 +533,11 @@ BTRMgr_SO_Start (
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_Stop (
     tBTRMgrSoHdl hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet    leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -543,19 +545,19 @@ BTRMgr_SO_Stop (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStop(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState  = eBTRMgrSOStateStopped;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStateStopped;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32OverFlowCnt = 0;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32UnderFlowCnt= 0;
 
@@ -563,11 +565,11 @@ BTRMgr_SO_Stop (
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_Pause (
     tBTRMgrSoHdl hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -575,29 +577,29 @@ BTRMgr_SO_Pause (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstPause(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState  = eBTRMgrSOStatePaused;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStatePaused;
 
     return leBtrMgrSoRet;
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_Resume (
     tBTRMgrSoHdl hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet  = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -605,31 +607,31 @@ BTRMgr_SO_Resume (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstResume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState  = eBTRMgrSOStatePlaying;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStatePlaying;
 
     return leBtrMgrSoRet;
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_SendBuffer (
     tBTRMgrSoHdl    hBTRMgrSoHdl,
     char*           pcInBuf,
     int             aiInBufSize
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -637,14 +639,14 @@ BTRMgr_SO_SendBuffer (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     //TODO: Implement ping-pong/triple/circular buffering if needed
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSendBuffer(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, pcInBuf, aiInBufSize)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
@@ -654,11 +656,11 @@ BTRMgr_SO_SendBuffer (
 }
 
 
-eBTRMgrSORet
+eBTRMgrRet
 BTRMgr_SO_SendEOS (
     tBTRMgrSoHdl    hBTRMgrSoHdl
 ) {
-    eBTRMgrSORet    leBtrMgrSoRet = eBTRMgrSOSuccess;
+    eBTRMgrRet      leBtrMgrSoRet = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
 #ifdef USE_GST1
@@ -666,19 +668,19 @@ BTRMgr_SO_SendEOS (
 #endif
 
     if (pstBtrMgrSoHdl == NULL) {
-        return eBTRMgrSONotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSendEOS(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
         g_print("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
-        leBtrMgrSoRet = eBTRMgrSOFailure;
+        leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSoState  = eBTRMgrSOStateCompleted;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStateCompleted;
 
     return leBtrMgrSoRet;
 }
