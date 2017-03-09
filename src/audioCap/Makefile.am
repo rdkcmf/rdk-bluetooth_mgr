@@ -23,7 +23,10 @@ INCLUDE_FILES =
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap
 AM_LDFLAGS =
 
-if !USE_ACM
+if USE_ACM
+AM_CPPFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
+AM_LDFLAGS += -lIARMBus
+else
 AM_CPPFLAGS += -DUSE_AC_RMF
 endif
 

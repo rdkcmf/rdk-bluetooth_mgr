@@ -20,7 +20,7 @@ SUBDIRS = streamInOut
 INCLUDE_FILES =
 
 
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/src/main -I${top_srcdir}/include ${RPC_FLAGS} -I=${includedir}/rdk/iarmbus
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/src/main -I${top_srcdir}/include ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
 
 bin_PROGRAMS = btMgrTest btMgrHTMLControl
 btMgrTest_SOURCES = btmgr_test.c
