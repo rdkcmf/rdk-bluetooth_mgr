@@ -286,6 +286,7 @@ printMenu (
     printf("36. Deny a connection request\n");
     printf("37. Increase Device Volume of External BT Device\n");
     printf("38. Skip to Next track on External BT Device\n");
+    printf("39. Play wav file forever\n");
 
     printf("88. debug test\n");
     printf("99. Exit\n");
@@ -753,6 +754,21 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_MediaPlayControl(lhBTRCore, devnum, enBTRCoreMobileAudioIn, enBTRCoreMediaNext);
+            }
+            break;
+         case 39:
+            printf("play wav file forever\n");
+            printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
+            {
+                char cliDataPath[4] = {'\0'};
+                char cliDataWriteMTU[8] = {'\0'};
+                snprintf(cliDataPath, 4, "%d", stAppData.iDataPath);
+                snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
+                char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
+                do
+                {
+                    streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs, &stAppData);
+                } while (1);
             }
             break; 
         case 88:
