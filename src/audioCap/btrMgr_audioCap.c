@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <errno.h>
 #endif
 
 /* Ext lib Headers */
@@ -154,6 +155,7 @@ btrMgr_AC_acmDataCapture (
                 struct sockaddr_un  lstBtrMgrAcmDCSockAddr;
                 int                 li32BtrMgrAcmDCSockFd = -1;
                 int                 li32BtrMgrAcmDCSockFlags;
+                int                 lerrno = 0;
 
                 lui16msTimeout = 1;
                 g_print("%s:%d:%s - eBTRMgrACAcmDCStart\n", __FILE__, __LINE__, __FUNCTION__);
@@ -165,10 +167,14 @@ btrMgr_AC_acmDataCapture (
                     g_print("%s:%d:%s - pcBtrMgrAcmSockPath = %s\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
 
                     lstBtrMgrAcmDCSockAddr.sun_family = AF_UNIX;
-                    strncpy(lstBtrMgrAcmDCSockAddr.sun_path, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath, strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath));
+                    strncpy(lstBtrMgrAcmDCSockAddr.sun_path, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath, 
+                        strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath) < (MAX_OUTPUT_PATH_LEN - 1) ?
+                            strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath) + 1 : MAX_OUTPUT_PATH_LEN);
+
 
                     if ((li32BtrMgrAcmDCSockFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-                        g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to create socket :FAILURE\n", __FILE__, __LINE__, __FUNCTION__);
+                        lerrno = errno;
+                        g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to create socket :FAILURE - %d\n", __FILE__, __LINE__, __FUNCTION__, lerrno);
                     }
 
                     if ((li32BtrMgrAcmDCSockFd != -1) &&
@@ -179,10 +185,13 @@ btrMgr_AC_acmDataCapture (
                     
                     if ((li32BtrMgrAcmDCSockFd != -1) && 
                         (connect(li32BtrMgrAcmDCSockFd, (const struct sockaddr*)&lstBtrMgrAcmDCSockAddr, sizeof(lstBtrMgrAcmDCSockAddr)) == -1)) {
-                        g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to connect socket :FAILURE\n", __FILE__, __LINE__, __FUNCTION__);
+                        lerrno = errno;
+                        g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to connect socket :FAILURE - %d\n", __FILE__, __LINE__, __FUNCTION__, lerrno);
                         close(li32BtrMgrAcmDCSockFd);
+                        lerrno = errno;
                     }
                     else {
+                        lerrno = errno;
                         if (!(lpInDataBuf = malloc(pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold))) {
                             g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to alloc\n", __FILE__, __LINE__, __FUNCTION__);
                             break;
@@ -191,7 +200,7 @@ btrMgr_AC_acmDataCapture (
                 }
 
                 pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd = li32BtrMgrAcmDCSockFd;
-                g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Read socket : %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd);
+                g_print("%s:%d:%s - eBTRMgrACAcmDCStart - Read socket : %d - %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd, lerrno);
             }
             /* eBTRMgrACAcmDCStop - STOP */
             else if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCStop) {
