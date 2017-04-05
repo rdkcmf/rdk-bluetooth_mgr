@@ -72,6 +72,9 @@ typedef struct _stBTRMgrSOGst {
     int          i32InRate;
     int          i32InChannels;
     unsigned int ui32InBitsPSample;
+
+    GMutex       pipelineDataMutex;
+    gboolean     bPipelineError;
 } stBTRMgrSOGst;
 
 
@@ -135,6 +138,12 @@ btrMgr_SO_gstBusCall (
         case GST_MESSAGE_ERROR: {
             gchar*      debug;
             GError*     err;
+
+            if (pstBtrMgrSoGst) {
+                g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+                pstBtrMgrSoGst->bPipelineError  = TRUE;
+                g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+            }
 
             gst_message_parse_error (msg, &err, &debug);
             g_print ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
@@ -253,7 +262,7 @@ BTRMgr_SO_GstInit (
         return eBTRMgrSOGstFailure;
     }
 
-    
+
     pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
@@ -263,6 +272,8 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pLoop           = (void*)loop;
     pstBtrMgrSoGst->gstClkTStamp    = 0;
     pstBtrMgrSoGst->inBufOffset     = 0;
+    pstBtrMgrSoGst->bPipelineError  = FALSE;
+    g_mutex_init(&pstBtrMgrSoGst->pipelineDataMutex);
 
 
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
@@ -335,6 +346,14 @@ BTRMgr_SO_GstDeInit (
         g_main_loop_unref(loop);
         loop = NULL;
     }
+
+
+    g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+    pstBtrMgrSoGst->bPipelineError  = FALSE;
+    g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+
+    g_mutex_clear(&pstBtrMgrSoGst->pipelineDataMutex);
+
 
     memset((void*)pstBtrMgrSoGst, 0, sizeof(stBTRMgrSOGst));
     free((void*)pstBtrMgrSoGst);
@@ -472,6 +491,12 @@ BTRMgr_SO_GstStart (
     pstBtrMgrSoGst->i32InChannels       = ai32InChannels;
     pstBtrMgrSoGst->ui32InBitsPSample   = lui32InBitsPSample;
 
+
+    g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+    pstBtrMgrSoGst->bPipelineError  = FALSE;
+    g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+
+
     return eBTRMgrSOGstSuccess;
 }
 
@@ -511,6 +536,12 @@ BTRMgr_SO_GstStop (
     pstBtrMgrSoGst->i32InRate           = 0;
     pstBtrMgrSoGst->i32InChannels       = 0;
     pstBtrMgrSoGst->ui32InBitsPSample   = 0;
+
+
+    g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+    pstBtrMgrSoGst->bPipelineError  = FALSE;
+    g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+
 
     return eBTRMgrSOGstSuccess;
 }
@@ -611,70 +642,80 @@ BTRMgr_SO_GstSendBuffer (
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSoGst->pLoop;
     guint       busWatchId  = pstBtrMgrSoGst->busWId;
 
+    gboolean    lbPipelineEr = FALSE;
+
     (void)pipeline;
     (void)appsrc;
     (void)loop;
     (void)busWatchId;
 
+
+    g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+    lbPipelineEr = pstBtrMgrSoGst->bPipelineError;
+    g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+
+
     /* push Buffers */
-    while (aiInBufSize > pstBtrMgrSoGst->i32InBufMaxSize) {
-        GstBuffer *gstBuf;
-        GstMapInfo gstBufMap;
+    if (lbPipelineEr == FALSE) {
+        while (aiInBufSize > pstBtrMgrSoGst->i32InBufMaxSize) {
+            GstBuffer *gstBuf;
+            GstMapInfo gstBufMap;
 
-        gstBuf = gst_buffer_new_and_alloc (pstBtrMgrSoGst->i32InBufMaxSize);
-        gst_buffer_set_size (gstBuf, pstBtrMgrSoGst->i32InBufMaxSize);
+            gstBuf = gst_buffer_new_and_alloc (pstBtrMgrSoGst->i32InBufMaxSize);
+            gst_buffer_set_size (gstBuf, pstBtrMgrSoGst->i32InBufMaxSize);
 
-        gst_buffer_map (gstBuf, &gstBufMap, GST_MAP_WRITE);
+            gst_buffer_map (gstBuf, &gstBufMap, GST_MAP_WRITE);
 
-        //TODO: Repalce memcpy and new_alloc if possible
-        memcpy (gstBufMap.data, pcInBuf + i32InBufOffset, pstBtrMgrSoGst->i32InBufMaxSize);
+            //TODO: Repalce memcpy and new_alloc if possible
+            memcpy (gstBufMap.data, pcInBuf + i32InBufOffset, pstBtrMgrSoGst->i32InBufMaxSize);
 
-        //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
-		// size of the incoming buffer (which represents the num of samples received at this instant)
-        GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
-        GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (pstBtrMgrSoGst->i32InBufMaxSize * 1000)/((pstBtrMgrSoGst->i32InRate/1000.0) * (pstBtrMgrSoGst->ui32InBitsPSample/8) * pstBtrMgrSoGst->i32InChannels);
-        pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
+            //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
+            // size of the incoming buffer (which represents the num of samples received at this instant)
+            GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
+            GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (pstBtrMgrSoGst->i32InBufMaxSize * 1000)/((pstBtrMgrSoGst->i32InRate/1000.0) * (pstBtrMgrSoGst->ui32InBitsPSample/8) * pstBtrMgrSoGst->i32InChannels);
+            pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
 
-        GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
-        pstBtrMgrSoGst->inBufOffset    += pstBtrMgrSoGst->i32InBufMaxSize;
-        GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
+            GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
+            pstBtrMgrSoGst->inBufOffset    += pstBtrMgrSoGst->i32InBufMaxSize;
+            GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
 
-        gst_buffer_unmap (gstBuf, &gstBufMap);
+            gst_buffer_unmap (gstBuf, &gstBufMap);
 
-        //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrSoGst->i32InBufMaxSize);
-        gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
+            //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrSoGst->i32InBufMaxSize);
+            gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
 
-        aiInBufSize     -= pstBtrMgrSoGst->i32InBufMaxSize;
-        i32InBufOffset  += pstBtrMgrSoGst->i32InBufMaxSize;
-    }
+            aiInBufSize     -= pstBtrMgrSoGst->i32InBufMaxSize;
+            i32InBufOffset  += pstBtrMgrSoGst->i32InBufMaxSize;
+        }
 
 
-    {
-        GstBuffer *gstBuf;
-        GstMapInfo gstBufMap;
+        {
+            GstBuffer *gstBuf;
+            GstMapInfo gstBufMap;
 
-        gstBuf = gst_buffer_new_and_alloc (aiInBufSize);
-        gst_buffer_set_size (gstBuf, aiInBufSize);
+            gstBuf = gst_buffer_new_and_alloc (aiInBufSize);
+            gst_buffer_set_size (gstBuf, aiInBufSize);
 
-        gst_buffer_map (gstBuf, &gstBufMap, GST_MAP_WRITE);
+            gst_buffer_map (gstBuf, &gstBufMap, GST_MAP_WRITE);
 
-        //TODO: Repalce memcpy and new_alloc if possible
-        memcpy (gstBufMap.data, pcInBuf + i32InBufOffset, aiInBufSize);
+            //TODO: Repalce memcpy and new_alloc if possible
+            memcpy (gstBufMap.data, pcInBuf + i32InBufOffset, aiInBufSize);
 
-        //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
-		// size of the incoming buffer (which represents the num of samples received at this instant)
-        GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
-        GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (aiInBufSize * 1000)/((pstBtrMgrSoGst->i32InRate/1000.0) * (pstBtrMgrSoGst->ui32InBitsPSample/8) * pstBtrMgrSoGst->i32InChannels);
-        pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
+            //TODO: Arrive at this vale based on Sampling rate, bits per sample, num of Channels and the 
+            // size of the incoming buffer (which represents the num of samples received at this instant)
+            GST_BUFFER_PTS (gstBuf)         = pstBtrMgrSoGst->gstClkTStamp;
+            GST_BUFFER_DURATION (gstBuf)    = GST_USECOND * (aiInBufSize * 1000)/((pstBtrMgrSoGst->i32InRate/1000.0) * (pstBtrMgrSoGst->ui32InBitsPSample/8) * pstBtrMgrSoGst->i32InChannels);
+            pstBtrMgrSoGst->gstClkTStamp   += GST_BUFFER_DURATION (gstBuf);
 
-        GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
-        pstBtrMgrSoGst->inBufOffset    += aiInBufSize;
-        GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
+            GST_BUFFER_OFFSET (gstBuf)      = pstBtrMgrSoGst->inBufOffset;
+            pstBtrMgrSoGst->inBufOffset    += aiInBufSize;
+            GST_BUFFER_OFFSET_END (gstBuf)  = pstBtrMgrSoGst->inBufOffset - 1;
 
-        gst_buffer_unmap (gstBuf, &gstBufMap);
+            gst_buffer_unmap (gstBuf, &gstBufMap);
 
-        //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, aiInBufSize);
-        gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
+            //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, aiInBufSize);
+            gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
+        }
     }
 
     return eBTRMgrSOGstSuccess;
@@ -697,13 +738,23 @@ BTRMgr_SO_GstSendEOS (
     GMainLoop*  loop        = (GMainLoop*)pstBtrMgrSoGst->pLoop;
     guint       busWatchId  = pstBtrMgrSoGst->busWId;
 
+    gboolean    lbPipelineEr = FALSE;
+
     (void)pipeline;
     (void)appsrc;
     (void)loop;
     (void)busWatchId;
 
+
+    g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+    lbPipelineEr = pstBtrMgrSoGst->bPipelineError;
+    g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+
+
     /* push EOS */
-    gst_app_src_end_of_stream (GST_APP_SRC (appsrc));
+    if (lbPipelineEr == FALSE) {
+        gst_app_src_end_of_stream (GST_APP_SRC (appsrc));
+    }
 
     return eBTRMgrSOGstSuccess;
 }
