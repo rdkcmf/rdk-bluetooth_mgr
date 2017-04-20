@@ -30,11 +30,11 @@
 #define BTMGRLOG_DEBUG(format...)       RDK_LOG(RDK_LOG_DEBUG,  "LOG.RDK.BTMGR", format)
 #define BTMGRLOG_TRACE(format...)       RDK_LOG(RDK_LOG_TRACE1, "LOG.RDK.BTMGR", format)
 #else
-#define BTMGRLOG_ERROR(format...)       printf (format)
-#define BTMGRLOG_WARN(format...)        printf (format)
-#define BTMGRLOG_INFO(format...)        printf (format)
-#define BTMGRLOG_DEBUG(format...)       printf (format)
-#define BTMGRLOG_TRACE(format...)       printf (format)
+#define BTMGRLOG_ERROR(format...)       fprintf (stderr, format)
+#define BTMGRLOG_WARN(format...)        fprintf (stderr, format)
+#define BTMGRLOG_INFO(format...)        fprintf (stderr, format)
+#define BTMGRLOG_DEBUG(format...)       fprintf (stderr, format)
+#define BTMGRLOG_TRACE(format...)       fprintf (stderr, format)
 #endif
 
 #endif /* __BTMGR_PRIV_H__ */

@@ -57,13 +57,17 @@ BTMGR_Result_t BTMGR_Init()
 
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, _btmgr_deviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, _btmgr_deviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, _btmgr_deviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, _btmgr_deviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_PAIRING_FAILED, _btmgr_deviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED, _btmgr_deviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED, _btmgr_deviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED, _btmgr_deviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, _btmgr_deviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTMGR_NAME, BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, _btmgr_deviceCallback);
         BTMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
     else
@@ -807,42 +811,50 @@ const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type)
 /**********************/
 /* Private Interfaces */
 /**********************/
-static void _btmgr_deviceCallback(const char *owner, IARM_EventId_t eventId, void *pData, size_t len)
-{
-    if (NULL == pData)
-    {
+static void
+_btmgr_deviceCallback (
+    const char*     owner,
+    IARM_EventId_t  eventId,
+    void*           pData,
+    size_t          len
+) {
+    if (NULL == pData) {
         BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
     }
-    else
-    {
+    else {
         BTMGR_EventMessage_t *pReceivedEvent = (BTMGR_EventMessage_t*)pData;
         BTMGR_EventMessage_t newEvent;
 
-        if ((BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE == eventId)               ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId)           ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE == eventId)         ||
-            (BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE == eventId)           ||
-            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE == eventId)         ||
-            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE == eventId)        ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE == eventId)        ||
+        if ((BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE        == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE    == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE  == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE    == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE  == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_PAIRING_FAILED      == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED    == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED   == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED   == eventId) ||
             (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST == eventId) ||
-            (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST == eventId))
-        {
+            (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    == eventId)) {
+
             memcpy (&newEvent, pReceivedEvent, sizeof(BTMGR_EventMessage_t));
+
             if (m_eventCallbackFunction)
                 m_eventCallbackFunction (newEvent);
 
             BTMGRLOG_INFO ("_btmgr_deviceCallback : posted event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
 
-            if (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId)
-            {
+            if (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId) {
                 BTMGRLOG_ERROR("_btmgr_deviceCallback : Name = %s\n\n", newEvent.m_discoveredDevice.m_name);
             }
         }
-        else
-        {
+        else {
             BTMGRLOG_ERROR ("%s : Event is invalid\n", __FUNCTION__);
         }
     }
+    
+    return;
 }
 

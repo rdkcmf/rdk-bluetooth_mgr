@@ -227,14 +227,14 @@ cb_unsolicited_bluetooth_status (
 ) {
     //printf("device status change: %d\n",p_StatusCB->eDeviceType);
     printf("app level cb device status change: new state is %d\n",p_StatusCB->eDeviceCurrState);
-    if ((p_StatusCB->eDevicePrevState == enBTRCore_DS_Connected) && (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Playing)) {
+    if ((p_StatusCB->eDevicePrevState == enBTRCoreDevStConnected) && (p_StatusCB->eDeviceCurrState == enBTRCoreDevStPlaying)) {
         if (p_StatusCB->eDeviceType == enBTRCoreMobileAudioIn) {
             printf("transition to playing, get the transport info...\n");
             GetTransport((appDataStruct*)apvUserData);
         }
     }
 
-    if ((p_StatusCB->eDevicePrevState == enBTRCore_DS_Playing) && (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Disconnected)) {
+    if ((p_StatusCB->eDevicePrevState == enBTRCoreDevStPlaying) && (p_StatusCB->eDeviceCurrState == enBTRCoreDevStDisconnected)) {
         if ((p_StatusCB->eDeviceType == enBTRCoreSpeakers) || (p_StatusCB->eDeviceType == enBTRCoreHeadSet)) {
             printf("DISCONNECTED WHILE PLAYING...\n");
             streamOutLiveTestMainAlternateStop((appDataStruct*)apvUserData);

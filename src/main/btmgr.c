@@ -428,135 +428,133 @@ btmgr_StopCastingAudio (
 
 
 /* Public Functions */
-BTMGR_Result_t BTMGR_Init()
-{
+BTMGR_Result_t
+BTMGR_Init (
+    void
+) {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     enBTRCoreRet halrc = enBTRCoreSuccess;
     const char* pDebugConfig = NULL;
 
-    if (NULL == gBTRCoreHandle)
-    {
-        /* Init the logger */
-        if( access(BTMGR_DEBUG_OVERRIDE_PATH, F_OK) != -1 )
-            pDebugConfig = BTMGR_DEBUG_OVERRIDE_PATH;
-        else
-            pDebugConfig = BTMGR_DEBUG_ACTUAL_PATH;
+    if (NULL != gBTRCoreHandle) {
+        BTMGRLOG_WARN("BTMGR_Init : Already Inited; Return Success\n");
+        return rc;
+    }
 
-        rdk_logger_init(pDebugConfig);
+    /* Init the logger */
+    if( access(BTMGR_DEBUG_OVERRIDE_PATH, F_OK) != -1 ) {
+        pDebugConfig = BTMGR_DEBUG_OVERRIDE_PATH;
+    }
+    else {
+        pDebugConfig = BTMGR_DEBUG_ACTUAL_PATH;
+    }
+    rdk_logger_init(pDebugConfig);
 
-        /* Initialze all the database */
-        memset (&gDefaultAdapterContext, 0, sizeof(gDefaultAdapterContext));
-        memset (&gListOfAdapters, 0, sizeof(gListOfAdapters));
-        memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
-        memset (&gListOfPairedDevices, 0, sizeof(gListOfPairedDevices));
-        memset(&gstBtrCoreDevMediaInfo, 0, sizeof(gstBtrCoreDevMediaInfo));
-        gIsDiscoveryInProgress = 0;
 
-        /* Init the mutex */
+    /* Initialze all the database */
+    memset (&gDefaultAdapterContext, 0, sizeof(gDefaultAdapterContext));
+    memset (&gListOfAdapters, 0, sizeof(gListOfAdapters));
+    memset(&gStreamCaptureSettings, 0, sizeof(gStreamCaptureSettings));
+    memset (&gListOfPairedDevices, 0, sizeof(gListOfPairedDevices));
+    memset(&gstBtrCoreDevMediaInfo, 0, sizeof(gstBtrCoreDevMediaInfo));
+    gIsDiscoveryInProgress = 0;
 
-        /* Call the Core/HAL init */
-        halrc = BTRCore_Init(&gBTRCoreHandle);
-        if ((NULL == gBTRCoreHandle) || (enBTRCoreSuccess != halrc))
-        {
-            BTMGRLOG_ERROR ("BTMGR_Init : Could not initialize BTRCore/HAL module\n");
-            rc = BTMGR_RESULT_GENERIC_FAILURE;
+
+    /* Init the mutex */
+
+    /* Call the Core/HAL init */
+    halrc = BTRCore_Init(&gBTRCoreHandle);
+    if ((NULL == gBTRCoreHandle) || (enBTRCoreSuccess != halrc)) {
+        BTMGRLOG_ERROR ("BTMGR_Init : Could not initialize BTRCore/HAL module\n");
+        rc = BTMGR_RESULT_GENERIC_FAILURE;
+    }
+    else {
+        char lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
+
+        if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion))
+            BTMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
+
+        BTMGRLOG_ERROR("BTR Bluetooth Version: %s\n", lpcBtVersion);
+
+        if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters))
+            BTMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
+
+        BTMGRLOG_INFO ("Number of Adapters found are = %u\n", gListOfAdapters.number_of_adapters);
+        if (0 == gListOfAdapters.number_of_adapters) {
+            BTMGRLOG_WARN("Bluetooth adapter NOT Found! Expected to be connected to make use of this module; Not considered as failure\n");
         }
-        else
-        {
-            char lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
-
-            if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion))
-                BTMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
-
-            BTMGRLOG_ERROR("BTR Bluetooth Version: %s\n", lpcBtVersion);
-
-            if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters))
-                BTMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
-
-            BTMGRLOG_INFO ("Number of Adapters found are = %u\n", gListOfAdapters.number_of_adapters);
-            if (0 == gListOfAdapters.number_of_adapters)
-            {
-                BTMGRLOG_WARN("Bluetooth adapter NOT Found! Expected to be connected to make use of this module; Not considered as failure\n");
-            }
-            else
-            {
-                /* you have atlesat one BlueTooth adapter. Now get the Default Adapter path for future usages; */
-                gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
-                if (enBTRCoreSuccess == BTRCore_GetAdapter(gBTRCoreHandle, &gDefaultAdapterContext))
-                {
-                    BTMGRLOG_INFO ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
-                }
-
-                /* TODO: Handling multiple Adapters */
-                if (gListOfAdapters.number_of_adapters > 1)
-                    BTMGRLOG_WARN("There are more than 1 Bluetooth Adapters Found! Lets handle it properly\n");
+        else {
+            /* you have atlesat one Bluetooth adapter. Now get the Default Adapter path for future usages; */
+            gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
+            if (enBTRCoreSuccess == BTRCore_GetAdapter(gBTRCoreHandle, &gDefaultAdapterContext)) {
+                BTMGRLOG_INFO ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
             }
 
-            /* Register for callback to get the status of connected Devices */
-            BTRCore_RegisterStatusCallback(gBTRCoreHandle, btmgr_DeviceStatusCallback, NULL);
+            /* TODO: Handling multiple Adapters */
+            if (gListOfAdapters.number_of_adapters > 1)
+                BTMGRLOG_WARN("There are more than 1 Bluetooth Adapters Found! Lets handle it properly\n");
+        }
 
-            /* Register for callback to get the Discovered Devices */
-            BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btmgr_DeviceDiscoveryCallback, NULL);
+        /* Register for callback to get the status of connected Devices */
+        BTRCore_RegisterStatusCallback(gBTRCoreHandle, btmgr_DeviceStatusCallback, NULL);
+
+        /* Register for callback to get the Discovered Devices */
+        BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btmgr_DeviceDiscoveryCallback, NULL);
 
 #if 1
-            FILE *fpPersistData = NULL;
-            char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
-            char lui8fAdapterAddr[BD_NAME_LEN] = {'\0'};
-            char lui8deviceId[64] = {'\0'};
-            char *lui8delimiter = ">>";
-            char lui8fDelimiter[2] = {'\0'};
-            char lui8fReadChar;
-            char lui8fConnStatus;
-            int  index = 0;
+        FILE *fpPersistData = NULL;
+        char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
+        char lui8fAdapterAddr[BD_NAME_LEN] = {'\0'};
+        char lui8deviceId[64] = {'\0'};
+        char *lui8delimiter = ">>";
+        char lui8fDelimiter[2] = {'\0'};
+        char lui8fReadChar;
+        char lui8fConnStatus;
+        int  index = 0;
 
-            BTMgrDeviceHandle lDeviceHandle;
+        BTMgrDeviceHandle lDeviceHandle;
 
-            if(access(BTMGR_PERSISTENT_DATA_PATH, F_OK) == 0) {
-                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data EXISTS - READING\n");
-                fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "r");
-            }
+        if(access(BTMGR_PERSISTENT_DATA_PATH, F_OK) == 0) {
+            BTMGRLOG_INFO ("BTMGR_Init : Persistent Data EXISTS - READING\n");
+            fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "r");
+        }
 
-            BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
+        BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
 
-            if (fpPersistData != NULL) {
-                fread(lui8fAdapterAddr, sizeof(char), strlen(lui8adapterAddr), fpPersistData);
-                fread(lui8fDelimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
-                
-                do {
+        if (fpPersistData != NULL) {
+            fread(lui8fAdapterAddr, sizeof(char), strlen(lui8adapterAddr), fpPersistData);
+            fread(lui8fDelimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
+            
+            do {
+                fread(&lui8fReadChar, sizeof(char), 1 , fpPersistData);
+
+                if (lui8fReadChar == '>') {
                     fread(&lui8fReadChar, sizeof(char), 1 , fpPersistData);
-
-                    if (lui8fReadChar == '>') {
-                        fread(&lui8fReadChar, sizeof(char), 1 , fpPersistData);
-                        break;
-                    }
-
-                    lui8deviceId[index++] = lui8fReadChar;
-                } while (index < 64);
-
-                fread(&lui8fConnStatus, sizeof(char), 1 , fpPersistData);
-
-                fclose(fpPersistData);
-
-                if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0)
-                    BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Adapter matches\n");
-
-                if (lui8fConnStatus == '1') {
-                    BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Connected Status matches\n");
-                    lDeviceHandle = strtoll(lui8deviceId, NULL, 10);
-                    BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Last connected Device ID = %lld\n", lDeviceHandle);
-
-                    BTMGR_StartAudioStreamingOut(0, lDeviceHandle, BTMGR_DEVICE_TYPE_AUDIOSINK);
+                    break;
                 }
+
+                lui8deviceId[index++] = lui8fReadChar;
+            } while (index < 64);
+
+            fread(&lui8fConnStatus, sizeof(char), 1 , fpPersistData);
+
+            fclose(fpPersistData);
+
+            if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0)
+                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Adapter matches\n");
+
+            if (lui8fConnStatus == '1') {
+                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Connected Status matches\n");
+                lDeviceHandle = strtoll(lui8deviceId, NULL, 10);
+                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Last connected Device ID = %lld\n", lDeviceHandle);
+
+                BTMGR_StartAudioStreamingOut(0, lDeviceHandle, BTMGR_DEVICE_TYPE_AUDIOSINK);
             }
+        }
 #endif
 
-        }
     }
-    else
-    {
-        BTMGRLOG_WARN("BTMGR_Init : Already Inited; Return Success\n");
-    }
-
+    
     return rc;
 }
 
@@ -707,7 +705,7 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
         {
             /* This will internall stops the playback as well as disconnects. */
             rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
-            if (enBTRCoreSuccess != halrc)
+            if (BTMGR_RESULT_SUCCESS != rc )
             {
                 BTMGRLOG_ERROR ("BTMGR_SetAdapterPowerStatus : This device is being Connected n Playing. Failed to stop Playback. Going Ahead to power off Adapter.\n");
             }
@@ -1036,62 +1034,137 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
     return rc;
 }
 
-BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle)
-{
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    enBTRCoreRet halrc = enBTRCoreSuccess;
-    if (isDiscoveryInProgress())
-    {
+BTMGR_Result_t
+BTMGR_PairDevice (
+    unsigned char       index_of_adapter,
+    BTMgrDeviceHandle   handle
+) {
+    BTMGR_Result_t  rc  = BTMGR_RESULT_SUCCESS;
+    BTMGR_Events_t  lBtMgrOutEvent = -1;
+
+    if (isDiscoveryInProgress()) {
         BTMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
         BTMGR_StopDeviceDiscovery(index_of_adapter);
     }
 
-    if (NULL == gBTRCoreHandle)
-    {
-        rc = BTMGR_RESULT_INIT_FAILED;
+    if (!gBTRCoreHandle) {
         BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        return BTMGR_RESULT_INIT_FAILED;
     }
-    else if((index_of_adapter > getAdapterCount()) || (0 == handle))
-    {
-        rc = BTMGR_RESULT_INVALID_INPUT;
+
+    if ((!handle) || (index_of_adapter > getAdapterCount())) {
         BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        return BTMGR_RESULT_INVALID_INPUT;
     }
-    else
-    {
-        /* Update the Paired Device List */
-        BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
 
-        if (0 == btmgr_IsThisPairedDevice(handle))
-        {
-            halrc = BTRCore_PairDevice (gBTRCoreHandle, handle);
-            if (enBTRCoreSuccess != halrc)
-            {
-                BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed to pair a device\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
-            }
-            else
-            {
-                BTMGRLOG_INFO ("BTMGR_PairDevice : Paired Successfully\n");
-                if(m_eventCallbackFunction)
-                {
-                    BTMGR_EventMessage_t newEvent;
-                    memset (&newEvent, 0, sizeof(newEvent));
+    /* Update the Paired Device List */
+    BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
+    if (1 == btmgr_IsThisPairedDevice(handle)) {
+        BTMGRLOG_INFO ("BTMGR_PairDevice : Already a Paired Device; Nothing Done...\n");
+        return BTMGR_RESULT_SUCCESS;
+    }
 
-                    newEvent.m_adapterIndex = index_of_adapter;
-                    newEvent.m_eventType = BTMGR_EVENT_DEVICE_PAIRING_COMPLETE;
-                    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
-                    /*  Post a callback */
-                    m_eventCallbackFunction (newEvent);
-                }
+    if (enBTRCoreSuccess != BTRCore_PairDevice(gBTRCoreHandle, handle)) {
+        BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed to pair a device\n");
+        rc = BTMGR_RESULT_GENERIC_FAILURE;
+        lBtMgrOutEvent = BTMGR_EVENT_DEVICE_PAIRING_FAILED;
+    }
+    else {
+        BTMGRLOG_INFO ("BTMGR_PairDevice : Paired Successfully\n");
+        rc = BTMGR_RESULT_SUCCESS;
+        lBtMgrOutEvent = BTMGR_EVENT_DEVICE_PAIRING_COMPLETE;
+    }
 
-                /* Update the Paired Device List */
-                BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
-            }
+
+
+    if (m_eventCallbackFunction) {
+        BTMGR_EventMessage_t newEvent;
+        memset (&newEvent, 0, sizeof(newEvent));
+
+        newEvent.m_adapterIndex = index_of_adapter;
+        newEvent.m_eventType    = lBtMgrOutEvent;
+        newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+        /*  Post a callback */
+        m_eventCallbackFunction (newEvent);
+    }
+
+    /* Update the Paired Device List */
+    BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
+
+    return rc;
+}
+
+BTMGR_Result_t
+BTMGR_UnpairDevice (
+    unsigned char       index_of_adapter,
+    BTMgrDeviceHandle   handle
+) {
+    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
+    BTMGR_Events_t  lBtMgrOutEvent = -1;
+
+    if (isDiscoveryInProgress()) {
+        BTMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
+        BTMGR_StopDeviceDiscovery(index_of_adapter);
+    }
+
+    if (!gBTRCoreHandle) {
+        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        return BTMGR_RESULT_INIT_FAILED;
+    }
+
+    if ((!handle) || (index_of_adapter > getAdapterCount())) {
+        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        return BTMGR_RESULT_INVALID_INPUT;
+    }
+
+    /* Get the latest Paired Device List; This is added as the developer could add a device thro test application and try unpair thro' UI */
+    BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
+    if (0 == btmgr_IsThisPairedDevice(handle)) {
+        BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Not a Paired device...\n");
+        return BTMGR_RESULT_GENERIC_FAILURE;
+    }
+
+
+    /* Check whether the requested device is connected n playing. */
+    if (gCurStreamingDevHandle == handle) {
+        /* This will internall stops the playback as well as disconnects. */
+        rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
+        if (BTMGR_RESULT_SUCCESS != rc) {
+            BTMGRLOG_ERROR ("BTMGR_UnpairDevice :This device is being Connected n Playing. Failed to stop Playback. Going Ahead to unpair.\n");
         }
-        else
-            BTMGRLOG_INFO ("BTMGR_PairDevice : Already a Paired Device; Nothing Done...\n");
     }
+
+
+    if (enBTRCoreSuccess != BTRCore_UnPairDevice(gBTRCoreHandle, handle)) {
+        BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to unpair\n");
+        rc = BTMGR_RESULT_GENERIC_FAILURE;
+        lBtMgrOutEvent = BTMGR_EVENT_DEVICE_UNPAIRING_FAILED;
+    }
+    else {
+        BTMGRLOG_INFO ("BTMGR_UnpairDevice : Unpaired Successfully\n");
+        rc = BTMGR_RESULT_SUCCESS;
+        lBtMgrOutEvent = BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE;
+    }
+
+
+    if (m_eventCallbackFunction) {
+        BTMGR_EventMessage_t newEvent;
+        memset (&newEvent, 0, sizeof(newEvent));
+
+        newEvent.m_adapterIndex = index_of_adapter;
+        newEvent.m_eventType    = lBtMgrOutEvent;
+        newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX; /* Application will have to get the list explicitly for list; Lets return the max value */
+
+        /*  Post a callback */
+        m_eventCallbackFunction (newEvent);
+    }
+
+    /* Update the Paired Device List */
+    BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
+
+
     return rc;
 }
 
@@ -1161,79 +1234,6 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
     return rc;
 }
 
-BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle)
-{
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    enBTRCoreRet halrc = enBTRCoreSuccess;
-
-    if (isDiscoveryInProgress())
-    {
-        BTMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-        BTMGR_StopDeviceDiscovery(index_of_adapter);
-    }
-
-    if (NULL == gBTRCoreHandle)
-    {
-        rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
-    }
-    else if ((0 == handle) || (index_of_adapter > getAdapterCount()))
-    {
-        rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
-    }
-    else
-    {
-        /* Get the latest Paired Device List; This is added as the developer could add a device thro test application and try unpair thro' UI */
-        BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
-
-        if (1 == btmgr_IsThisPairedDevice(handle))
-        {
-            /* Check whether the requested device is connected n playing. */
-            if (gCurStreamingDevHandle == handle)
-            {
-                /* This will internall stops the playback as well as disconnects. */
-                rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
-                if (enBTRCoreSuccess != halrc)
-                {
-                    BTMGRLOG_ERROR ("BTMGR_UnpairDevice :This device is being Connected n Playing. Failed to stop Playback. Going Ahead to unpair.\n");
-                }
-            }
-
-            halrc = BTRCore_UnPairDevice(gBTRCoreHandle, handle);
-            if (enBTRCoreSuccess != halrc)
-            {
-                BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to unpair\n");
-                rc = BTMGR_RESULT_GENERIC_FAILURE;
-            }
-            else
-            {
-                BTMGRLOG_INFO ("BTMGR_UnpairDevice : Unpaired Successfully\n");
-                if(m_eventCallbackFunction)
-                {
-                    BTMGR_EventMessage_t newEvent;
-                    memset (&newEvent, 0, sizeof(newEvent));
-
-                    newEvent.m_adapterIndex = index_of_adapter;
-                    newEvent.m_eventType = BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE;
-                    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-
-                    /*  Post a callback */
-                    m_eventCallbackFunction (newEvent);
-                }
-
-                /* Update the Paired Device List */
-                BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
-            }
-        }
-        else
-        {
-            BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Not a Paired device...\n");
-            rc = BTMGR_RESULT_GENERIC_FAILURE;
-        }
-    }
-    return rc;
-}
 
 BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs)
 {
@@ -1300,20 +1300,6 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
             }
 #endif
 
-#if 0
-            if(m_eventCallbackFunction)
-            {
-                BTMGR_EventMessage_t newEvent;
-                memset (&newEvent, 0, sizeof(newEvent));
-
-                newEvent.m_adapterIndex = index_of_adapter;
-                newEvent.m_eventType = BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
-                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-
-                /*  Post a callback */
-                m_eventCallbackFunction (newEvent);
-            }
-#endif
         }
     }
     return rc;
@@ -1355,6 +1341,19 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
         {
             BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Failed to Disconnect\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
+
+            if(m_eventCallbackFunction)
+            {
+                BTMGR_EventMessage_t newEvent;
+                memset (&newEvent, 0, sizeof(newEvent));
+
+                newEvent.m_adapterIndex = index_of_adapter;
+                newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_FAILED;
+                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+                /*  Post a callback */
+                m_eventCallbackFunction (newEvent);
+            }
         }
         else
         {
@@ -1407,20 +1406,7 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
             }
 #endif
 
-#if 0
-            if(m_eventCallbackFunction)
-            {
-                BTMGR_EventMessage_t newEvent;
-                memset (&newEvent, 0, sizeof(newEvent));
 
-                newEvent.m_adapterIndex = index_of_adapter;
-                newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE;
-                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-
-                /*  Post a callback */
-                m_eventCallbackFunction (newEvent);
-            }
-#endif
         }
     }
     return rc;
@@ -1729,6 +1715,19 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                         {
                             BTMGRLOG_ERROR ("%s : Failed to get Device Data Path. So Will not be able to stream now\n", __FUNCTION__);
                             rc = BTMGR_RESULT_GENERIC_FAILURE;
+
+                            if (m_eventCallbackFunction)
+                            {
+                                BTMGR_EventMessage_t newEvent;
+                                memset (&newEvent, 0, sizeof(newEvent));
+
+                                newEvent.m_adapterIndex = index_of_adapter;
+                                newEvent.m_eventType    = BTMGR_EVENT_DEVICE_CONNECTION_FAILED;
+                                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+                                /*  Post a callback */
+                                m_eventCallbackFunction (newEvent);
+                            }
+
                         }
                     }
                     else
@@ -1896,13 +1895,13 @@ btmgr_DeviceStatusCallback (
     BTMGRLOG_ERROR ("btmgr_DeviceStatusCallback: Received status callback\n");
     if ((p_StatusCB) && (m_eventCallbackFunction))
     {
-        if (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Connected)
+        if (p_StatusCB->eDeviceCurrState == enBTRCoreDevStConnected)
         {
             newEvent.m_eventType = BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
             /*  Post a callback */
             m_eventCallbackFunction (newEvent);
         }
-        else if (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Disconnected)
+        else if (p_StatusCB->eDeviceCurrState == enBTRCoreDevStDisconnected)
         {
             newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE;
 
