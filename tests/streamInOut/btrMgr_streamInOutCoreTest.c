@@ -333,10 +333,10 @@ main (
     lstBTRCoreAdapter.bFirstAvailable = TRUE;
     if (enBTRCoreSuccess ==	BTRCore_GetAdapter(lhBTRCore, &lstBTRCoreAdapter)) {
         default_adapter = lstBTRCoreAdapter.adapter_number;
-        BTRCore_LOG("GetAdapter Returns Adapter number %d\n",default_adapter);
+        printf("GetAdapter Returns Adapter number %d\n",default_adapter);
     }
     else {
-        BTRCore_LOG("No bluetooth adapter found!\n");
+        printf("No bluetooth adapter found!\n");
         return -1;
     }
 
@@ -360,21 +360,21 @@ main (
         case 2: 
             if (default_adapter != NO_ADAPTER) {
                 StartDiscovery.adapter_number = default_adapter;
-                BTRCore_LOG("Looking for devices on BT adapter %d\n",StartDiscovery.adapter_number);
+                printf("Looking for devices on BT adapter %d\n",StartDiscovery.adapter_number);
                 StartDiscovery.duration = 13;
-                BTRCore_LOG("duration %d\n",StartDiscovery.duration);
+                printf("duration %d\n",StartDiscovery.duration);
                 StartDiscovery.max_devices = 10;
-                BTRCore_LOG("max_devices %d\n",StartDiscovery.max_devices);
+                printf("max_devices %d\n",StartDiscovery.max_devices);
                 StartDiscovery.lookup_names = TRUE;
-                BTRCore_LOG("lookup_names %d\n",StartDiscovery.lookup_names);
+                printf("lookup_names %d\n",StartDiscovery.lookup_names);
                 StartDiscovery.flags = 0;
-                BTRCore_LOG("flags %d\n",StartDiscovery.flags);
+                printf("flags %d\n",StartDiscovery.flags);
                 printf("Performing device scan. Please wait...\n");
                 BTRCore_StartDiscovery(lhBTRCore, &StartDiscovery);
                 printf("scan complete\n");
             }
             else {
-                BTRCore_LOG("Error, no default_adapter set\n");
+                printf("Error, no default_adapter set\n");
             }
             break;
         case 3:
