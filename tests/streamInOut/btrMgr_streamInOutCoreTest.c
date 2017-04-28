@@ -222,8 +222,8 @@ cb_connection_authentication (
 
 void
 cb_unsolicited_bluetooth_status (
-    stBTRCoreDevStateCBInfo* p_StatusCB,
-    void*                    apvUserData
+    stBTRCoreDevStatusCBInfo*   p_StatusCB,
+    void*                       apvUserData
 ) {
     //printf("device status change: %d\n",p_StatusCB->eDeviceType);
     printf("app level cb device status change: new state is %d\n",p_StatusCB->eDeviceCurrState);

@@ -75,8 +75,8 @@ static void btmgr_StopCastingAudio (void);
 
 /* Callbacks Prototypes */
 static eBTRMgrRet btmgr_ACDataReadyCallback (void* apvAcDataBuf, unsigned int aui32AcDataLen, void* apvUserData);
-static void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevices devicefound); 
-static void btmgr_DeviceStatusCallback (stBTRCoreDevStateCBInfo* p_StatusCB, void* apvUserData); 
+static void btmgr_DeviceDiscoveryCallback (stBTRCoreScannedDevices devicefound);
+static void btmgr_DeviceStatusCallback (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
 
 
 /* Static Function Definitions */
@@ -1884,7 +1884,7 @@ btmgr_DeviceDiscoveryCallback (
 
 static void
 btmgr_DeviceStatusCallback (
-    stBTRCoreDevStateCBInfo*    p_StatusCB,
+    stBTRCoreDevStatusCBInfo*   p_StatusCB,
     void*                       apvUserData
 ) {
     BTMGR_EventMessage_t newEvent;
@@ -1893,31 +1893,37 @@ btmgr_DeviceStatusCallback (
     newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
     BTMGRLOG_ERROR ("btmgr_DeviceStatusCallback: Received status callback\n");
-    if ((p_StatusCB) && (m_eventCallbackFunction))
-    {
-        if (p_StatusCB->eDeviceCurrState == enBTRCoreDevStConnected)
-        {
+
+    if ((p_StatusCB) && (m_eventCallbackFunction)) {
+
+        switch (p_StatusCB->eDeviceCurrState) {
+        case enBTRCoreDevStInitialized:
+            break;
+        case enBTRCoreDevStConnecting:
+            break;
+        case enBTRCoreDevStConnected:
             newEvent.m_eventType = BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
-            /*  Post a callback */
-            m_eventCallbackFunction (newEvent);
-        }
-        else if (p_StatusCB->eDeviceCurrState == enBTRCoreDevStDisconnected)
-        {
+            m_eventCallbackFunction(newEvent);      // Post a callback
+            break;
+        case enBTRCoreDevStDisconnected:
             newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE;
+            m_eventCallbackFunction (newEvent);     // Post a callback
 
-            /*  Post a callback */
-            m_eventCallbackFunction (newEvent);
-
-            if (gCurStreamingDevHandle != 0)
-            {
+            if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
                 /* update the flags as the device is NOT Connected */
                 gIsDeviceConnected = 0;
-
                 /* Stop the playback which already stopped internally but to free up the memory */
                 BTMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
             }
+
+            break;
+        case enBTRCoreDevStPlaying:
+            break;
+        default:
+            break;
         }
     }
+
     return;
 }
 
