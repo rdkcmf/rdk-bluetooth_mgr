@@ -25,6 +25,8 @@
 #ifndef __BTR_MGR_STREAMIN_GST_H__
 #define __BTR_MGR_STREAMIN_GST_H__
 
+#include "btmgr_priv.h"
+
 typedef void* tBTRMgrSiGstHdl;
 
 typedef enum _eBTRMgrSIGstRet {

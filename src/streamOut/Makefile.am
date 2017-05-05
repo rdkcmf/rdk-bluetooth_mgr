@@ -20,7 +20,7 @@ SUBDIRS =
 
 INCLUDE_FILES =
 
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/streamOut
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/streamOut -I${top_srcdir}/include
 AM_LDFLAGS =
 
 if USE_GSTREAMER1
@@ -31,7 +31,7 @@ endif
 lib_LTLIBRARIES = libbtrMgrStreamOut.la
 libbtrMgrStreamOut_la_SOURCES = btrMgr_streamOut.c
 libbtrMgrStreamOut_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
-libbtrMgrStreamOut_la_LIBADD = $(GLIB_LIBS)
+libbtrMgrStreamOut_la_LIBADD = $(GLIB_LIBS) -lrdkloggers
 
 if USE_GSTREAMER1
 libbtrMgrStreamOut_la_SOURCES += btrMgr_streamOutGst.c

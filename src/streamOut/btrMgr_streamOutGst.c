@@ -41,7 +41,7 @@
 
 
 /* Interface lib Headers */
-
+#include "btmgr_priv.h"         //for rdklogger
 
 /* Local Headers */
 #include "btrMgr_streamOutGst.h"
@@ -96,11 +96,11 @@ btrMgr_SO_g_main_loop_run_context (
     stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
 
     if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
-        g_print ("%s:%d:%s - GMainLoop Running\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_INFO ("%s:%d:%s - GMainLoop Running\n", __FILE__, __LINE__, __FUNCTION__);
         g_main_loop_run (pstBtrMgrSoGst->pLoop);
     }
 
-    g_print ("%s:%d:%s - GMainLoop Exiting\n", __FILE__, __LINE__, __FUNCTION__);
+    BTMGRLOG_INFO ("%s:%d:%s - GMainLoop Exiting\n", __FILE__, __LINE__, __FUNCTION__);
     return NULL;
 }
 
@@ -116,7 +116,7 @@ btrMgr_SO_gstBusCall (
     switch (GST_MESSAGE_TYPE (msg)) {
 
         case GST_MESSAGE_EOS: {
-            g_print ("%s:%d:%s - End-of-stream\n", __FILE__, __LINE__, __FUNCTION__);
+            BTMGRLOG_INFO ("%s:%d:%s - End-of-stream\n", __FILE__, __LINE__, __FUNCTION__);
             if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
                 g_main_loop_quit(pstBtrMgrSoGst->pLoop);
                 pstBtrMgrSoGst->pLoop = NULL;
@@ -129,7 +129,7 @@ btrMgr_SO_gstBusCall (
                 GstState prevState, currentState;
 
                 gst_message_parse_state_changed (msg, &prevState, &currentState, NULL);
-                g_print ("%s:%d:%s - From: %s -> To: %s\n", __FILE__, __LINE__, __FUNCTION__, 
+                BTMGRLOG_INFO ("%s:%d:%s - From: %s -> To: %s\n", __FILE__, __LINE__, __FUNCTION__, 
                             gst_element_state_get_name (prevState), gst_element_state_get_name (currentState));
             }
             break;
@@ -146,10 +146,10 @@ btrMgr_SO_gstBusCall (
             }
 
             gst_message_parse_error (msg, &err, &debug);
-            g_print ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
+            BTMGRLOG_DEBUG ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
             g_free (debug);
 
-            g_printerr ("%s:%d:%s - Error: %s\n", __FILE__, __LINE__, __FUNCTION__, err->message);
+            BTMGRLOG_ERROR ("%s:%d:%s - Error: %s\n", __FILE__, __LINE__, __FUNCTION__, err->message);
             g_error_free (err);
 
             if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
@@ -164,10 +164,10 @@ btrMgr_SO_gstBusCall (
             GError*   warn;
 
             gst_message_parse_warning (msg, &warn, &debug);
-            g_print ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
+            BTMGRLOG_DEBUG ("%s:%d:%s - Debugging info: %s\n", __FILE__, __LINE__, __FUNCTION__, (debug) ? debug : "none");
             g_free (debug);
 
-            g_printerr ("%s:%d:%s - Warning: %s\n", __FILE__, __LINE__, __FUNCTION__, warn->message);
+            BTMGRLOG_WARN ("%s:%d:%s - Warning: %s\n", __FILE__, __LINE__, __FUNCTION__, warn->message);
             g_error_free (warn);
           break;
         }
@@ -193,13 +193,13 @@ btrMgr_SO_validateStateWithTimeout (
 
     do { 
         if ((GST_STATE_CHANGE_SUCCESS == gst_element_get_state(GST_ELEMENT(element), &gst_current, &gst_pending, timeout * GST_MSECOND)) && (gst_current == stateToValidate)) {
-            g_print("%s:%d:%s - gst_element_get_state - SUCCESS : State = %d, Pending = %d\n", __FILE__, __LINE__, __FUNCTION__, gst_current, gst_pending);
+            BTMGRLOG_INFO("%s:%d:%s - gst_element_get_state - SUCCESS : State = %d, Pending = %d\n", __FILE__, __LINE__, __FUNCTION__, gst_current, gst_pending);
             return gst_current;
         }
         usleep(msTimeOut * 1000); // Let element safely transition to required state 
     } while ((gst_current != stateToValidate) && (gstGetStateCnt-- != 0)) ;
 
-    g_print("%s:%d:%s - gst_element_get_state - FAILURE : State = %d, Pending = %d\n", __FILE__, __LINE__, __FUNCTION__, gst_current, gst_pending);
+    BTMGRLOG_ERROR("%s:%d:%s - gst_element_get_state - FAILURE : State = %d, Pending = %d\n", __FILE__, __LINE__, __FUNCTION__, gst_current, gst_pending);
 
     if (gst_pending == stateToValidate)
         return gst_pending;
@@ -228,7 +228,7 @@ BTRMgr_SO_GstInit (
 
 
     if ((pstBtrMgrSoGst = (stBTRMgrSOGst*)malloc (sizeof(stBTRMgrSOGst))) == NULL) {
-        g_print ("%s:%d:%s - Unable to allocate memory\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Unable to allocate memory\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
@@ -257,7 +257,7 @@ BTRMgr_SO_GstInit (
     pipeline = gst_pipeline_new ("btmgr-so-pipeline");
 
     if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
-        g_print ("%s:%d:%s - Gstreamer plugin missing for streamOut\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Gstreamer plugin missing for streamOut\n", __FILE__, __LINE__, __FUNCTION__);
         free((void*)pstBtrMgrSoGst);
         return eBTRMgrSOGstFailure;
     }
@@ -294,7 +294,7 @@ BTRMgr_SO_GstInit (
         
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
-        g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         BTRMgr_SO_GstDeInit((tBTRMgrSoGstHdl)pstBtrMgrSoGst);
         return eBTRMgrSOGstFailure;
     }
@@ -312,7 +312,7 @@ BTRMgr_SO_GstDeInit (
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -384,7 +384,7 @@ BTRMgr_SO_GstStart (
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst || !apcInFmt) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -408,7 +408,7 @@ BTRMgr_SO_GstStart (
 
     /* Check if we are in correct state */
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
-        g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
@@ -482,7 +482,7 @@ BTRMgr_SO_GstStart (
     /* start play back and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) { 
-        g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
@@ -508,7 +508,7 @@ BTRMgr_SO_GstStop (
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -525,7 +525,7 @@ BTRMgr_SO_GstStop (
     /* stop play back */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
-        g_print ("%s:%d:%s - - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
@@ -554,7 +554,7 @@ BTRMgr_SO_GstPause (
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -570,14 +570,14 @@ BTRMgr_SO_GstPause (
 
     /* Check if we are in correct state */
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
-        g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
     /* pause playback and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
-        g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     } 
 
@@ -592,7 +592,7 @@ BTRMgr_SO_GstResume (
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -608,14 +608,14 @@ BTRMgr_SO_GstResume (
 
     /* Check if we are in correct state */
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PAUSED, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PAUSED) {
-        g_print ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Incorrect State to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
     /* Resume playback and listed to events */
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_PLAYING, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_PLAYING) {
-        g_print ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Unable to perform Operation\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailure;
     }
 
@@ -633,7 +633,7 @@ BTRMgr_SO_GstSendBuffer (
     int             i32InBufOffset = 0;
 
     if (!pstBtrMgrSoGst) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -681,7 +681,7 @@ BTRMgr_SO_GstSendBuffer (
 
             gst_buffer_unmap (gstBuf, &gstBufMap);
 
-            //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrSoGst->i32InBufMaxSize);
+            //BTMGRLOG_INFO ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrSoGst->i32InBufMaxSize);
             gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
 
             aiInBufSize     -= pstBtrMgrSoGst->i32InBufMaxSize;
@@ -713,7 +713,7 @@ BTRMgr_SO_GstSendBuffer (
 
             gst_buffer_unmap (gstBuf, &gstBufMap);
 
-            //g_print ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, aiInBufSize);
+            //BTMGRLOG_INFO ("%s:%d:%s - PUSHING BUFFER = %d\n", __FILE__, __LINE__, __FUNCTION__, aiInBufSize);
             gst_app_src_push_buffer (GST_APP_SRC (appsrc), gstBuf);
         }
     }
@@ -729,7 +729,7 @@ BTRMgr_SO_GstSendEOS (
     stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
 
     if (!pstBtrMgrSoGst) {
-        g_print ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("%s:%d:%s - Invalid input argument\n", __FILE__, __LINE__, __FUNCTION__);
         return eBTRMgrSOGstFailInArg;
     }
 
@@ -768,7 +768,7 @@ btrMgr_SO_NeedData_cB (
 ) {
     stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
     
-    //g_print ("%s:%d:%s - NEED DATA = %d\n", __FILE__, __LINE__, __FUNCTION__, size);
+    //BTMGRLOG_INFO ("%s:%d:%s - NEED DATA = %d\n", __FILE__, __LINE__, __FUNCTION__, size);
     (void)pstBtrMgrSoGst;
 }
 
@@ -780,7 +780,7 @@ btrMgr_SO_EnoughData_cB (
 ) {
     stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
     
-    //g_print ("%s:%d:%s - ENOUGH DATA\n", __FILE__, __LINE__, __FUNCTION__);
+    //BTMGRLOG_INFO ("%s:%d:%s - ENOUGH DATA\n", __FILE__, __LINE__, __FUNCTION__);
     (void)pstBtrMgrSoGst;
 }
 

@@ -18,7 +18,10 @@
 */
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "btmgr.h"
 #include "btmgr_priv.h"
 #include "btmgr_iarm_interface.h"
 

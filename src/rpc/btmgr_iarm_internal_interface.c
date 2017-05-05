@@ -16,7 +16,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <stdlib.h>
+#include <string.h>
 
+#include "btmgr.h"
 #include "btmgr_priv.h"
 #include "btmgr_iarm_interface.h"
 
