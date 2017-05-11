@@ -65,13 +65,13 @@ BTRMgr_SO_Init (
 #endif
 
     if ((pstBtrMgrSoHdl = (stBTRMgrSOHdl*)g_malloc0 (sizeof(stBTRMgrSOHdl))) == NULL) {
-        BTMGRLOG_ERROR ("%s:%d:%s - Unable to allocate memory\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR ("Unable to allocate memory\n");
         return eBTRMgrInitFailure;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstInit(&(pstBtrMgrSoHdl->hBTRMgrSoGstHdl))) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrInitFailure;
     }
 #else
@@ -111,7 +111,7 @@ BTRMgr_SO_DeInit (
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstDeInit(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
     pstBtrMgrSoHdl->hBTRMgrSoGstHdl = NULL;
@@ -310,7 +310,6 @@ BTRMgr_SO_GetEstimatedInABufSize (
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize >> 8) + 1;
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize << 8;
 
-    BTMGRLOG_INFO("%s:%d:%s\n", __FILE__, __LINE__, __FUNCTION__);
     BTMGRLOG_INFO("Effective MTU = %d\n", lui16OutMtu);
     BTMGRLOG_INFO("OutByteRate = %d\n", lui32OutByteRate);
     BTMGRLOG_INFO("OutMtuTimemSec = %f\n", lfOutMtuTimemSec);
@@ -518,7 +517,7 @@ BTRMgr_SO_Start (
                                                 lui8SbcMaxBitpool,
                                                 apstBtrMgrSoOutASettings->i32BtrMgrDevFd,
                                                 apstBtrMgrSoOutASettings->i32BtrMgrDevMtu)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
@@ -550,7 +549,7 @@ BTRMgr_SO_Stop (
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstStop(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
@@ -582,7 +581,7 @@ BTRMgr_SO_Pause (
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstPause(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
@@ -612,7 +611,7 @@ BTRMgr_SO_Resume (
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstResume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
@@ -645,7 +644,7 @@ BTRMgr_SO_SendBuffer (
     //TODO: Implement ping-pong/triple/circular buffering if needed
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSendBuffer(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, pcInBuf, aiInBufSize)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else
@@ -673,7 +672,7 @@ BTRMgr_SO_SendEOS (
 
 #ifdef USE_GST1
     if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSendEOS(pstBtrMgrSoHdl->hBTRMgrSoGstHdl)) != eBTRMgrSOGstSuccess) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrSoGstRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrFailure;
     }
 #else

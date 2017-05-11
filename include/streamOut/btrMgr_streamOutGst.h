@@ -25,8 +25,6 @@
 #ifndef __BTR_MGR_STREAMOUT_GST_H__
 #define __BTR_MGR_STREAMOUT_GST_H__
 
-#include "btmgr_priv.h"
-
 typedef void* tBTRMgrSoGstHdl;
 
 #define BTRMGR_AUDIO_SFMT_SIGNED_8BIT       "S8"

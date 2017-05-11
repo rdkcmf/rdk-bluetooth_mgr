@@ -34,17 +34,17 @@ _GetNumberOfAdapters (
     unsigned char   numOfAdapters = 0;
     unsigned char*  pNumberOfAdapters = (unsigned char*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pNumberOfAdapters) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
@@ -52,11 +52,11 @@ _GetNumberOfAdapters (
     rc = BTMGR_GetNumberOfAdapters(&numOfAdapters);
     if (BTMGR_RESULT_SUCCESS == rc) {
         *pNumberOfAdapters = numOfAdapters;
-        BTMGRLOG_INFO ("%s : Success; Number of Adapters = %d\n", __FUNCTION__, numOfAdapters);
+        BTMGRLOG_INFO ("Success; Number of Adapters = %d\n", numOfAdapters);
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -71,28 +71,28 @@ _SetAdapterName (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterName_t* pName = (BTMGR_IARMAdapterName_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pName) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_SetAdapterName(pName->m_adapterIndex, pName->m_name);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -107,28 +107,28 @@ _GetAdapterName (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterName_t* pName = (BTMGR_IARMAdapterName_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pName) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_GetAdapterName(pName->m_adapterIndex, pName->m_name);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success ; Adapter name is %s\n", __FUNCTION__, pName->m_name);
+        BTMGRLOG_INFO ("Success ; Adapter name is %s\n", pName->m_name);
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -143,28 +143,28 @@ _SetAdapterPowerStatus (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterPower_t* pPowerStatus = (BTMGR_IARMAdapterPower_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPowerStatus) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_SetAdapterPowerStatus(pPowerStatus->m_adapterIndex, pPowerStatus->m_powerStatus);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -179,28 +179,28 @@ _GetAdapterPowerStatus (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterPower_t* pPowerStatus = (BTMGR_IARMAdapterPower_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPowerStatus) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_GetAdapterPowerStatus(pPowerStatus->m_adapterIndex, &pPowerStatus->m_powerStatus);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -215,28 +215,28 @@ _SetAdapterDiscoverable (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterDiscoverable_t* pDiscoverable = (BTMGR_IARMAdapterDiscoverable_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDiscoverable) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_SetAdapterDiscoverable(pDiscoverable->m_adapterIndex, pDiscoverable->m_isDiscoverable, pDiscoverable->m_timeout);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -251,28 +251,28 @@ _IsAdapterDiscoverable (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterDiscoverable_t* pDiscoverable = (BTMGR_IARMAdapterDiscoverable_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDiscoverable) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_IsAdapterDiscoverable(pDiscoverable->m_adapterIndex, &pDiscoverable->m_isDiscoverable);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -287,17 +287,17 @@ _ChangeDeviceDiscoveryStatus (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMAdapterDiscover_t* pAdapterIndex = (BTMGR_IARMAdapterDiscover_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pAdapterIndex) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
@@ -308,11 +308,11 @@ _ChangeDeviceDiscoveryStatus (
         rc = BTMGR_StopDeviceDiscovery(pAdapterIndex->m_adapterIndex);
 
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -327,28 +327,28 @@ _GetDiscoveredDevices (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMDiscoveredDevices_t* pDiscoveredDevices = (BTMGR_IARMDiscoveredDevices_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDiscoveredDevices) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_GetDiscoveredDevices(pDiscoveredDevices->m_adapterIndex, &pDiscoveredDevices->m_devices);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -363,30 +363,30 @@ _PairDevice (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMPairDevice_t* pPairDevice = (BTMGR_IARMPairDevice_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPairDevice) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_PairDevice(pPairDevice->m_adapterIndex, pPairDevice->m_deviceHandle);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
 #if 0
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
 #endif
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -401,30 +401,30 @@ _UnpairDevice (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMPairDevice_t* pUnPairDevice = (BTMGR_IARMPairDevice_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pUnPairDevice) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_UnpairDevice(pUnPairDevice->m_adapterIndex, pUnPairDevice->m_deviceHandle);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
 #if 0
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
 #endif
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -439,28 +439,28 @@ _GetPairedDevices (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMPairedDevices_t* pPairedDevices = (BTMGR_IARMPairedDevices_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPairedDevices) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_GetPairedDevices(pPairedDevices->m_adapterIndex, &pPairedDevices->m_devices);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -475,28 +475,28 @@ _ConnectToDevice (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMConnectDevice_t* pConnect = (BTMGR_IARMConnectDevice_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pConnect) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_ConnectToDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle, pConnect->m_connectAs);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -511,28 +511,28 @@ _DisconnectFromDevice (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMConnectDevice_t* pConnect = (BTMGR_IARMConnectDevice_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pConnect) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_DisconnectFromDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -548,28 +548,28 @@ _GetConnectedDevices (
     BTMGR_IARMConnectedDevices_t* pConnectedDevices = (BTMGR_IARMConnectedDevices_t*) arg;
 
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pConnectedDevices) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_GetConnectedDevices(pConnectedDevices->m_adapterIndex, &pConnectedDevices->m_devices);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -584,28 +584,28 @@ _GetDeviceProperties (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMDDeviceProperty_t* pDeviceProperty = (BTMGR_IARMDDeviceProperty_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDeviceProperty) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_GetDeviceProperties(pDeviceProperty->m_adapterIndex, pDeviceProperty->m_deviceHandle, &pDeviceProperty->m_deviceProperty);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -621,28 +621,28 @@ _StartAudioStreaming (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMStreaming_t*  pStartStream = (BTMGR_IARMStreaming_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStartStream) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_StartAudioStreamingOut(pStartStream->m_adapterIndex, pStartStream->m_deviceHandle, pStartStream->m_audioPref);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -657,28 +657,28 @@ _StopAudioStreaming (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMStreaming_t* pStopStream = (BTMGR_IARMStreaming_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStopStream) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_StopAudioStreamingOut(pStopStream->m_adapterIndex, pStopStream->m_deviceHandle);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -691,28 +691,28 @@ static IARM_Result_t _IsAudioStreaming(void *arg)
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMStreamingStatus_t* pStreamStatus = (BTMGR_IARMStreamingStatus_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStreamStatus) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_IsAudioStreamingOut(pStreamStatus->m_adapterIndex, &pStreamStatus->m_streamingStatus);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -727,28 +727,28 @@ _SetAudioStreamOutType (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMStreamingType_t* pStartStream = (BTMGR_IARMStreamingType_t*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStartStream) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_SetAudioStreamingOutType(pStartStream->m_adapterIndex, pStartStream->m_audioOutType);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -763,24 +763,24 @@ _ResetAdapter (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     unsigned char*  pAdapterIndex =  (unsigned char*) arg;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("%s : BTRMgr is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pAdapterIndex) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("%s : Failed; RetCode = %d\n", __FUNCTION__, retCode);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     rc = BTMGR_ResetAdapter (*pAdapterIndex);
     if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("%s : Success\n", __FUNCTION__);
+        BTMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
@@ -809,7 +809,7 @@ _EventCallback (
 ) {
     BTMGR_EventMessage_t eventData;
 
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     memcpy (&eventData, &events, sizeof(BTMGR_EventMessage_t));
 
@@ -875,7 +875,7 @@ void
 btmgr_BeginIARMMode (
     void
 ) {
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
         gIsBTMGR_Internal_Inited = 1;
@@ -926,7 +926,7 @@ void
 btmgr_TermIARMMode (
     void
 ) {
-    BTMGRLOG_INFO ("%s : Entering\n", __FUNCTION__);
+    BTMGRLOG_INFO ("Entering\n");
 
     if (gIsBTMGR_Internal_Inited) {
         BTMGRLOG_INFO ("IARM Interface Being terminated\n");

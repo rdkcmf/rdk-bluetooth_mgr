@@ -18,7 +18,7 @@
 ##########################################################################
 SUBDIRS =
 if USE_RPC
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/src/main -I${top_srcdir}/src/rpc -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut  -I${top_srcdir}/include/streamIn ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus  ${GLIB_CFLAGS} ${RPC_FLAGS}
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/src/rpc -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut  -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/priv ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus  ${GLIB_CFLAGS} ${RPC_FLAGS}
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -ldbus-1 -lIARMBus -lrdkloggers
 
 bin_PROGRAMS = btMgrBus 

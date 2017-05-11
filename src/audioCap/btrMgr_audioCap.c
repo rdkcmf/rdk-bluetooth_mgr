@@ -127,11 +127,11 @@ btrMgr_AC_acmDataCapture (
 
 
     if (pstBtrMgrAcHdl == NULL) {
-        BTMGRLOG_ERROR("%s:%d:%s - Fail - eBTRMgrFailInArg\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR("Fail - eBTRMgrFailInArg\n");
         return NULL;
     }
 
-    BTMGRLOG_INFO ("%s:%d:%s - Enter\n", __FILE__, __LINE__, __FUNCTION__);
+    BTMGRLOG_INFO ("Enter\n");
 
     
 
@@ -142,7 +142,7 @@ btrMgr_AC_acmDataCapture (
             if ((lpeBtrMgrAcmDCOp = g_async_queue_timeout_pop(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, li64usTimeout)) != NULL) {
                 leBtrMgrAcmDCCurOp = *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp);
                 g_free(lpeBtrMgrAcmDCOp);
-                BTMGRLOG_INFO ("%s:%d:%s - g_async_queue_timeout_pop %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrAcmDCCurOp);
+                BTMGRLOG_INFO ("g_async_queue_timeout_pop %d\n", leBtrMgrAcmDCCurOp);
             }
         }
 
@@ -159,13 +159,13 @@ btrMgr_AC_acmDataCapture (
                 int                 lerrno = 0;
 
                 lui16msTimeout = 1;
-                BTMGRLOG_INFO ("%s:%d:%s - eBTRMgrACAcmDCStart\n", __FILE__, __LINE__, __FUNCTION__);
+                BTMGRLOG_INFO ("eBTRMgrACAcmDCStart\n");
 
                 if (!strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath)) {
-                    BTMGRLOG_ERROR("%s:%d:%s - eBTRMgrACAcmDCStart - Invalid Socket Path\n", __FILE__, __LINE__, __FUNCTION__);
+                    BTMGRLOG_ERROR("eBTRMgrACAcmDCStart - Invalid Socket Path\n");
                 }
                 else {
-                    BTMGRLOG_INFO ("%s:%d:%s - pcBtrMgrAcmSockPath = %s\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
+                    BTMGRLOG_INFO ("pcBtrMgrAcmSockPath = %s\n", pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
 
                     lstBtrMgrAcmDCSockAddr.sun_family = AF_UNIX;
                     strncpy(lstBtrMgrAcmDCSockAddr.sun_path, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath, 
@@ -175,41 +175,41 @@ btrMgr_AC_acmDataCapture (
 
                     if ((li32BtrMgrAcmDCSockFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
                         lerrno = errno;
-                        BTMGRLOG_ERROR("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to create socket :FAILURE - %d\n", __FILE__, __LINE__, __FUNCTION__, lerrno);
+                        BTMGRLOG_ERROR("eBTRMgrACAcmDCStart - Unable to create socket :FAILURE - %d\n", lerrno);
                     }
 
                     if ((li32BtrMgrAcmDCSockFd != -1) &&
                         ((li32BtrMgrAcmDCSockFlags = fcntl(li32BtrMgrAcmDCSockFd, F_GETFL, 0)) != -1) &&
                         (fcntl(li32BtrMgrAcmDCSockFd, F_SETFL, li32BtrMgrAcmDCSockFlags | O_NONBLOCK) != -1)) {
-                        BTMGRLOG_INFO("%s:%d:%s - eBTRMgrACAcmDCStart - Socket O_NONBLOCK : SUCCESS\n", __FILE__, __LINE__, __FUNCTION__);
+                        BTMGRLOG_INFO("eBTRMgrACAcmDCStart - Socket O_NONBLOCK : SUCCESS\n");
                     }
                     
                     if ((li32BtrMgrAcmDCSockFd != -1) && 
                         (connect(li32BtrMgrAcmDCSockFd, (const struct sockaddr*)&lstBtrMgrAcmDCSockAddr, sizeof(lstBtrMgrAcmDCSockAddr)) == -1)) {
                         lerrno = errno;
-                        BTMGRLOG_ERROR("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to connect socket :FAILURE - %d\n", __FILE__, __LINE__, __FUNCTION__, lerrno);
+                        BTMGRLOG_ERROR("eBTRMgrACAcmDCStart - Unable to connect socket :FAILURE - %d\n", lerrno);
                         close(li32BtrMgrAcmDCSockFd);
                         lerrno = errno;
                     }
                     else {
                         lerrno = errno;
                         if (!(lpInDataBuf = malloc(pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold))) {
-                            BTMGRLOG_ERROR("%s:%d:%s - eBTRMgrACAcmDCStart - Unable to alloc\n", __FILE__, __LINE__, __FUNCTION__);
+                            BTMGRLOG_ERROR("eBTRMgrACAcmDCStart - Unable to alloc\n");
                             break;
                         } 
                     }
                 }
 
                 pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd = li32BtrMgrAcmDCSockFd;
-                BTMGRLOG_INFO ("%s:%d:%s - eBTRMgrACAcmDCStart - Read socket : %d - %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd, lerrno);
+                BTMGRLOG_INFO ("eBTRMgrACAcmDCStart - Read socket : %d - %d\n", pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd, lerrno);
             }
             /* eBTRMgrACAcmDCStop - STOP */
             else if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCStop) {
                 lui16msTimeout = 500;
-                BTMGRLOG_INFO ("%s:%d:%s - eBTRMgrACAcmDCStop\n", __FILE__, __LINE__, __FUNCTION__);
+                BTMGRLOG_INFO ("eBTRMgrACAcmDCStop\n");
 
                 if (pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd == -1) {
-                    BTMGRLOG_ERROR("%s:%d:%s - eBTRMgrACAcmDCStop :FAILURE\n", __FILE__, __LINE__, __FUNCTION__);
+                    BTMGRLOG_ERROR("eBTRMgrACAcmDCStop :FAILURE\n");
                 }
                 else {
                     if (lpInDataBuf) {
@@ -226,18 +226,18 @@ btrMgr_AC_acmDataCapture (
             /* eBTRMgrACAcmDCPause - PAUSE */
             else if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCPause) {
                 lui16msTimeout = 500;
-                BTMGRLOG_INFO ("%s:%d:%s - eBTRMgrACAcmDCPause\n", __FILE__, __LINE__, __FUNCTION__);
+                BTMGRLOG_INFO ("eBTRMgrACAcmDCPause\n");
 
             }
             /* eBTRMgrACAcmDCResume - RESUME */
             else if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCResume) {
                 lui16msTimeout = 1;
-                BTMGRLOG_INFO ("%s:%d:%s - eBTRMgrACAcmDCResume\n", __FILE__, __LINE__, __FUNCTION__);
+                BTMGRLOG_INFO ("eBTRMgrACAcmDCResume\n");
 
             }
             /* eBTRMgrACAcmDCExit - EXIT */
             else if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCExit) {
-                BTMGRLOG_INFO ("%s:%d:%s - eBTRMgrACAcmDCExit\n", __FILE__, __LINE__, __FUNCTION__);
+                BTMGRLOG_INFO ("eBTRMgrACAcmDCExit\n");
                 break;
             }
             /* eBTRMgrACAcmDCUnknown - UNKNOWN */
@@ -262,7 +262,7 @@ btrMgr_AC_acmDataCapture (
                     if (pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB(lpInDataBuf,
                                                                 li32InDataBufBytesRead,
                                                                 pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData) != eBTRMgrSuccess) {
-                        BTMGRLOG_ERROR("%s:%d:%s - AC Data Ready Callback Failed\n", __FILE__, __LINE__, __FUNCTION__);
+                        BTMGRLOG_ERROR("AC Data Ready Callback Failed\n");
                     }
                 }
             }
@@ -289,7 +289,7 @@ btrMgr_AC_acmDataCapture (
     } while(1);
     
     
-    BTMGRLOG_INFO ("%s:%d:%s - Exit\n", __FILE__, __LINE__, __FUNCTION__);
+    BTMGRLOG_INFO ("Exit\n");
 
     return NULL;
 }
@@ -313,13 +313,13 @@ BTRMgr_AC_Init (
 #endif
 
     if ((pstBtrMgrAcHdl = (stBTRMgrACHdl*)g_malloc0 (sizeof(stBTRMgrACHdl))) == NULL) {
-        BTMGRLOG_ERROR("%s:%d:%s - Unable to allocate memory\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR("Unable to allocate memory\n");
         return eBTRMgrInitFailure;
     }
 
 #if defined(USE_AC_RMF)
     if ((leBtrMgrRmfAcRet = RMF_AudioCapture_Open(&pstBtrMgrAcHdl->hBTRMgrRmfAcHdl)) != RMF_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - RMF_AudioCapture_Open:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrRmfAcRet);
+        BTMGRLOG_ERROR("RMF_AudioCapture_Open:Return Status = %d\n", leBtrMgrRmfAcRet);
         leBtrMgrAcRet = eBTRMgrInitFailure;
     }
 #else
@@ -347,12 +347,12 @@ BTRMgr_AC_Init (
                                             IARMBUS_AUDIOCAPTUREMGR_OPEN,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_OPEN:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_OPEN:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrInitFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrInitFailure;
     }
     else {
@@ -363,7 +363,7 @@ BTRMgr_AC_Init (
             leBtrMgrAcRet = eBTRMgrInitFailure;
         }
 
-        BTMGRLOG_INFO ("%s:%d:%s - btrMgr_AC_acmDataCapture : %p\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread);
+        BTMGRLOG_INFO ("btrMgr_AC_acmDataCapture : %p\n", pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread);
     }
 #endif
 
@@ -397,7 +397,7 @@ BTRMgr_AC_DeInit (
 
 #if defined(USE_AC_RMF)
     if ((leBtrMgrRmfAcRet = RMF_AudioCapture_Close(pstBtrMgrAcHdl->hBTRMgrRmfAcHdl)) != RMF_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrRmfAcRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrRmfAcRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
     pstBtrMgrAcHdl->hBTRMgrRmfAcHdl = NULL;
@@ -408,11 +408,11 @@ BTRMgr_AC_DeInit (
         if ((lpeBtrMgrAcmDCOp = g_malloc0(sizeof(eBTRMgrACAcmDCOp))) != NULL) {
             *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp) = eBTRMgrACAcmDCExit;
             g_async_queue_push(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, lpeBtrMgrAcmDCOp);
-            BTMGRLOG_INFO ("%s:%d:%s - g_async_queue_push: eBTRMgrACAcmDCExit\n", __FILE__, __LINE__, __FUNCTION__);
+            BTMGRLOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCExit\n");
         }
     }
     else {
-        BTMGRLOG_ERROR("%s:%d:%s - pBtrMgrAcmDataCapGThread: eBTRMgrACAcmDCExit - FAILED\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR("pBtrMgrAcmDataCapGThread: eBTRMgrACAcmDCExit - FAILED\n");
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -434,12 +434,12 @@ BTRMgr_AC_DeInit (
                                             IARMBUS_AUDIOCAPTUREMGR_CLOSE,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_CLOSE:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_CLOSE:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -490,13 +490,13 @@ BTRMgr_AC_GetDefaultSettings (
 
 #if defined(USE_AC_RMF)
     if ((leBtrMgrRmfAcRet = RMF_AudioCapture_GetDefaultSettings(&pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings)) != RMF_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrRmfAcRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrRmfAcRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
-    BTMGRLOG_INFO ("%s:%d:%s - Default CBBufferReady = %p\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady);
-    BTMGRLOG_INFO ("%s:%d:%s - Default Fifosize      = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize);
-    BTMGRLOG_INFO ("%s:%d:%s - Default Threshold     = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
+    BTMGRLOG_INFO ("Default CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady);
+    BTMGRLOG_INFO ("Default Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize);
+    BTMGRLOG_INFO ("Default Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -571,12 +571,12 @@ BTRMgr_AC_GetDefaultSettings (
                                             IARMBUS_AUDIOCAPTUREMGR_GET_DEFAULT_AUDIO_PROPS,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_GET_DEFAULT_AUDIO_PROPS:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_GET_DEFAULT_AUDIO_PROPS:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -584,9 +584,9 @@ BTRMgr_AC_GetDefaultSettings (
     if (leBtrMgrAcRet == eBTRMgrSuccess) {
         memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmDefSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-        BTMGRLOG_INFO ("%s:%d:%s - Default Fifosize = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size);
-        BTMGRLOG_INFO ("%s:%d:%s - Default Threshold= %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold);
-        BTMGRLOG_INFO ("%s:%d:%s - Default DelayComp= %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
+        BTMGRLOG_INFO ("Default Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size);
+        BTMGRLOG_INFO ("Default Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold);
+        BTMGRLOG_INFO ("Default DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
 
         //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -686,13 +686,13 @@ BTRMgr_AC_GetCurrentSettings (
 #if defined(USE_AC_RMF)
     if ((leBtrMgrRmfAcRet = RMF_AudioCapture_GetCurrentSettings( pstBtrMgrAcHdl->hBTRMgrRmfAcHdl,
                                                                 &pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings)) != RMF_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrRmfAcRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrRmfAcRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
-    BTMGRLOG_INFO ("%s:%d:%s - Current CBBufferReady = %p\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady);
-    BTMGRLOG_INFO ("%s:%d:%s - Current Fifosize      = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize);
-    BTMGRLOG_INFO ("%s:%d:%s - Current Threshold     = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
+    BTMGRLOG_INFO ("Current CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady);
+    BTMGRLOG_INFO ("Current Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize);
+    BTMGRLOG_INFO ("Current Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -768,12 +768,12 @@ BTRMgr_AC_GetCurrentSettings (
                                             IARMBUS_AUDIOCAPTUREMGR_GET_AUDIO_PROPS,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_GET_AUDIO_PROPS:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_GET_AUDIO_PROPS:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -781,9 +781,9 @@ BTRMgr_AC_GetCurrentSettings (
     if (leBtrMgrAcRet == eBTRMgrSuccess) {
         memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmCurSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-        BTMGRLOG_INFO ("%s:%d:%s - Current Fifosize = %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size);
-        BTMGRLOG_INFO ("%s:%d:%s - Current Threshold= %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold);
-        BTMGRLOG_INFO ("%s:%d:%s - Current DelayComp= %d\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
+        BTMGRLOG_INFO ("Current Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size);
+        BTMGRLOG_INFO ("Current Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold);
+        BTMGRLOG_INFO ("Current DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
 
         //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -921,7 +921,7 @@ BTRMgr_AC_Start (
 
     if ((leBtrMgrRmfAcRet = RMF_AudioCapture_Start(pstBtrMgrAcHdl->hBTRMgrRmfAcHdl, 
                                                    pstBtrMgrRmfAcSettings)) != RMF_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrRmfAcRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrRmfAcRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -952,12 +952,12 @@ BTRMgr_AC_Start (
                                             IARMBUS_AUDIOCAPTUREMGR_SET_AUDIO_PROPERTIES,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_SET_AUDIO_PROPERTIES:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_SET_AUDIO_PROPERTIES:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -970,12 +970,12 @@ BTRMgr_AC_Start (
                                             IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -983,7 +983,7 @@ BTRMgr_AC_Start (
             strlen(lstBtrMgrIarmAcmArgs.details.arg_output_props.output.file_path) < MAX_OUTPUT_PATH_LEN ?
                     strlen(lstBtrMgrIarmAcmArgs.details.arg_output_props.output.file_path) : MAX_OUTPUT_PATH_LEN - 1);
 
-    BTMGRLOG_INFO ("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS : pcBtrMgrAcmSockPath = %s\n", __FILE__, __LINE__, __FUNCTION__, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
+    BTMGRLOG_INFO ("IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS : pcBtrMgrAcmSockPath = %s\n", pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
 
 
     memset(&lstBtrMgrIarmAcmArgs, 0, sizeof(iarmbus_acm_arg_t));
@@ -993,12 +993,12 @@ BTRMgr_AC_Start (
                                             IARMBUS_AUDIOCAPTUREMGR_START,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_START:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_START:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -1008,11 +1008,11 @@ BTRMgr_AC_Start (
         if ((lpeBtrMgrAcmDCOp = g_malloc0(sizeof(eBTRMgrACAcmDCOp))) != NULL) {
             *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp) = eBTRMgrACAcmDCStart;
             g_async_queue_push(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, lpeBtrMgrAcmDCOp);
-            BTMGRLOG_INFO ("%s:%d:%s - g_async_queue_push: eBTRMgrACAcmDCStart\n", __FILE__, __LINE__, __FUNCTION__);
+            BTMGRLOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCStart\n");
         }
     }
     else {
-        BTMGRLOG_ERROR("%s:%d:%s - pBtrMgrAcmDataCapGThread: eBTRMgrACAcmDCStart - FAILED\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR("pBtrMgrAcmDataCapGThread: eBTRMgrACAcmDCStart - FAILED\n");
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -1042,7 +1042,7 @@ BTRMgr_AC_Stop (
 
 #if defined(USE_AC_RMF)
     if ((leBtrMgrRmfAcRet = RMF_AudioCapture_Stop(pstBtrMgrAcHdl->hBTRMgrRmfAcHdl)) != RMF_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgrRmfAcRet);
+        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrRmfAcRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 #else
@@ -1052,11 +1052,11 @@ BTRMgr_AC_Stop (
         if ((lpeBtrMgrAcmDCOp = g_malloc0(sizeof(eBTRMgrACAcmDCOp))) != NULL) {
             *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp) = eBTRMgrACAcmDCStop;
             g_async_queue_push(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, lpeBtrMgrAcmDCOp);
-            BTMGRLOG_INFO ("%s:%d:%s - g_async_queue_push: eBTRMgrACAcmDCStop\n", __FILE__, __LINE__, __FUNCTION__);
+            BTMGRLOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCStop\n");
         }
     }
     else {
-        BTMGRLOG_ERROR("%s:%d:%s - pBtrMgrAcmDataCapGThread: eBTRMgrACAcmDCStop - FAILED\n", __FILE__, __LINE__, __FUNCTION__);
+        BTMGRLOG_ERROR("pBtrMgrAcmDataCapGThread: eBTRMgrACAcmDCStop - FAILED\n");
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
@@ -1068,12 +1068,12 @@ BTRMgr_AC_Stop (
                                             IARMBUS_AUDIOCAPTUREMGR_STOP,
                                             (void *)&lstBtrMgrIarmAcmArgs,
                                             sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-        BTMGRLOG_ERROR("%s:%d:%s - IARMBUS_AUDIOCAPTUREMGR_STOP:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, leBtrMgIarmAcmRet);
+        BTMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_STOP:Return Status = %d\n", leBtrMgIarmAcmRet);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
     if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-        BTMGRLOG_ERROR("%s:%d:%s - lstBtrMgrIarmAcmArgs:Return Status = %d\n", __FILE__, __LINE__, __FUNCTION__, lstBtrMgrIarmAcmArgs.result);
+        BTMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
         leBtrMgrAcRet = eBTRMgrFailure;
     }
     
@@ -1113,7 +1113,7 @@ btrMgr_AC_rmfBufferReady_cB (
 
     if (pstBtrMgrAcHdl && pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB) {
         if (pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB(pInDataBuf, inBytesToEncode, pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData) != eBTRMgrSuccess) {
-            BTMGRLOG_ERROR("%s:%d:%s - AC Data Ready Callback Failed\n", __FILE__, __LINE__, __FUNCTION__);
+            BTMGRLOG_ERROR("AC Data Ready Callback Failed\n");
         }
     }
 

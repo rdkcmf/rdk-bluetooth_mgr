@@ -161,6 +161,43 @@ AC_ARG_ENABLE([rpc],
     	      ],
     	      [echo "rpc plugin is disabled"])
 
+# Check for rdk logger 
+AC_ARG_ENABLE([rdk-logger],
+              AS_HELP_STRING([--enable-rdk-logger],[enable rdk logger (default is no)]),
+              [
+      		case "${enableval}" in
+        	 yes) rdk_logger_ok=yes;;
+        	 no)  rdk_logger_ok=no;;
+        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-rdk-logger]) ;;
+       		esac
+    	      ],
+    	      [echo "rdk logger is disabled"])
+
+
+AS_IF([test "x$rdk_logger_ok" = "xyes"], [
+    AC_CHECK_LIB(rdkloggers, rdk_logger_init,
+                       enable_rdk_logger=yes, enable_rdk_logger=no
+                       AC_MSG_ERROR([RDK_LOGGER library (librdklogger) not found]))
+    if test "$enable_rdk_logger" = yes; then
+       AC_MSG_CHECKING([for rdkloggers])
+       AC_TRY_COMPILE(
+    [#include <stdio.h>
+    #undef PACKAGE
+    #undef VERSION
+    #undef HAVE_STDLIB_H
+    #include "rdk_debug.h"],,
+             enable_rdk_logger=yes,
+             enable_rdk_logger=no)
+       AC_MSG_RESULT($enable_rdk_logger)
+       if test "$enable_rdk_logger" = yes; then
+          AC_DEFINE(RDK_LOGGER_ENABLED, 1, [Enabled RDK Logger])
+       else
+          AC_MSG_ERROR([RDK_LOGGER library (librdklogger) not found])
+       fi
+    fi
+], [])
+
+
 plugindir="\$(libdir)/gstreamer-$GST_MAJORMINOR"
 
 BTR_MGR_SRC="src"

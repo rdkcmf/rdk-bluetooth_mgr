@@ -42,8 +42,10 @@ BTMGR_PairedDevicesList_t   gListOfPairedDevices;
 unsigned char               gIsDiscoveryInProgress = 0;
 unsigned char               gIsDeviceConnected = 0;
 
-const char* BTMGR_DEBUG_ACTUAL_PATH    = "/etc/debug.ini";
-const char* BTMGR_DEBUG_OVERRIDE_PATH  = "/opt/debug.ini";
+#ifdef RDK_LOGGER_ENABLED
+int b_rdk_logger_enabled = 0;
+#endif
+
 const char* BTMGR_PERSISTENT_DATA_PATH = "/opt/lib/bluetooth/btmgrPersist.dat";
 
 static BTMGR_EventCallback m_eventCallbackFunction = NULL;
@@ -436,12 +438,15 @@ BTMGR_Init (
 ) {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
     enBTRCoreRet halrc = enBTRCoreSuccess;
-    const char* pDebugConfig = NULL;
 
     if (NULL != gBTRCoreHandle) {
         BTMGRLOG_WARN("BTMGR_Init : Already Inited; Return Success\n");
         return rc;
     }
+#ifdef RDK_LOGGER_ENABLED
+    const char* pDebugConfig = NULL;
+    const char* BTMGR_DEBUG_ACTUAL_PATH    = "/etc/debug.ini";
+    const char* BTMGR_DEBUG_OVERRIDE_PATH  = "/opt/debug.ini";
 
     /* Init the logger */
     if( access(BTMGR_DEBUG_OVERRIDE_PATH, F_OK) != -1 ) {
@@ -450,8 +455,10 @@ BTMGR_Init (
     else {
         pDebugConfig = BTMGR_DEBUG_ACTUAL_PATH;
     }
-    rdk_logger_init(pDebugConfig);
-
+    if( 0==rdk_logger_init(pDebugConfig)) {
+        b_rdk_logger_enabled = 1;
+    }
+#endif
 
     /* Initialze all the database */
     memset (&gDefaultAdapterContext, 0, sizeof(gDefaultAdapterContext));
@@ -473,14 +480,14 @@ BTMGR_Init (
     else {
         char lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
 
-        if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion))
+        if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion)) {
             BTMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
-
+        }
         BTMGRLOG_ERROR("BTR Bluetooth Version: %s\n", lpcBtVersion);
 
-        if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters))
+        if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters)) {
             BTMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
-
+        }
         BTMGRLOG_INFO ("Number of Adapters found are = %u\n", gListOfAdapters.number_of_adapters);
         if (0 == gListOfAdapters.number_of_adapters) {
             BTMGRLOG_WARN("Bluetooth adapter NOT Found! Expected to be connected to make use of this module; Not considered as failure\n");
@@ -493,8 +500,9 @@ BTMGR_Init (
             }
 
             /* TODO: Handling multiple Adapters */
-            if (gListOfAdapters.number_of_adapters > 1)
+            if (gListOfAdapters.number_of_adapters > 1) {
                 BTMGRLOG_WARN("There are more than 1 Bluetooth Adapters Found! Lets handle it properly\n");
+            }
         }
 
         /* Register for callback to get the status of connected Devices */
@@ -542,9 +550,9 @@ BTMGR_Init (
 
             fclose(fpPersistData);
 
-            if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0)
+            if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0) {
                 BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Adapter matches\n");
-
+            }
             if (lui8fConnStatus == '1') {
                 BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Connected Status matches\n");
                 lDeviceHandle = strtoll(lui8deviceId, NULL, 10);
@@ -570,12 +578,12 @@ BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters)
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if (NULL == pNumOfAdapters)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -608,12 +616,12 @@ BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* 
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((NULL == pNameOfAdapter) || (index_of_adapter > getAdapterCount()))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -627,8 +635,10 @@ BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* 
                 BTMGRLOG_ERROR ("BTMGR_SetAdapterName : Failed to set Adapter Name\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
-            else
+            else 
+            {
                 BTMGRLOG_INFO ("BTMGR_SetAdapterName : Set Successfully\n");
+            }
         }
         else
         {
@@ -650,12 +660,12 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((NULL == pNameOfAdapter) || (index_of_adapter > getAdapterCount()))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -670,8 +680,9 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
+            {
                 BTMGRLOG_INFO ("BTMGR_GetAdapterName : Fetched Successfully\n");
-
+            }
             /*  Copy regardless of success or failure. */
             strncpy (pNameOfAdapter, name, (BTMGR_NAME_LEN_MAX - 1));
         }
@@ -693,12 +704,12 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (power_status > 1))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -724,7 +735,9 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
+            {
                 BTMGRLOG_INFO ("BTMGR_SetAdapterPowerStatus : Set Successfully\n");
+            }
         }
         else
         {
@@ -745,12 +758,12 @@ BTMGR_Result_t BTMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsig
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((NULL == pPowerStatus) || (index_of_adapter > getAdapterCount()))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -788,12 +801,12 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (discoverable > 1))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -804,10 +817,11 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
             if (timeout)
             {
                 halrc = BTRCore_SetAdapterDiscoverableTimeout(gBTRCoreHandle, pAdapterPath, timeout);
-                if (enBTRCoreSuccess != halrc)
+                if (enBTRCoreSuccess != halrc) {
                     BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed to set Adapter discovery timeout\n");
-                else
+                } else {
                     BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Set timeout Successfully\n");
+                }
             }
 
             /* Set the  discoverable state */
@@ -818,7 +832,9 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
+            {
                 BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Set discoverable status Successfully\n");
+            }
         }
         else
         {
@@ -839,12 +855,12 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((NULL == pDiscoverable) || (index_of_adapter > getAdapterCount()))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -885,12 +901,12 @@ BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter)
     else if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if(index_of_adapter > getAdapterCount())
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -932,12 +948,12 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
     else if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if(index_of_adapter > getAdapterCount())
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -986,12 +1002,12 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (!pDiscoveredDevices))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1050,12 +1066,12 @@ BTMGR_PairDevice (
     }
 
     if (!gBTRCoreHandle) {
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
         return BTMGR_RESULT_INIT_FAILED;
     }
 
     if ((!handle) || (index_of_adapter > getAdapterCount())) {
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
         return BTMGR_RESULT_INVALID_INPUT;
     }
 
@@ -1112,12 +1128,12 @@ BTMGR_UnpairDevice (
     }
 
     if (!gBTRCoreHandle) {
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
         return BTMGR_RESULT_INIT_FAILED;
     }
 
     if ((!handle) || (index_of_adapter > getAdapterCount())) {
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
         return BTMGR_RESULT_INVALID_INPUT;
     }
 
@@ -1179,12 +1195,12 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (!pPairedDevices))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1216,7 +1232,7 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
                     ptr->m_serviceInfo.m_numOfService = listOfDevices.devices[i].device_profile.numberOfService;
                     for (j = 0; j < listOfDevices.devices[i].device_profile.numberOfService; j++)
                     {
-                        BTMGRLOG_INFO ("%s : Profile ID = %u; Profile Name = %s \n", __FUNCTION__, listOfDevices.devices[i].device_profile.profile[j].uuid_value,
+                        BTMGRLOG_INFO ("Profile ID = %u; Profile Name = %s \n", listOfDevices.devices[i].device_profile.profile[j].uuid_value,
                                                                                                    listOfDevices.devices[i].device_profile.profile[j].profile_name);
                         ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfDevices.devices[i].device_profile.profile[j].uuid_value;
                         strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfDevices.devices[i].device_profile.profile[j].profile_name);
@@ -1251,12 +1267,12 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if ((0 == handle) || (index_of_adapter > getAdapterCount()))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1315,16 +1331,16 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if ((0 == handle) || (index_of_adapter > getAdapterCount()))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else if (0 == gIsDeviceConnected)
     {
-        BTMGRLOG_ERROR ("%s : No Device is connected at this time\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("No Device is connected at this time\n");
         rc = BTMGR_RESULT_GENERIC_FAILURE;
     }
     else
@@ -1333,8 +1349,9 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
         {
             /* The streaming is happening; stop it */
             rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
-            if (BTMGR_RESULT_SUCCESS != rc)
-                BTMGRLOG_ERROR ("%s : Streamout is failed to stop\n", __FUNCTION__);
+            if (BTMGR_RESULT_SUCCESS != rc) {
+                BTMGRLOG_ERROR ("Streamout is failed to stop\n");
+            }
         }
 
         /* connectAs param is unused for now.. */
@@ -1392,15 +1409,15 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
                 fread(lui8fDelimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
                 fread(&lui8fConnStatus, sizeof(char), 1 , fpPersistData);
 
-                if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0)
+                if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0) {
                     BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data - Adapter matches\n");
-
-                if (strcmp(lui8fDeviceId, lui8deviceId) == 0) 
+                }
+                if (strcmp(lui8fDeviceId, lui8deviceId) == 0) {
                     BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data - Device Id matches\n");
-
-                if (lui8fConnStatus == '1')
+                }
+                if (lui8fConnStatus == '1') {
                     BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data - Connected Status matches\n");
-
+                }
                 fseek(fpPersistData, -1, SEEK_CUR);
                 fwrite("0", sizeof(char), 1 , fpPersistData);
 
@@ -1422,12 +1439,12 @@ BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_C
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (!pConnectedDevices))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1445,17 +1462,17 @@ BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_C
                 memcpy (&pConnectedDevices->m_deviceProperty[0].m_serviceInfo, &deviceProperty.m_serviceInfo, sizeof (BTMGR_DeviceServiceList_t));
                 strncpy (pConnectedDevices->m_deviceProperty[0].m_name, deviceProperty.m_name, (BTMGR_NAME_LEN_MAX - 1));
                 strncpy (pConnectedDevices->m_deviceProperty[0].m_deviceAddress, deviceProperty.m_deviceAddress, (BTMGR_NAME_LEN_MAX - 1));
-                BTMGRLOG_INFO ("%s : Successfully posted the connected device inforation\n", __FUNCTION__);
+                BTMGRLOG_INFO ("Successfully posted the connected device inforation\n");
             }
             else
             {
-                BTMGRLOG_ERROR ("%s : Failed to get connected device inforation\n", __FUNCTION__);
+                BTMGRLOG_ERROR ("Failed to get connected device inforation\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
         }
         else if (gIsDeviceConnected != 0)
         {
-            BTMGRLOG_ERROR ("%s : Seems like Device is connected but not streaming. Lost the connect info\n", __FUNCTION__);
+            BTMGRLOG_ERROR ("Seems like Device is connected but not streaming. Lost the connect info\n");
         }
     }
     return rc;
@@ -1473,12 +1490,12 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (!pDeviceProperty) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1506,7 +1523,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                         pDeviceProperty->m_serviceInfo.m_numOfService = listOfPDevices.devices[i].device_profile.numberOfService;
                         for (j = 0; j < listOfPDevices.devices[i].device_profile.numberOfService; j++)
                         {
-                            BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, listOfPDevices.devices[i].device_profile.profile[j].uuid_value,
+                            BTMGRLOG_INFO ("Profile ID = %d; Profile Name = %s \n", listOfPDevices.devices[i].device_profile.profile[j].uuid_value,
                                                                                                        listOfPDevices.devices[i].device_profile.profile[j].profile_name);
                             pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].device_profile.profile[j].uuid_value;
                             strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].device_profile.profile[j].profile_name, BTMGR_NAME_LEN_MAX);
@@ -1520,8 +1537,9 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                     }
                 }
             }
-            else
+            else {
                 BTMGRLOG_WARN("No Device is paired yet\n");
+            }
         }
 
         halrc = BTRCore_GetListOfScannedDevices (gBTRCoreHandle, &listOfSDevices);
@@ -1544,7 +1562,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                             pDeviceProperty->m_serviceInfo.m_numOfService = listOfSDevices.devices[i].device_profile.numberOfService;
                             for (j = 0; j < listOfSDevices.devices[i].device_profile.numberOfService; j++)
                             {
-                                BTMGRLOG_INFO ("%s : Profile ID = %d; Profile Name = %s \n", __FUNCTION__, listOfSDevices.devices[i].device_profile.profile[j].uuid_value,
+                                BTMGRLOG_INFO ("Profile ID = %d; Profile Name = %s \n", listOfSDevices.devices[i].device_profile.profile[j].uuid_value,
                                                                                                            listOfSDevices.devices[i].device_profile.profile[j].profile_name);
                                 pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = listOfSDevices.devices[i].device_profile.profile[j].uuid_value;
                                 strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfSDevices.devices[i].device_profile.profile[j].profile_name, BTMGR_NAME_LEN_MAX);
@@ -1556,8 +1574,9 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
                     }
                 }
             }
-            else
+            else {
                 BTMGRLOG_WARN("No Device in scan list\n");
+            }
         }
         pDeviceProperty->m_rssi = btmgr_MapSignalStrengthToRSSI (pDeviceProperty->m_signalLevel);
 
@@ -1576,7 +1595,7 @@ BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback)
     if (!eventCallback)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1592,12 +1611,12 @@ BTMGR_Result_t BTMGR_DeInit(void)
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else
     {
         BTRCore_DeInit(gBTRCoreHandle);
-        BTMGRLOG_ERROR ("%s : BTRCore DeInited; Now will we exit the app\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore DeInited; Now will we exit the app\n");
     }
     return rc;
 }
@@ -1615,26 +1634,26 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if((index_of_adapter > getAdapterCount()) || (0 == handle))
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else if (gCurStreamingDevHandle == handle)
     {
-        BTMGRLOG_ERROR ("%s : Its already streaming out in this device.. Check the volume :)\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Its already streaming out in this device.. Check the volume :)\n");
     }
     else
     {
         if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle != handle))
         {
-            BTMGRLOG_ERROR ("%s : Its already streaming out. lets stop this and start on other device \n", __FUNCTION__);
+            BTMGRLOG_ERROR ("Its already streaming out. lets stop this and start on other device \n");
             rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
             if (rc != BTMGR_RESULT_SUCCESS)
             {
-                BTMGRLOG_ERROR ("%s : Failed to stop streaming at the current device..\n", __FUNCTION__);
+                BTMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
                 return rc;
             }
         }
@@ -1656,7 +1675,7 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                 }
                 if (!isFound)
                 {
-                    BTMGRLOG_ERROR ("%s : Failed to find this device in the paired devices list\n", __FUNCTION__);
+                    BTMGRLOG_ERROR ("Failed to find this device in the paired devices list\n");
                     rc = BTMGR_RESULT_GENERIC_FAILURE;
                 }
                 else
@@ -1667,9 +1686,9 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                         BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref);
 
                         /* FIXME */
-                        BTMGRLOG_WARN("%s : Sleep for few sec as alternate to async callback; temp change\n",__FUNCTION__);
+                        BTMGRLOG_WARN("Sleep for few sec as alternate to async callback; temp change\n");
                         sleep(5);
-                        BTMGRLOG_WARN("%s : Slept for few sec as alternate to async callback; temp change\n",__FUNCTION__);
+                        BTMGRLOG_WARN("Slept for few sec as alternate to async callback; temp change\n");
                     }
 
                     if (BTMGR_RESULT_SUCCESS == rc)
@@ -1705,17 +1724,17 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                             if (BTMGR_RESULT_SUCCESS == btmgr_StartCastingAudio (deviceFD, deviceWriteMTU))
                             {
                                 gCurStreamingDevHandle = listOfPDevices.devices[i].deviceId;
-                                BTMGRLOG_WARN("%s : Streaming Started.. Enjoy the show..! :)\n", __FUNCTION__);
+                                BTMGRLOG_WARN("Streaming Started.. Enjoy the show..! :)\n");
                             }
                             else
                             {
-                                BTMGRLOG_ERROR ("%s : Failed to stream now\n", __FUNCTION__);
+                                BTMGRLOG_ERROR ("Failed to stream now\n");
                                 rc = BTMGR_RESULT_GENERIC_FAILURE;
                             }
                         }
                         else
                         {
-                            BTMGRLOG_ERROR ("%s : Failed to get Device Data Path. So Will not be able to stream now\n", __FUNCTION__);
+                            BTMGRLOG_ERROR ("Failed to get Device Data Path. So Will not be able to stream now\n");
                             rc = BTMGR_RESULT_GENERIC_FAILURE;
 
                             if (m_eventCallbackFunction)
@@ -1734,19 +1753,19 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                     }
                     else
                     {
-                        BTMGRLOG_ERROR ("%s : Failed to connect to device and not playing\n", __FUNCTION__);
+                        BTMGRLOG_ERROR ("Failed to connect to device and not playing\n");
                     }
                 }
             }
             else
             {
-                BTMGRLOG_ERROR ("%s : No device is paired yet; Will not be able to play at this moment\n", __FUNCTION__);
+                BTMGRLOG_ERROR ("No device is paired yet; Will not be able to play at this moment\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
         }
         else
         {
-            BTMGRLOG_ERROR ("%s : Failed to get the paired devices list\n", __FUNCTION__);
+            BTMGRLOG_ERROR ("Failed to get the paired devices list\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -1768,9 +1787,9 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
 
         /* Just in case */
         /* FIXME */
-        BTMGRLOG_WARN("%s : Sleep for few sec as alternate to async callback; temp change\n",__FUNCTION__);
+        BTMGRLOG_WARN("Sleep for few sec as alternate to async callback; temp change\n");
         sleep(2);
-        BTMGRLOG_WARN("%s : Slept for few sec as alternate to async callback; temp change\n",__FUNCTION__);
+        BTMGRLOG_WARN("Slept for few sec as alternate to async callback; temp change\n");
 
         if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
             free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
@@ -1791,7 +1810,7 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
     if(!pStreamingStatus)
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
@@ -1810,7 +1829,7 @@ BTMGR_Result_t BTMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BT
 {
     BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
 
-    BTMGRLOG_ERROR ("%s : Secondary audio support is not implemented yet. Always primary audio is played for now\n", __FUNCTION__);
+    BTMGRLOG_ERROR ("Secondary audio support is not implemented yet. Always primary audio is played for now\n");
     return rc;
 }
 
@@ -1821,12 +1840,12 @@ BTMGR_Result_t BTMGR_ResetAdapter (unsigned char index_of_adapter)
     if (NULL == gBTRCoreHandle)
     {
         rc = BTMGR_RESULT_INIT_FAILED;
-        BTMGRLOG_ERROR ("%s : BTRCore is not Inited\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
     else if (index_of_adapter > getAdapterCount())
     {
         rc = BTMGR_RESULT_INVALID_INPUT;
-        BTMGRLOG_ERROR ("%s : Input is invalid\n", __FUNCTION__);
+        BTMGRLOG_ERROR ("Input is invalid\n");
     }
     else
     {
