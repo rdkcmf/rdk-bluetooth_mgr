@@ -38,6 +38,7 @@
 
 /* Local Headers */
 #include "btrMgr_mediaTypes.h"
+#include "btrMgr_Types.h"
 #include "btrMgr_streamOut.h"
 #ifdef USE_GST1
 #include "btrMgr_streamOutGst.h"

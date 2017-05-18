@@ -58,6 +58,7 @@
 #include "btrMgr_mediaTypes.h"
 #include "btrMgr_audioCap.h"
 #include "btmgr_priv.h"
+#include "btrMgr_Types.h"
 
 /* Local defines */
 #if !defined(USE_AC_RMF)

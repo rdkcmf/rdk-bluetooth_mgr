@@ -125,6 +125,7 @@ AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_avMedia.h])
 
 # Use Glib
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
+PKG_CHECK_MODULES([LIBCJSON], [libcjson >= 1.0])
 
 # GStreamer version. Use 1.0 Only
 AC_ARG_ENABLE(gstreamer1,
@@ -219,6 +220,7 @@ AC_SUBST(BTR_MGR_TEST)
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/main/Makefile
+                 src/persistIf/Makefile
                  src/rpc/Makefile
                  src/ctrl/Makefile
                  src/audioCap/Makefile

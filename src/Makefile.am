@@ -16,4 +16,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = audioCap streamOut streamIn rpc main ctrl
+SUBDIRS = audioCap streamOut streamIn persistIf rpc main ctrl

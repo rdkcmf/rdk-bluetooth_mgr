@@ -26,16 +26,18 @@
 #include "btmgr.h"
 #include "btmgr_priv.h"
 
+#include "btrMgr_Types.h"
 #include "btrMgr_mediaTypes.h"
 #include "btrMgr_streamOut.h"
 #include "btrMgr_audioCap.h"
-
+#include "btrMgr_persistIface.h"
 
 tBTRCoreHandle          gBTRCoreHandle = NULL;
 BTMgrDeviceHandle       gCurStreamingDevHandle = 0;
 stBTRCoreAdapter        gDefaultAdapterContext;
 stBTRCoreListAdapters   gListOfAdapters;
 stBTRCoreDevMediaInfo   gstBtrCoreDevMediaInfo;
+tBTRMgrPIHdl  			piHandle = NULL;
 
 
 BTMGR_PairedDevicesList_t   gListOfPairedDevices;
@@ -46,7 +48,6 @@ unsigned char               gIsDeviceConnected = 0;
 int b_rdk_logger_enabled = 0;
 #endif
 
-const char* BTMGR_PERSISTENT_DATA_PATH = "/opt/lib/bluetooth/btmgrPersist.dat";
 
 static BTMGR_EventCallback m_eventCallbackFunction = NULL;
 
@@ -512,54 +513,55 @@ BTMGR_Init (
         BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btmgr_DeviceDiscoveryCallback, NULL);
 
 #if 1
-        FILE *fpPersistData = NULL;
-        char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
-        char lui8fAdapterAddr[BD_NAME_LEN] = {'\0'};
-        char lui8deviceId[64] = {'\0'};
-        char *lui8delimiter = ">>";
-        char lui8fDelimiter[2] = {'\0'};
-        char lui8fReadChar;
-        char lui8fConnStatus;
-        int  index = 0;
+        // Init Persistent handles
+	eBTRMgrRet piInitRet = eBTRMgrFailure;
+        piInitRet = BTRMgr_PI_Init(&piHandle);
+        if(piInitRet == eBTRMgrSuccess)
+        {
+            char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
+            int  pindex = 0;
+            int  dindex = 0;
+            int profileRetStatus;
+            int numOfProfiles = 0;
+            int deviceCount = 0;
+            int isConnected = 0;
 
-        BTMgrDeviceHandle lDeviceHandle;
+            BTMGR_PersistentData_t persistentData;
+            BTMgrDeviceHandle lDeviceHandle;
 
-        if(access(BTMGR_PERSISTENT_DATA_PATH, F_OK) == 0) {
-            BTMGRLOG_INFO ("BTMGR_Init : Persistent Data EXISTS - READING\n");
-            fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "r");
-        }
-
-        BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
-
-        if (fpPersistData != NULL) {
-            fread(lui8fAdapterAddr, sizeof(char), strlen(lui8adapterAddr), fpPersistData);
-            fread(lui8fDelimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
-            
-            do {
-                fread(&lui8fReadChar, sizeof(char), 1 , fpPersistData);
-
-                if (lui8fReadChar == '>') {
-                    fread(&lui8fReadChar, sizeof(char), 1 , fpPersistData);
-                    break;
+            profileRetStatus = BTRMgr_PI_GetAllProfiles(piHandle,&persistentData);
+            BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
+            if (profileRetStatus != eBTRMgrFailure)
+            {
+                BTMGRLOG_INFO ("BTMGR_Init : Successfully get all profiles\n");
+                if(strcmp(persistentData.adapterId,lui8adapterAddr) == 0)
+                {
+                    BTMGRLOG_INFO ("BTMGR_Init : Adapter matches = %s\n",lui8adapterAddr);
+                    numOfProfiles = persistentData.numOfProfiles;
+                    BTMGRLOG_INFO ("BTMGR_Init : Number of Profiles = %d\n",numOfProfiles);
+                    for(pindex = 0; pindex < numOfProfiles; pindex++)
+                    {
+                        deviceCount = persistentData.profileList[pindex].numOfDevices;
+                        for(dindex = 0; dindex < deviceCount ; dindex++)
+                        {
+                            lDeviceHandle = persistentData.profileList[pindex].deviceList[dindex].deviceId;
+                            isConnected = persistentData.profileList[pindex].deviceList[dindex].isConnected;
+                            if(isConnected)
+                            {
+                                if(strcmp(persistentData.profileList[pindex].profileId,BTMGR_A2DP_SINK_PROFILE_ID) == 0)
+                                {
+                                    BTMGRLOG_INFO ("BTMGR_Init : Streaming to Device  = %lld\n",lDeviceHandle);
+                                    BTMGR_StartAudioStreamingOut(0, lDeviceHandle, BTMGR_DEVICE_TYPE_AUDIOSINK);
+                                }
+                            }
+                        }
+                    }
                 }
-
-                lui8deviceId[index++] = lui8fReadChar;
-            } while (index < 64);
-
-            fread(&lui8fConnStatus, sizeof(char), 1 , fpPersistData);
-
-            fclose(fpPersistData);
-
-            if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0) {
-                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Adapter matches\n");
             }
-            if (lui8fConnStatus == '1') {
-                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Connected Status matches\n");
-                lDeviceHandle = strtoll(lui8deviceId, NULL, 10);
-                BTMGRLOG_INFO ("BTMGR_Init : Persistent Data - Last connected Device ID = %lld\n", lDeviceHandle);
-
-                BTMGR_StartAudioStreamingOut(0, lDeviceHandle, BTMGR_DEVICE_TYPE_AUDIOSINK);
-            }
+        }
+        else
+        {
+            BTMGRLOG_ERROR ("BTMGR_Init : Could not initialize PI module\n");
         }
 #endif
 
@@ -1289,33 +1291,28 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
             gIsDeviceConnected = 1;
 
 #if 1
-            FILE *fpPersistData = NULL;
-            char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
-            char lui8deviceId[64] = {'\0'};
-            char *lui8delimiter = ">>";
+	    char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
+	    char lui8profileId[BD_NAME_LEN] = {'\0'};
+	    eBTRMgrRet addretStatus = eBTRMgrFailure;
 
-            if(access(BTMGR_PERSISTENT_DATA_PATH, F_OK) != 0) {
-                BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Persistent Data DOES NOT EXISTS - CREATING\n");
-                fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "w+");
-            }
-            else {
-                BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Persistent Data EXISTS - UPDATING\n");
-                fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "w+");
-            }
+	    BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
 
-            BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
-
-            snprintf(lui8deviceId, 64, "%llu",  handle);
-
-            if (fpPersistData != NULL) {
-                fwrite(lui8adapterAddr, sizeof(char), strlen(lui8adapterAddr), fpPersistData);
-                fwrite(lui8delimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
-                fwrite(lui8deviceId, sizeof(char), strlen(lui8deviceId), fpPersistData);
-                fwrite(lui8delimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
-                fwrite("1", sizeof(char), 1 , fpPersistData);
-
-                fclose(fpPersistData);
-            }
+	    // Device connected add data from json file
+	    BTMGR_Profile_t btPtofile;
+	    strcpy(btPtofile.adapterId,lui8adapterAddr);
+	    btPtofile.deviceId = handle;
+	    btPtofile.isConnect = 1;
+	    strcpy(lui8profileId,BTMGR_A2DP_SINK_PROFILE_ID);
+	    strcpy(btPtofile.profileId,lui8profileId);
+	    addretStatus = BTRMgr_PI_AddProfile(piHandle,btPtofile);
+	    if(addretStatus == eBTRMgrSuccess)
+	    {
+		BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Persistent File updated successfully\n");
+	    }
+	    else
+	    {
+		BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Persistent File update failed \n");
+	    }
 #endif
 
         }
@@ -1380,49 +1377,25 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
             gIsDeviceConnected = 0;
 
 #if 1
-            FILE *fpPersistData = NULL;
-            char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
-            char lui8fAdapterAddr[BD_NAME_LEN] = {'\0'};
-            char lui8fDeviceId[64] = {'\0'};
-            char lui8deviceId[64] = {'\0'};
-            char *lui8delimiter = ">>";
-            char lui8fDelimiter[2] = {'\0'};
-            char lui8fConnStatus;
-
-            if(access(BTMGR_PERSISTENT_DATA_PATH, F_OK) != 0) {
-                BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Persistent Data DOES NOT EXISTS - CREATING\n");
-                fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "w+");
-            }
-            else {
-                BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data EXISTS - UPDATING\n");
-                fpPersistData = fopen(BTMGR_PERSISTENT_DATA_PATH, "r+");
-            }
-
-            BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
-
-            snprintf(lui8deviceId, 64, "%llu",  handle);
-
-            if (fpPersistData != NULL) {
-                fread(lui8fAdapterAddr, sizeof(char), strlen(lui8adapterAddr), fpPersistData);
-                fread(lui8fDelimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
-                fread(lui8fDeviceId, sizeof(char), strlen(lui8deviceId), fpPersistData);
-                fread(lui8fDelimiter, sizeof(char), strlen(lui8delimiter), fpPersistData);
-                fread(&lui8fConnStatus, sizeof(char), 1 , fpPersistData);
-
-                if (strcmp(lui8fAdapterAddr, lui8adapterAddr) == 0) {
-                    BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data - Adapter matches\n");
-                }
-                if (strcmp(lui8fDeviceId, lui8deviceId) == 0) {
-                    BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data - Device Id matches\n");
-                }
-                if (lui8fConnStatus == '1') {
-                    BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent Data - Connected Status matches\n");
-                }
-                fseek(fpPersistData, -1, SEEK_CUR);
-                fwrite("0", sizeof(char), 1 , fpPersistData);
-
-                fclose(fpPersistData);
-            }
+        char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
+        BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
+	    eBTRMgrRet remvretStatus = eBTRMgrFailure;
+	    BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
+	    // Device disconnected remove data from json file
+	    BTMGR_Profile_t btPtofile;
+	    strcpy(btPtofile.adapterId,lui8adapterAddr);
+	    btPtofile.deviceId = handle;
+	    btPtofile.isConnect = 1;
+	    strcpy(btPtofile.profileId,BTMGR_A2DP_SINK_PROFILE_ID);
+	    remvretStatus = BTRMgr_PI_RemoveProfile(piHandle,btPtofile);
+	    if(remvretStatus == eBTRMgrSuccess)
+	    {
+		BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent File updated successfully\n");
+	    }
+	    else
+	    {
+		BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Persistent File update failed \n");
+	    }
 #endif
 
 
@@ -1615,6 +1588,8 @@ BTMGR_Result_t BTMGR_DeInit(void)
     }
     else
     {
+        BTRMgr_PI_DeInit(&piHandle);
+        BTMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app\n");
         BTRCore_DeInit(gBTRCoreHandle);
         BTMGRLOG_ERROR ("BTRCore DeInited; Now will we exit the app\n");
     }

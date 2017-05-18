@@ -18,7 +18,7 @@
 ##########################################################################
 SUBDIRS =
 if !USE_RPC
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/priv -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS}
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/common -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/priv -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS}
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -lrdkloggers 
 
 lib_LTLIBRARIES = libBTMgr.la

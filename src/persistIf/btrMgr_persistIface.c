@@ -141,7 +141,9 @@ eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_PersistentDa
                     isConnect =  cJSON_GetObjectItem(device,"ConnectionStatus")->valueint;
                 persistentData->profileList[pcount].deviceList[dcount].isConnected = isConnect;
                 if(deviceId && profileId)
-                    BTMGRLOG_DEBUG ("btrMgr_persistIface: BTRMgr_PI_GetAllProfiles - Parsing device details, Device- %lld, Status-%d, Profile-%s\n",deviceId,isConnect,profileId);
+		{
+                   BTMGRLOG_DEBUG ("btrMgr_persistIface: BTRMgr_PI_GetAllProfiles - Parsing device details, Device- %s, Status-%d, Profile-%s\n",deviceId,isConnect,profileId);
+		}
             }
         }
     }
@@ -269,7 +271,7 @@ eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_PersistentD
                 cJSON_AddStringToObject(device, "DeviceId",deviceId );
                 cJSON_AddNumberToObject(device, "ConnectionStatus",persistentData->profileList[pcount].deviceList[dcount].isConnected);
                 cJSON_AddItemToArray(devices, device);
-                BTMGRLOG_DEBUG ("btrMgr_persistIface: BTRMgr_PI_SetAllProfiles , Device Added :- %lld, Status- %d,\n",deviceId,persistentData->profileList[pcount].deviceList[dcount].isConnected);
+                BTMGRLOG_DEBUG ("btrMgr_persistIface: BTRMgr_PI_SetAllProfiles , Device Added :- %s, Status- %d,\n",deviceId,persistentData->profileList[pcount].deviceList[dcount].isConnected);
             }
             Profile = cJSON_CreateObject();
             cJSON_AddStringToObject(Profile,"ProfileId",persistentData->profileList[pcount].profileId);
@@ -366,7 +368,7 @@ eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_Profile_t pe
     else
     {
         // Profile is empty cant delete
-        BTMGRLOG_ERROR ("btrMgr_persistIface: BTRMgr_PI_SetAllProfiles,Nothing to delete, Profile is empty %s\n");
+        BTMGRLOG_ERROR ("btrMgr_persistIface: BTRMgr_PI_SetAllProfiles,Nothing to delete, Profile is empty \n");
         return eBTRMgrFailure;
     }
     return eBTRMgrSuccess;
@@ -417,7 +419,7 @@ static void writeToPersistentFile(char* fileName,cJSON* profileData)
         BTMGRLOG_DEBUG ("btrMgr_persistIface: readPersistentFile, Writing data to file - %s, Content - %s\n" ,fileName,fileContent);
         fprintf(fp, "%s", fileContent);
         fclose(fp);
-        BTMGRLOG_DEBUG ("btrMgr_persistIface: readPersistentFile, File write Success\n" ,fileName,fileContent);
+        BTMGRLOG_DEBUG ("btrMgr_persistIface: readPersistentFile, File write Success\n");
     }
 
 }

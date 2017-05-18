@@ -33,6 +33,7 @@
 #include "btrCore.h"            //basic RDK BT functions
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
 
+#include "btrMgr_Types.h"
 #include "btrMgr_mediaTypes.h"
 #include "btrMgr_streamOut.h"
 #include "btrMgr_streamIn.h"

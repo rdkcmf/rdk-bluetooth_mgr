@@ -23,16 +23,8 @@
  *
  */
 
-#ifndef __BTR_MGR_TYPES_H__
-#define __BTR_MGR_TYPES_H__
-
-typedef enum _eBTRMgrRet {
-    eBTRMgrFailure,
-    eBTRMgrInitFailure,
-    eBTRMgrNotInitialized,
-    eBTRMgrFailInArg,
-    eBTRMgrSuccess
-} eBTRMgrRet;
+#ifndef __BTR_MGR_MEDIA_TYPES_H__
+#define __BTR_MGR_MEDIA_TYPES_H__
 
 typedef enum _eBTRMgrState {
     eBTRMgrStateInitialized,

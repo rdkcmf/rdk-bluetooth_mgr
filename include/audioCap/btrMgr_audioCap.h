@@ -26,7 +26,7 @@
 
 #ifndef __BTR_MGR_AUDIOCAP_H__
 #define __BTR_MGR_AUDIOCAP_H__
-
+#include "btrMgr_Types.h"
 typedef void* tBTRMgrAcHdl;
 
 typedef eBTRMgrRet (*BTRMgr_AC_DataReadyCb) (void* apvAcDataBuf, unsigned int aui32AcDataLen, void *apvUserData);
