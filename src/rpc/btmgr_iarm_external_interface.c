@@ -95,12 +95,12 @@ BTMGR_Result_t BTMGR_DeInit()
         //retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DeInit", 0, 0);
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_DeInit: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_DeInit: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     else
@@ -126,12 +126,12 @@ BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters)
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pNumOfAdapters = num_of_adapters;
-            BTMGRLOG_INFO ("BTMGR_GetNumberOfAdapters : Success; Number of Adapters = %d\n", num_of_adapters);
+            BTMGRLOG_INFO ("Success; Number of Adapters = %d\n", num_of_adapters);
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetNumberOfAdapters : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -156,12 +156,12 @@ BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* 
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAdapterName", (void *)&adapterSetting, sizeof(adapterSetting));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAdapterName : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterName : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -187,12 +187,12 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
         if (IARM_RESULT_SUCCESS == retCode)
         {
             strncpy (pNameOfAdapter, adapterSetting.m_name, (BTMGR_NAME_LEN_MAX - 1));
-            BTMGRLOG_INFO ("BTMGR_GetAdapterName : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -217,12 +217,12 @@ BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsig
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAdapterPowerStatus", (void *)&powerStatus, sizeof(powerStatus));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAdapterPowerStatus : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterPowerStatus : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -246,12 +246,12 @@ BTMGR_Result_t BTMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsig
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pPowerStatus = powerStatus.m_powerStatus;
-            BTMGRLOG_INFO ("BTMGR_GetAdapterPowerStatus : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetAdapterPowerStatus : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -277,12 +277,12 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAdapterDiscoverable", (void *)&discoverableSetting, sizeof(discoverableSetting));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -306,12 +306,12 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pDiscoverable = discoverableSetting.m_isDiscoverable;
-            BTMGRLOG_INFO ("BTMGR_IsAdapterDiscoverable : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_IsAdapterDiscoverable : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -336,12 +336,12 @@ BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter)
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetDeviceDiscoveryStatus", (void *)&deviceDiscovery, sizeof(deviceDiscovery));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StartDeviceDiscovery : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StartDeviceDiscovery : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -366,12 +366,12 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetDeviceDiscoveryStatus", (void *)&deviceDiscovery, sizeof(deviceDiscovery));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StopDeviceDiscovery : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StopDeviceDiscovery : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -396,12 +396,12 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pDiscoveredDevices, &discoveredDevices.m_devices, sizeof(BTMGR_DiscoveredDevicesList_t));
-            BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -427,12 +427,12 @@ BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandl
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "PairDevice", (void *)&newDevice, sizeof(newDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_PairDevice : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -456,12 +456,12 @@ BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHan
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "UnpairDevice", (void *)&removeDevice, sizeof(removeDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_UnpairDevice : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -486,12 +486,12 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pPairedDevices, &pairedDevices.m_devices, sizeof(BTMGR_PairedDevicesList_t));
-            BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -516,12 +516,12 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "ConnectToDevice", (void *)&connectToDevice, sizeof(connectToDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -545,12 +545,12 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "DisconnectFromDevice", (void *)&disConnectToDevice, sizeof(disConnectToDevice));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -575,12 +575,12 @@ BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_C
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pConnectedDevices, &connectedDevices.m_devices, sizeof(BTMGR_ConnectedDevicesList_t));
-            BTMGRLOG_INFO ("BTMGR_GetConnectedDevices : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetConnectedDevices : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -606,12 +606,12 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
         if (IARM_RESULT_SUCCESS == retCode)
         {
             memcpy (pDeviceProperty, &deviceProperty.m_deviceProperty, sizeof(BTMGR_DevicesProperty_t));
-            BTMGRLOG_INFO ("BTMGR_GetDeviceProperties : Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -628,7 +628,7 @@ BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback)
     else
     {
         m_eventCallbackFunction = eventCallback;
-        BTMGRLOG_INFO ("BTMGR_RegisterEventCallback : Success\n");
+        BTMGRLOG_INFO ("Success\n");
     }
     return rc;
 }
@@ -653,12 +653,12 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "StartAudioStreaming", (void *)&streaming, sizeof(streaming));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StartAudioStreamingOut: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StartAudioStreamingOut: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -683,12 +683,12 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "StopAudioStreaming", (void*) &streaming, sizeof(streaming));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_StopAudioStreamingOut: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_StopAudioStreamingOut: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -713,12 +713,12 @@ BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigne
         if (IARM_RESULT_SUCCESS == retCode)
         {
             *pStreamingStatus = status.m_streamingStatus;
-            BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_IsAudioStreamingOut: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -743,12 +743,12 @@ BTMGR_Result_t BTMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BT
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "SetAudioStreamOutType", (void *)&streamingType, sizeof(streamingType));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_SetAudioStreamingOutType: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_SetAudioStreamingOutType: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -769,12 +769,12 @@ BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter)
         retCode = IARM_Bus_Call(IARM_BUS_BTMGR_NAME, "ResetAdapter", (void *)&index_of_adapter, sizeof(index_of_adapter));
         if (IARM_RESULT_SUCCESS == retCode)
         {
-            BTMGRLOG_INFO ("BTMGR_IsAudioStreamingOut: Success\n");
+            BTMGRLOG_INFO ("Success\n");
         }
         else
         {
             rc = BTMGR_RESULT_GENERIC_FAILURE;
-            BTMGRLOG_ERROR ("BTMGR_IsAudioStreamingOut: Failed; RetCode = %d\n", retCode);
+            BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         }
     }
     return rc;
@@ -852,10 +852,10 @@ _btmgr_deviceCallback (
             if (m_eventCallbackFunction)
                 m_eventCallbackFunction (newEvent);
 
-            BTMGRLOG_INFO ("_btmgr_deviceCallback : posted event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
+            BTMGRLOG_INFO ("posted event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
 
             if (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId) {
-                BTMGRLOG_ERROR("_btmgr_deviceCallback : Name = %s\n\n", newEvent.m_discoveredDevice.m_name);
+                BTMGRLOG_ERROR("Name = %s\n\n", newEvent.m_discoveredDevice.m_name);
             }
         }
         else {

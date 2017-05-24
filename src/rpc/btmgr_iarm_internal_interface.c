@@ -547,7 +547,6 @@ _GetConnectedDevices (
     BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
     BTMGR_IARMConnectedDevices_t* pConnectedDevices = (BTMGR_IARMConnectedDevices_t*) arg;
 
-
     BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {
@@ -784,7 +783,7 @@ _ResetAdapter (
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("_ResetAdapter: Failed; RetCode = %d\n", rc);
+        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -875,6 +874,7 @@ void
 btmgr_BeginIARMMode (
     void
 ) {
+
     BTMGRLOG_INFO ("Entering\n");
 
     if (!gIsBTMGR_Internal_Inited) {

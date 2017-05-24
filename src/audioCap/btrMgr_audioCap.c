@@ -132,9 +132,7 @@ btrMgr_AC_acmDataCapture (
         return NULL;
     }
 
-    BTMGRLOG_INFO ("Enter\n");
-
-    
+    BTMGRLOG_DEBUG ("Enter\n");
 
     do {
         /* Process incoming events */
@@ -143,7 +141,7 @@ btrMgr_AC_acmDataCapture (
             if ((lpeBtrMgrAcmDCOp = g_async_queue_timeout_pop(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, li64usTimeout)) != NULL) {
                 leBtrMgrAcmDCCurOp = *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp);
                 g_free(lpeBtrMgrAcmDCOp);
-                BTMGRLOG_INFO ("g_async_queue_timeout_pop %d\n", leBtrMgrAcmDCCurOp);
+                BTMGRLOG_DEBUG ("g_async_queue_timeout_pop %d\n", leBtrMgrAcmDCCurOp);
             }
         }
 
@@ -166,7 +164,7 @@ btrMgr_AC_acmDataCapture (
                     BTMGRLOG_ERROR("eBTRMgrACAcmDCStart - Invalid Socket Path\n");
                 }
                 else {
-                    BTMGRLOG_INFO ("pcBtrMgrAcmSockPath = %s\n", pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
+                    BTMGRLOG_DEBUG ("pcBtrMgrAcmSockPath = %s\n", pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
 
                     lstBtrMgrAcmDCSockAddr.sun_family = AF_UNIX;
                     strncpy(lstBtrMgrAcmDCSockAddr.sun_path, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath, 
@@ -182,7 +180,7 @@ btrMgr_AC_acmDataCapture (
                     if ((li32BtrMgrAcmDCSockFd != -1) &&
                         ((li32BtrMgrAcmDCSockFlags = fcntl(li32BtrMgrAcmDCSockFd, F_GETFL, 0)) != -1) &&
                         (fcntl(li32BtrMgrAcmDCSockFd, F_SETFL, li32BtrMgrAcmDCSockFlags | O_NONBLOCK) != -1)) {
-                        BTMGRLOG_INFO("eBTRMgrACAcmDCStart - Socket O_NONBLOCK : SUCCESS\n");
+                        BTMGRLOG_DEBUG("eBTRMgrACAcmDCStart - Socket O_NONBLOCK : SUCCESS\n");
                     }
                     
                     if ((li32BtrMgrAcmDCSockFd != -1) && 
@@ -289,8 +287,7 @@ btrMgr_AC_acmDataCapture (
 
     } while(1);
     
-    
-    BTMGRLOG_INFO ("Exit\n");
+    BTMGRLOG_DEBUG ("Exit\n");  
 
     return NULL;
 }
@@ -364,7 +361,7 @@ BTRMgr_AC_Init (
             leBtrMgrAcRet = eBTRMgrInitFailure;
         }
 
-        BTMGRLOG_INFO ("btrMgr_AC_acmDataCapture : %p\n", pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread);
+        BTMGRLOG_DEBUG ("btrMgr_AC_acmDataCapture : %p\n", pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread);
     }
 #endif
 
@@ -409,7 +406,7 @@ BTRMgr_AC_DeInit (
         if ((lpeBtrMgrAcmDCOp = g_malloc0(sizeof(eBTRMgrACAcmDCOp))) != NULL) {
             *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp) = eBTRMgrACAcmDCExit;
             g_async_queue_push(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, lpeBtrMgrAcmDCOp);
-            BTMGRLOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCExit\n");
+            BTMGRLOG_DEBUG ("g_async_queue_push: eBTRMgrACAcmDCExit\n");
         }
     }
     else {
@@ -495,9 +492,13 @@ BTRMgr_AC_GetDefaultSettings (
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
-    BTMGRLOG_INFO ("Default CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady);
-    BTMGRLOG_INFO ("Default Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize);
-    BTMGRLOG_INFO ("Default Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
+    BTMGRLOG_DEBUG ("\n"
+                    "Default CBBufferReady = %p\n"
+                    "Default Fifosize      = %d\n"
+                    "Default Threshold     = %d\n",
+                    pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady,
+                    pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize,
+                    pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -585,9 +586,13 @@ BTRMgr_AC_GetDefaultSettings (
     if (leBtrMgrAcRet == eBTRMgrSuccess) {
         memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmDefSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-        BTMGRLOG_INFO ("Default Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size);
-        BTMGRLOG_INFO ("Default Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold);
-        BTMGRLOG_INFO ("Default DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
+        BTMGRLOG_DEBUG ("\n"
+                        "Default Fifosize = %d\n"
+                        "Default Threshold= %d\n"
+                        "Default DelayComp= %d\n",
+                        pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size,
+                        pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold,
+                        pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
 
         //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -691,9 +696,13 @@ BTRMgr_AC_GetCurrentSettings (
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
-    BTMGRLOG_INFO ("Current CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady);
-    BTMGRLOG_INFO ("Current Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize);
-    BTMGRLOG_INFO ("Current Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
+    BTMGRLOG_DEBUG ("\n"
+                    "Current CBBufferReady = %p\n"
+                    "Current Fifosize      = %d\n"
+                    "Current Threshold     = %d\n",
+                    pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady,
+                    pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize,
+                    pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -782,9 +791,13 @@ BTRMgr_AC_GetCurrentSettings (
     if (leBtrMgrAcRet == eBTRMgrSuccess) {
         memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmCurSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-        BTMGRLOG_INFO ("Current Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size);
-        BTMGRLOG_INFO ("Current Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold);
-        BTMGRLOG_INFO ("Current DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
+        BTMGRLOG_DEBUG ("\n"
+                        "Current Fifosize = %d\n"
+                        "Current Threshold= %d\n"
+                        "Current DelayComp= %d\n",
+                        pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size,
+                        pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold,
+                        pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
 
         //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -984,7 +997,7 @@ BTRMgr_AC_Start (
             strlen(lstBtrMgrIarmAcmArgs.details.arg_output_props.output.file_path) < MAX_OUTPUT_PATH_LEN ?
                     strlen(lstBtrMgrIarmAcmArgs.details.arg_output_props.output.file_path) : MAX_OUTPUT_PATH_LEN - 1);
 
-    BTMGRLOG_INFO ("IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS : pcBtrMgrAcmSockPath = %s\n", pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
+    BTMGRLOG_DEBUG ("IARMBUS_AUDIOCAPTUREMGR_GET_OUTPUT_PROPS : pcBtrMgrAcmSockPath = %s\n", pstBtrMgrAcHdl->pcBtrMgrAcmSockPath);
 
 
     memset(&lstBtrMgrIarmAcmArgs, 0, sizeof(iarmbus_acm_arg_t));
@@ -1009,7 +1022,7 @@ BTRMgr_AC_Start (
         if ((lpeBtrMgrAcmDCOp = g_malloc0(sizeof(eBTRMgrACAcmDCOp))) != NULL) {
             *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp) = eBTRMgrACAcmDCStart;
             g_async_queue_push(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, lpeBtrMgrAcmDCOp);
-            BTMGRLOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCStart\n");
+            BTMGRLOG_DEBUG ("g_async_queue_push: eBTRMgrACAcmDCStart\n");
         }
     }
     else {
@@ -1053,7 +1066,7 @@ BTRMgr_AC_Stop (
         if ((lpeBtrMgrAcmDCOp = g_malloc0(sizeof(eBTRMgrACAcmDCOp))) != NULL) {
             *((eBTRMgrACAcmDCOp*)lpeBtrMgrAcmDCOp) = eBTRMgrACAcmDCStop;
             g_async_queue_push(pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue, lpeBtrMgrAcmDCOp);
-            BTMGRLOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCStop\n");
+            BTMGRLOG_DEBUG ("g_async_queue_push: eBTRMgrACAcmDCStop\n");
         }
     }
     else {

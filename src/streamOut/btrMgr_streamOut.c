@@ -311,11 +311,17 @@ BTRMgr_SO_GetEstimatedInABufSize (
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize >> 8) + 1;
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize << 8;
 
-    BTMGRLOG_INFO("Effective MTU = %d\n", lui16OutMtu);
-    BTMGRLOG_INFO("OutByteRate = %d\n", lui32OutByteRate);
-    BTMGRLOG_INFO("OutMtuTimemSec = %f\n", lfOutMtuTimemSec);
-    BTMGRLOG_INFO("InByteRate = %d\n", lui32InByteRate);
-    BTMGRLOG_INFO("InBufMaxSize = %d\n", apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize);
+    BTMGRLOG_DEBUG("\n"
+                   "Effective MTU = %d\n"
+                   "OutByteRate = %d\n"
+                   "OutMtuTimemSec = %f\n"
+                   "InByteRate = %d\n"
+                   "InBufMaxSize = %d\n",
+                   lui16OutMtu,
+                   lui32OutByteRate,
+                   lfOutMtuTimemSec,
+                   lui32InByteRate,
+                   apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize);
 
     return leBtrMgrSoRet;
 }

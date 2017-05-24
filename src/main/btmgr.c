@@ -245,12 +245,12 @@ btmgr_StartCastingAudio (
 
         /* Init StreamOut module - Create Pipeline */
         if (eBTRMgrSuccess != BTRMgr_SO_Init(&gStreamCaptureSettings.hBTRMgrSoHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Init FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_SO_Init FAILED\n");
             return BTMGR_RESULT_GENERIC_FAILURE;
         }
 
         if (eBTRMgrSuccess != BTRMgr_AC_Init(&gStreamCaptureSettings.hBTRMgrAcHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_AC_Init FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_AC_Init FAILED\n");
             return BTMGR_RESULT_GENERIC_FAILURE;
         }
 
@@ -269,13 +269,13 @@ btmgr_StartCastingAudio (
 
 
         if (!(lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo) || !(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo)) {
-            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: MEMORY ALLOC FAILED\n");
+            BTMGRLOG_ERROR ("MEMORY ALLOC FAILED\n");
             return BTMGR_RESULT_GENERIC_FAILURE;
         }
 
 
         if (eBTRMgrSuccess != BTRMgr_AC_GetDefaultSettings(gStreamCaptureSettings.hBTRMgrAcHdl, &lstBtrMgrAcOutASettings)) {
-            BTMGRLOG_WARN("btmgr_StartCastingAudio: BTRMgr_AC_GetDefaultSettings FAILED\n");
+            BTMGRLOG_ERROR("BTRMgr_AC_GetDefaultSettings FAILED\n");
         }
 
 
@@ -356,7 +356,7 @@ btmgr_StartCastingAudio (
 
 
         if (eBTRMgrSuccess != BTRMgr_SO_GetEstimatedInABufSize(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
-            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_SO_GetEstimatedInABufSize FAILED\n");
             lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize = inBytesToEncode;
         }
         else {
@@ -365,7 +365,7 @@ btmgr_StartCastingAudio (
 
 
         if (eBTRMgrSuccess != BTRMgr_SO_Start(gStreamCaptureSettings.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) {
-            BTMGRLOG_ERROR ("btmgr_StartCastingAudio: BTRMgr_SO_Start FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_SO_Start FAILED\n");
             eBtrMgrResult = BTMGR_RESULT_GENERIC_FAILURE;
         }
 
@@ -378,7 +378,7 @@ btmgr_StartCastingAudio (
                                                   btmgr_ACDataReadyCallback,
                                                   &gStreamCaptureSettings
                                                  )) {
-                BTMGRLOG_ERROR ("btmgr_StopCastingAudio: BTRMgr_AC_Stop FAILED\n");
+                BTMGRLOG_ERROR ("BTRMgr_AC_Stop FAILED\n");
                 eBtrMgrResult = BTMGR_RESULT_GENERIC_FAILURE;
             }
         }
@@ -404,23 +404,23 @@ btmgr_StopCastingAudio (
     if (gCurStreamingDevHandle) {
 
         if (eBTRMgrSuccess != BTRMgr_AC_Stop(gStreamCaptureSettings.hBTRMgrAcHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StopCastingAudio: BTRMgr_AC_Stop FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_AC_Stop FAILED\n");
         }
 
         if (eBTRMgrSuccess != BTRMgr_SO_SendEOS(gStreamCaptureSettings.hBTRMgrSoHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StopCastingAudio: BTRMgr_SO_SendEOS FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_SO_SendEOS FAILED\n");
         }
 
         if (eBTRMgrSuccess != BTRMgr_SO_Stop(gStreamCaptureSettings.hBTRMgrSoHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StopCastingAudio: BTRMgr_SO_Stop FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_SO_Stop FAILED\n");
         }
 
         if (eBTRMgrSuccess != BTRMgr_AC_DeInit(gStreamCaptureSettings.hBTRMgrAcHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StopCastingAudio: BTRMgr_AC_DeInit FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_AC_DeInit FAILED\n");
         }
 
         if (eBTRMgrSuccess != BTRMgr_SO_DeInit(gStreamCaptureSettings.hBTRMgrSoHdl)) {
-            BTMGRLOG_ERROR ("btmgr_StopCastingAudio: BTRMgr_SO_DeInit FAILED\n");
+            BTMGRLOG_ERROR ("BTRMgr_SO_DeInit FAILED\n");
         }
 
         gStreamCaptureSettings.hBTRMgrAcHdl = NULL;
@@ -441,7 +441,7 @@ BTMGR_Init (
     enBTRCoreRet halrc = enBTRCoreSuccess;
 
     if (NULL != gBTRCoreHandle) {
-        BTMGRLOG_WARN("BTMGR_Init : Already Inited; Return Success\n");
+        BTMGRLOG_WARN("Already Inited; Return Success\n");
         return rc;
     }
 #ifdef RDK_LOGGER_ENABLED
@@ -475,7 +475,7 @@ BTMGR_Init (
     /* Call the Core/HAL init */
     halrc = BTRCore_Init(&gBTRCoreHandle);
     if ((NULL == gBTRCoreHandle) || (enBTRCoreSuccess != halrc)) {
-        BTMGRLOG_ERROR ("BTMGR_Init : Could not initialize BTRCore/HAL module\n");
+        BTMGRLOG_ERROR ("Could not initialize BTRCore/HAL module\n");
         rc = BTMGR_RESULT_GENERIC_FAILURE;
     }
     else {
@@ -484,12 +484,13 @@ BTMGR_Init (
         if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion)) {
             BTMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
         }
-        BTMGRLOG_ERROR("BTR Bluetooth Version: %s\n", lpcBtVersion);
+        BTMGRLOG_INFO("BTR Bluetooth Version: %s\n", lpcBtVersion);
 
         if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters)) {
             BTMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
         }
         BTMGRLOG_INFO ("Number of Adapters found are = %u\n", gListOfAdapters.number_of_adapters);
+
         if (0 == gListOfAdapters.number_of_adapters) {
             BTMGRLOG_WARN("Bluetooth adapter NOT Found! Expected to be connected to make use of this module; Not considered as failure\n");
         }
@@ -497,12 +498,12 @@ BTMGR_Init (
             /* you have atlesat one Bluetooth adapter. Now get the Default Adapter path for future usages; */
             gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
             if (enBTRCoreSuccess == BTRCore_GetAdapter(gBTRCoreHandle, &gDefaultAdapterContext)) {
-                BTMGRLOG_INFO ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
+                BTMGRLOG_DEBUG ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
             }
 
             /* TODO: Handling multiple Adapters */
             if (gListOfAdapters.number_of_adapters > 1) {
-                BTMGRLOG_WARN("There are more than 1 Bluetooth Adapters Found! Lets handle it properly\n");
+                BTMGRLOG_WARN("Number of Bluetooth Adapters Found : %u !! Lets handle it properly\n", gListOfAdapters.number_of_adapters);
             }
         }
 
@@ -533,12 +534,12 @@ BTMGR_Init (
             BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
             if (profileRetStatus != eBTRMgrFailure)
             {
-                BTMGRLOG_INFO ("BTMGR_Init : Successfully get all profiles\n");
+                BTMGRLOG_INFO ("Successfully get all profiles\n");
                 if(strcmp(persistentData.adapterId,lui8adapterAddr) == 0)
                 {
-                    BTMGRLOG_INFO ("BTMGR_Init : Adapter matches = %s\n",lui8adapterAddr);
+                    BTMGRLOG_DEBUG ("Adapter matches = %s\n",lui8adapterAddr);
                     numOfProfiles = persistentData.numOfProfiles;
-                    BTMGRLOG_INFO ("BTMGR_Init : Number of Profiles = %d\n",numOfProfiles);
+                    BTMGRLOG_DEBUG ("Number of Profiles = %d\n",numOfProfiles);
                     for(pindex = 0; pindex < numOfProfiles; pindex++)
                     {
                         deviceCount = persistentData.profileList[pindex].numOfDevices;
@@ -550,7 +551,7 @@ BTMGR_Init (
                             {
                                 if(strcmp(persistentData.profileList[pindex].profileId,BTMGR_A2DP_SINK_PROFILE_ID) == 0)
                                 {
-                                    BTMGRLOG_INFO ("BTMGR_Init : Streaming to Device  = %lld\n",lDeviceHandle);
+                                    BTMGRLOG_INFO ("Streaming to Device  = %lld\n",lDeviceHandle);
                                     BTMGR_StartAudioStreamingOut(0, lDeviceHandle, BTMGR_DEVICE_TYPE_AUDIOSINK);
                                 }
                             }
@@ -561,7 +562,7 @@ BTMGR_Init (
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_Init : Could not initialize PI module\n");
+            BTMGRLOG_ERROR ("Could not initialize PI module\n");
         }
 #endif
 
@@ -597,11 +598,11 @@ BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters)
             if (listOfAdapters.number_of_adapters != gListOfAdapters.number_of_adapters)
                 memcpy (&gListOfAdapters, &listOfAdapters, sizeof (stBTRCoreListAdapters));
 
-            BTMGRLOG_INFO ("BTMGR_GetNumberOfAdapters : Available Adapters = %d\n", listOfAdapters.number_of_adapters);
+            BTMGRLOG_DEBUG ("Available Adapters = %d\n", listOfAdapters.number_of_adapters);
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_GetNumberOfAdapters : Could not find Adapters\n");
+            BTMGRLOG_ERROR ("Could not find Adapters\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -634,17 +635,17 @@ BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* 
             halrc = BTRCore_SetAdapterName(gBTRCoreHandle, pAdapterPath, name);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_SetAdapterName : Failed to set Adapter Name\n");
+                BTMGRLOG_ERROR ("Failed to set Adapter Name\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else 
             {
-                BTMGRLOG_INFO ("BTMGR_SetAdapterName : Set Successfully\n");
+                BTMGRLOG_INFO ("Set Successfully\n");
             }
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterName : Failed to adapter path\n");
+            BTMGRLOG_ERROR ("Failed to adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -678,19 +679,19 @@ BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameO
             halrc = BTRCore_GetAdapterName(gBTRCoreHandle, pAdapterPath, name);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed to get Adapter Name\n");
+                BTMGRLOG_ERROR ("Failed to get Adapter Name\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_GetAdapterName : Fetched Successfully\n");
+                BTMGRLOG_INFO ("Fetched Successfully\n");
             }
             /*  Copy regardless of success or failure. */
             strncpy (pNameOfAdapter, name, (BTMGR_NAME_LEN_MAX - 1));
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed to adapter path\n");
+            BTMGRLOG_ERROR ("Failed to adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -776,18 +777,18 @@ BTMGR_Result_t BTMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsig
             halrc = BTRCore_GetAdapterPower(gBTRCoreHandle, pAdapterPath, &power_status);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed to get Adapter Power\n");
+                BTMGRLOG_ERROR ("Failed to get Adapter Power\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_GetAdapterName : Fetched Successfully\n");
+                BTMGRLOG_INFO ("Fetched Successfully\n");
                 *pPowerStatus = power_status;
             }
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_GetAdapterName : Failed to get adapter path\n");
+            BTMGRLOG_ERROR ("Failed to get adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -820,9 +821,9 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
             {
                 halrc = BTRCore_SetAdapterDiscoverableTimeout(gBTRCoreHandle, pAdapterPath, timeout);
                 if (enBTRCoreSuccess != halrc) {
-                    BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed to set Adapter discovery timeout\n");
+                    BTMGRLOG_ERROR ("Failed to set Adapter discovery timeout\n");
                 } else {
-                    BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Set timeout Successfully\n");
+                    BTMGRLOG_INFO ("Set timeout Successfully\n");
                 }
             }
 
@@ -830,17 +831,17 @@ BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsi
             halrc = BTRCore_SetAdapterDiscoverable(gBTRCoreHandle, pAdapterPath, discoverable);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed to set Adapter discoverable status\n");
+                BTMGRLOG_ERROR ("Failed to set Adapter discoverable status\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_SetAdapterDiscoverable : Set discoverable status Successfully\n");
+                BTMGRLOG_INFO ("Set discoverable status Successfully\n");
             }
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_SetAdapterDiscoverable : Failed to get adapter path\n");
+            BTMGRLOG_ERROR ("Failed to get adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -873,18 +874,18 @@ BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsig
             halrc = BTRCore_GetAdapterDiscoverableStatus(gBTRCoreHandle, pAdapterPath, &discoverable);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_IsAdapterDiscoverable : Failed to get Adapter Status\n");
+                BTMGRLOG_ERROR ("Failed to get Adapter Status\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_IsAdapterDiscoverable : Fetched Successfully\n");
+                BTMGRLOG_INFO ("Fetched Successfully\n");
                 *pDiscoverable = discoverable;
             }
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_IsAdapterDiscoverable : Failed to get adapter path\n");
+            BTMGRLOG_ERROR ("Failed to get adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -921,18 +922,18 @@ BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter)
             halrc = BTRCore_StartDeviceDiscovery(gBTRCoreHandle, pAdapterPath);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_StartDeviceDiscovery : Failed to start discovery\n");
+                BTMGRLOG_ERROR ("Failed to start discovery\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_StartDeviceDiscovery : Discovery started Successfully\n");
+                BTMGRLOG_INFO ("Discovery started Successfully\n");
                 set_discovery_status(1);
             }
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_StartDeviceDiscovery : Failed to get adapter path\n");
+            BTMGRLOG_ERROR ("Failed to get adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -965,12 +966,12 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
             halrc = BTRCore_StopDeviceDiscovery(gBTRCoreHandle, pAdapterPath);
             if (enBTRCoreSuccess != halrc)
             {
-                BTMGRLOG_ERROR ("BTMGR_StopDeviceDiscovery : Failed to stop discovery\n");
+                BTMGRLOG_ERROR ("Failed to stop discovery\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
             else
             {
-                BTMGRLOG_INFO ("BTMGR_StopDeviceDiscovery : Discovery Stopped Successfully\n");
+                BTMGRLOG_INFO ("Discovery Stopped Successfully\n");
                 set_discovery_status(0);
                 if(m_eventCallbackFunction)
                 {
@@ -988,7 +989,7 @@ BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter)
         }
         else
         {
-            BTMGRLOG_ERROR ("BTMGR_StopDeviceDiscovery : Failed to get adapter path\n");
+            BTMGRLOG_ERROR ("Failed to get adapter path\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -1017,7 +1018,7 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
         halrc = BTRCore_GetListOfScannedDevices(gBTRCoreHandle, &listOfDevices);
         if (enBTRCoreSuccess != halrc)
         {
-            BTMGRLOG_ERROR ("BTMGR_GetDiscoveredDevices : Failed to get list of discovered devices\n");
+            BTMGRLOG_ERROR ("Failed to get list of discovered devices\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
         else
@@ -1043,12 +1044,11 @@ BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_
                     if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == ptr->m_deviceHandle))
                         ptr->m_isConnected = 1;
                 }
+                /*  Success */
+                BTMGRLOG_INFO ("Successful\n");
             }
             else
                 BTMGRLOG_WARN("No Device is found yet\n");
-
-            /*  Success */
-            BTMGRLOG_INFO ("BTMGR_GetDiscoveredDevices : Successful\n");
         }
     }
     return rc;
@@ -1080,18 +1080,18 @@ BTMGR_PairDevice (
     /* Update the Paired Device List */
     BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
     if (1 == btmgr_IsThisPairedDevice(handle)) {
-        BTMGRLOG_INFO ("BTMGR_PairDevice : Already a Paired Device; Nothing Done...\n");
+        BTMGRLOG_INFO ("Already a Paired Device; Nothing Done...\n");
         return BTMGR_RESULT_SUCCESS;
     }
 
 
     if (enBTRCoreSuccess != BTRCore_PairDevice(gBTRCoreHandle, handle)) {
-        BTMGRLOG_ERROR ("BTMGR_PairDevice : Failed to pair a device\n");
+        BTMGRLOG_ERROR ("Failed to pair a device\n");
         rc = BTMGR_RESULT_GENERIC_FAILURE;
         lBtMgrOutEvent = BTMGR_EVENT_DEVICE_PAIRING_FAILED;
     }
     else {
-        BTMGRLOG_INFO ("BTMGR_PairDevice : Paired Successfully\n");
+        BTMGRLOG_INFO ("Paired Successfully\n");
         rc = BTMGR_RESULT_SUCCESS;
         lBtMgrOutEvent = BTMGR_EVENT_DEVICE_PAIRING_COMPLETE;
     }
@@ -1141,7 +1141,7 @@ BTMGR_UnpairDevice (
     /* Get the latest Paired Device List; This is added as the developer could add a device thro test application and try unpair thro' UI */
     BTMGR_GetPairedDevices (index_of_adapter, &gListOfPairedDevices);
     if (0 == btmgr_IsThisPairedDevice(handle)) {
-        BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Not a Paired device...\n");
+        BTMGRLOG_ERROR ("Not a Paired device...\n");
         return BTMGR_RESULT_GENERIC_FAILURE;
     }
 
@@ -1157,12 +1157,12 @@ BTMGR_UnpairDevice (
 
 
     if (enBTRCoreSuccess != BTRCore_UnPairDevice(gBTRCoreHandle, handle)) {
-        BTMGRLOG_ERROR ("BTMGR_UnpairDevice : Failed to unpair\n");
+        BTMGRLOG_ERROR ("Failed to unpair\n");
         rc = BTMGR_RESULT_GENERIC_FAILURE;
         lBtMgrOutEvent = BTMGR_EVENT_DEVICE_UNPAIRING_FAILED;
     }
     else {
-        BTMGRLOG_INFO ("BTMGR_UnpairDevice : Unpaired Successfully\n");
+        BTMGRLOG_INFO ("Unpaired Successfully\n");
         rc = BTMGR_RESULT_SUCCESS;
         lBtMgrOutEvent = BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE;
     }
@@ -1210,7 +1210,7 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
         halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, &listOfDevices);
         if (enBTRCoreSuccess != halrc)
         {
-            BTMGRLOG_ERROR ("BTMGR_GetPairedDevices : Failed to get list of paired devices\n");
+            BTMGRLOG_ERROR ("Failed to get list of paired devices\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
         else
@@ -1242,12 +1242,11 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
                     if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == ptr->m_deviceHandle))
                         ptr->m_isConnected = 1;
                 }
+                /*  Success */
+                BTMGRLOG_INFO ("Successful\n");
             }
             else
                 BTMGRLOG_WARN("No Device is paired yet\n");
-
-            /*  Success */
-            BTMGRLOG_INFO ("BTMGR_GetPairedDevices : Successful\n");
         }
     }
     return rc;
@@ -1285,12 +1284,12 @@ BTMGR_ConnectToDevice (
         halrc = BTRCore_ConnectDevice (gBTRCoreHandle, handle, enBTRCoreSpeakers);
         if (enBTRCoreSuccess != halrc)
         {
-            BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Failed to Connect to this device\n");
+            BTMGRLOG_ERROR ("Failed to Connect to this device\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
         else
         {
-            BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Connected Successfully\n");
+            BTMGRLOG_INFO ("Connected Successfully\n");
             gIsDeviceConnected = 1;
 
 #if 1
@@ -1310,11 +1309,11 @@ BTMGR_ConnectToDevice (
 	    addretStatus = BTRMgr_PI_AddProfile(piHandle,btPtofile);
 	    if(addretStatus == eBTRMgrSuccess)
 	    {
-		BTMGRLOG_INFO ("BTMGR_ConnectToDevice : Persistent File updated successfully\n");
+		BTMGRLOG_DEBUG ("Persistent File updated successfully\n");
 	    }
 	    else
 	    {
-		BTMGRLOG_ERROR ("BTMGR_ConnectToDevice : Persistent File update failed \n");
+		BTMGRLOG_ERROR ("Persistent File update failed \n");
 	    }
 #endif
 
@@ -1384,7 +1383,7 @@ BTMGR_DisconnectFromDevice (
         halrc = BTRCore_DisconnectDevice (gBTRCoreHandle, handle, enBTRCoreSpeakers);
         if (enBTRCoreSuccess != halrc)
         {
-            BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Failed to Disconnect\n");
+            BTMGRLOG_ERROR ("Failed to Disconnect\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
 
             if(m_eventCallbackFunction)
@@ -1402,7 +1401,7 @@ BTMGR_DisconnectFromDevice (
         }
         else
         {
-            BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Disconnected  Successfully\n");
+            BTMGRLOG_INFO ("Disconnected  Successfully\n");
             gIsDeviceConnected = 0;
 
 #if 1
@@ -1419,11 +1418,11 @@ BTMGR_DisconnectFromDevice (
 	    remvretStatus = BTRMgr_PI_RemoveProfile(piHandle,btPtofile);
 	    if(remvretStatus == eBTRMgrSuccess)
 	    {
-		BTMGRLOG_INFO ("BTMGR_DisconnectFromDevice : Persistent File updated successfully\n");
+		BTMGRLOG_DEBUG ("Persistent File updated successfully\n");
 	    }
 	    else
 	    {
-		BTMGRLOG_ERROR ("BTMGR_DisconnectFromDevice : Persistent File update failed \n");
+		BTMGRLOG_ERROR ("Persistent File update failed \n");
 	    }
 #endif
 
@@ -1607,7 +1606,7 @@ BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDe
 
         if (!isFound)
         {
-            BTMGRLOG_ERROR ("BTMGR_GetDeviceProperties : Could not retrive info for this device\n");
+            BTMGRLOG_ERROR ("Could not retrive info for this device\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
@@ -1625,7 +1624,7 @@ BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback)
     else
     {
         m_eventCallbackFunction = eventCallback;
-        BTMGRLOG_INFO ("BTMGR_RegisterEventCallback : Success\n");
+        BTMGRLOG_INFO ("Success\n");
     }
     return rc;
 }
@@ -1721,15 +1720,25 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                         halrc = BTRCore_GetDeviceMediaInfo(gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &gstBtrCoreDevMediaInfo);
                         if (enBTRCoreSuccess == halrc) {
                             if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
-                                BTMGRLOG_WARN("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
-                                BTMGRLOG_WARN("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
-                                BTMGRLOG_WARN("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
-                                BTMGRLOG_WARN("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
-                                BTMGRLOG_WARN("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
-                                BTMGRLOG_WARN("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
-                                BTMGRLOG_WARN("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
-                                BTMGRLOG_WARN("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
-                                BTMGRLOG_WARN("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+                                BTMGRLOG_WARN("\n"
+                                "Device Media Info SFreq         = %d\n"
+                                "Device Media Info AChan         = %d\n"
+                                "Device Media Info SbcAllocMethod= %d\n"
+                                "Device Media Info SbcSubbands   = %d\n"
+                                "Device Media Info SbcBlockLength= %d\n"
+                                "Device Media Info SbcMinBitpool = %d\n"
+                                "Device Media Info SbcMaxBitpool = %d\n" 
+                                "Device Media Info SbcFrameLen   = %d\n" 
+                                "Device Media Info SbcBitrate    = %d\n",
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen,
+                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
                             }
                         }
                         
@@ -1742,7 +1751,7 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                             if (BTMGR_RESULT_SUCCESS == btmgr_StartCastingAudio (deviceFD, deviceWriteMTU))
                             {
                                 gCurStreamingDevHandle = listOfPDevices.devices[i].deviceId;
-                                BTMGRLOG_WARN("Streaming Started.. Enjoy the show..! :)\n");
+                                BTMGRLOG_INFO("Streaming Started.. Enjoy the show..! :)\n");
                             }
                             else
                             {
@@ -1861,7 +1870,7 @@ BTMGR_Result_t BTMGR_ResetAdapter (unsigned char index_of_adapter)
     }
     else
     {
-        BTMGRLOG_ERROR ("BTMGR_ResetAdapter: No Ops. As the Hal is not implemented yet\n");
+        BTMGRLOG_ERROR ("No Ops. As the Hal is not implemented yet\n");
     }
 
     return rc;
@@ -1879,7 +1888,7 @@ btmgr_ACDataReadyCallback (
     BTMGR_StreamingHandles *data = (BTMGR_StreamingHandles*)apvUserData; 
 
     if ((leBtrMgrSoRet = BTRMgr_SO_SendBuffer(data->hBTRMgrSoHdl, apvAcDataBuf, aui32AcDataLen)) != eBTRMgrSuccess) {
-        BTMGRLOG_INFO ("cbBufferReady: BTRMgr_SO_SendBuffer FAILED\n");
+        BTMGRLOG_ERROR ("cbBufferReady: BTRMgr_SO_SendBuffer FAILED\n");
     }
 
     data->bytesWritten += aui32AcDataLen;
@@ -1925,7 +1934,7 @@ btmgr_DeviceStatusCallback (
 
     newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
-    BTMGRLOG_ERROR ("btmgr_DeviceStatusCallback: Received status callback\n");
+    BTMGRLOG_INFO ("Received status callback\n");
 
     if ((p_StatusCB) && (m_eventCallbackFunction)) {
 
