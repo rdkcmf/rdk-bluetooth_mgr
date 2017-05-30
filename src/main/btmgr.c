@@ -1097,7 +1097,6 @@ BTMGR_PairDevice (
     }
 
 
-
     if (m_eventCallbackFunction) {
         BTMGR_EventMessage_t newEvent;
         memset (&newEvent, 0, sizeof(newEvent));
@@ -1254,11 +1253,15 @@ BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_Pair
     return rc;
 }
 
+BTMGR_Result_t
+BTMGR_ConnectToDevice (
+    unsigned char               index_of_adapter,
+    BTMgrDeviceHandle           handle,
+    BTMGR_DeviceConnect_Type_t  connectAs
+) {
+    BTMGR_Result_t  rc      = BTMGR_RESULT_SUCCESS;
+    enBTRCoreRet    halrc   = enBTRCoreSuccess;
 
-BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs)
-{
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    enBTRCoreRet halrc = enBTRCoreSuccess;
 
     if (isDiscoveryInProgress())
     {
@@ -1317,13 +1320,39 @@ BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDevice
 
         }
     }
+
+    if (rc == BTMGR_RESULT_SUCCESS) {
+        /* Max 20 sec timeout - Polled at 1 second interval: Confirmed 4 times */
+        unsigned int ui32sleepTimeOut = 1;
+        unsigned int ui32confirmIdx = 4;
+        
+        do {
+            unsigned int ui32sleepIdx = 5;
+
+            do {
+                sleep(ui32sleepTimeOut); 
+                halrc = BTRCore_GetDeviceConnected(gBTRCoreHandle, handle, enBTRCoreSpeakers);
+            } while ((halrc != enBTRCoreSuccess) && (--ui32sleepIdx));
+        } while (--ui32confirmIdx);
+
+        if (halrc != enBTRCoreSuccess) {
+            BTMGRLOG_ERROR ("Failed to Connect to this device - Confirmed\n");
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
+        }
+        else
+            BTMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
+    }
+
     return rc;
 }
 
-BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle)
-{
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
-    enBTRCoreRet halrc = enBTRCoreSuccess;
+BTMGR_Result_t
+BTMGR_DisconnectFromDevice (
+    unsigned char       index_of_adapter,
+    BTMgrDeviceHandle   handle
+) {
+    BTMGR_Result_t  rc      = BTMGR_RESULT_SUCCESS;
+    enBTRCoreRet    halrc   = enBTRCoreSuccess;
 
     if (NULL == gBTRCoreHandle)
     {
@@ -1401,6 +1430,29 @@ BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrD
 
         }
     }
+
+    if (rc == BTMGR_RESULT_SUCCESS) {
+        /* Max 4 sec timeout - Polled at 1 second interval: Confirmed 2 times */
+        unsigned int ui32sleepTimeOut = 1;
+        unsigned int ui32confirmIdx = 2;
+        
+        do {
+            unsigned int ui32sleepIdx = 2;
+
+            do {
+                sleep(ui32sleepTimeOut);
+                halrc = BTRCore_GetDeviceDisconnected(gBTRCoreHandle, handle, enBTRCoreSpeakers);
+            } while ((halrc != enBTRCoreSuccess) && (--ui32sleepIdx));
+        } while (--ui32confirmIdx);
+
+        if (halrc != enBTRCoreSuccess) {
+            BTMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
+            rc = BTMGR_RESULT_GENERIC_FAILURE;
+        }
+        else
+            BTMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
+    }
+
     return rc;
 }
 
@@ -1655,17 +1707,8 @@ BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMg
                 }
                 else
                 {
-                    /* Connect the device */
-                    {
-                        /* If the device is not connected, Connect to it */
-                        BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref);
-
-                        /* FIXME */
-                        BTMGRLOG_WARN("Sleep for few sec as alternate to async callback; temp change\n");
-                        sleep(5);
-                        BTMGRLOG_WARN("Slept for few sec as alternate to async callback; temp change\n");
-                    }
-
+                    /* Connect the device  - If the device is not connected, Connect to it */
+                    rc = BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref);
                     if (BTMGR_RESULT_SUCCESS == rc)
                     {
                         if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
@@ -1759,12 +1802,6 @@ BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgr
         BTRCore_ReleaseDeviceDataPath (gBTRCoreHandle, gCurStreamingDevHandle, enBTRCoreSpeakers);
 
         gCurStreamingDevHandle = 0;
-
-        /* Just in case */
-        /* FIXME */
-        BTMGRLOG_WARN("Sleep for few sec as alternate to async callback; temp change\n");
-        sleep(2);
-        BTMGRLOG_WARN("Slept for few sec as alternate to async callback; temp change\n");
 
         if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
             free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
