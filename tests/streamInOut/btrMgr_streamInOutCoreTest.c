@@ -191,17 +191,38 @@ sendSBCFileOverBT (
 
 
 int
-cb_connection_authentication (
+cb_connection_intimation (
     stBTRCoreConnCBInfo* apstConnCbInfo
 ) {
-#if 0
-    printf("\n\nConnection attempt by: %s\n",path);
-#endif
-    printf("Choose 35 to accept the connection/verify pin-passcode or 36 to deny the connection/discard pin-passcode\n\n");
+    printf("Choose 35 to verify pin-passcode or 36 to discard pin-passcode\n\n");
 
     if (apstConnCbInfo->ui32devPassKey) {
         printf("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
     }    
+
+    do {
+        usleep(20000);
+    } while (acceptConnection == 0);
+
+    printf("you picked %d\n", acceptConnection);
+    if (acceptConnection == 1) {
+        printf("Pin-Passcode accepted\n");
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 1;
+    }
+    else {
+        printf("Pin-Passcode denied\n");
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 0;
+    }
+}
+
+
+int
+cb_connection_authentication (
+    stBTRCoreConnCBInfo* apstConnCbInfo
+) {
+    printf("Choose 35 to accept the connection or 36 to deny the connection\n\n");
 
     do {
         usleep(20000);
@@ -725,7 +746,7 @@ main (
             break;
         case 33:
             printf("register connection-in Intimation CB\n");
-            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_intimation, NULL);
             break;
         case 34:
             printf("register authentication CB\n");
@@ -1333,7 +1354,7 @@ streamOutTestMainAlternate (
     lstBTRMgrCapSoHdl.hBTRMgrSoHdl    = hBTRMgrSoHdl;
 
     if((dataCapThread = g_thread_new(NULL, doDataCapture, (void*)&lstBTRMgrCapSoHdl)) == NULL) {
-         fprintf(stderr, "%s:%d:%s - Failed to create data Capture Thread\n", __FILE__, __LINE__, __FUNCTION__);
+         fprintf(stderr, "Failed to create data Capture Thread\n");
     }
 
     penDataCapThreadExitStatus = g_thread_join(dataCapThread);

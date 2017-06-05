@@ -81,7 +81,7 @@ void getName (char* mychoice)
 
 void eventCallback (BTMGR_EventMessage_t event)
 {
-    printf ("@@@@@@@@ %s ::::  Event ID %d @@@@@@@@\n", __FUNCTION__, event.m_eventType);
+    printf ("@@@@@@@@ eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_eventType);
     return;
 }
 
