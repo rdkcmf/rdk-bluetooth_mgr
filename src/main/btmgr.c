@@ -1353,7 +1353,8 @@ BTMGR_ConnectToDevice (
 ) {
     BTMGR_Result_t  rc      = BTMGR_RESULT_SUCCESS;
     enBTRCoreRet    halrc   = enBTRCoreSuccess;
-    unsigned char   ui8reActivateAgent = 0;
+    unsigned char   ui8reActivateAgent  = 0;
+    unsigned int    ui32retryIdx        = 3;
 
 
     if (!gBTRCoreHandle) {
@@ -1385,60 +1386,63 @@ BTMGR_ConnectToDevice (
     }
 
 
-    /* connectAs param is unused for now.. */
-    halrc = BTRCore_ConnectDevice (gBTRCoreHandle, handle, enBTRCoreSpeakers);
-    if (enBTRCoreSuccess != halrc) {
-        BTMGRLOG_ERROR ("Failed to Connect to this device\n");
-        rc = BTMGR_RESULT_GENERIC_FAILURE;
-    }
-    else {
-        BTMGRLOG_INFO ("Connected Successfully\n");
-        gIsDeviceConnected = 1;
-
-        char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
-        char lui8profileId[BD_NAME_LEN] = {'\0'};
-        eBTRMgrRet addretStatus = eBTRMgrFailure;
-
-        BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
-
-        // Device connected add data from json file
-        BTMGR_Profile_t btPtofile;
-        strcpy(btPtofile.adapterId,lui8adapterAddr);
-        btPtofile.deviceId = handle;
-        btPtofile.isConnect = 1;
-        strcpy(lui8profileId,BTMGR_A2DP_SINK_PROFILE_ID);
-        strcpy(btPtofile.profileId,lui8profileId);
-        addretStatus = BTRMgr_PI_AddProfile(piHandle,btPtofile);
-        if(addretStatus == eBTRMgrSuccess) {
-            BTMGRLOG_INFO ("Persistent File updated successfully\n");
-        }
-        else {
-            BTMGRLOG_ERROR ("Persistent File update failed \n");
-        }
-    }
-
-
-    if (rc != BTMGR_RESULT_GENERIC_FAILURE) {
-        /* Max 20 sec timeout - Polled at 1 second interval: Confirmed 4 times */
-        unsigned int ui32sleepTimeOut = 1;
-        unsigned int ui32confirmIdx = 4;
-        
-        do {
-            unsigned int ui32sleepIdx = 5;
-
-            do {
-                sleep(ui32sleepTimeOut); 
-                halrc = BTRCore_GetDeviceConnected(gBTRCoreHandle, handle, enBTRCoreSpeakers);
-            } while ((halrc != enBTRCoreSuccess) && (--ui32sleepIdx));
-        } while (--ui32confirmIdx);
-
-        if (halrc != enBTRCoreSuccess) {
-            BTMGRLOG_ERROR ("Failed to Connect to this device - Confirmed\n");
+    do {
+        /* connectAs param is unused for now.. */
+        halrc = BTRCore_ConnectDevice (gBTRCoreHandle, handle, enBTRCoreSpeakers);
+        if (enBTRCoreSuccess != halrc) {
+            BTMGRLOG_ERROR ("Failed to Connect to this device\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
-        else
-            BTMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
-    }
+        else {
+            BTMGRLOG_INFO ("Connected Successfully\n");
+            rc = BTMGR_RESULT_SUCCESS;
+            gIsDeviceConnected = 1;
+
+            char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
+            char lui8profileId[BD_NAME_LEN] = {'\0'};
+            eBTRMgrRet addretStatus = eBTRMgrFailure;
+
+            BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
+
+            // Device connected add data from json file
+            BTMGR_Profile_t btPtofile;
+            strcpy(btPtofile.adapterId,lui8adapterAddr);
+            btPtofile.deviceId = handle;
+            btPtofile.isConnect = 1;
+            strcpy(lui8profileId,BTMGR_A2DP_SINK_PROFILE_ID);
+            strcpy(btPtofile.profileId,lui8profileId);
+            addretStatus = BTRMgr_PI_AddProfile(piHandle,btPtofile);
+            if(addretStatus == eBTRMgrSuccess) {
+                BTMGRLOG_INFO ("Persistent File updated successfully\n");
+            }
+            else {
+                BTMGRLOG_ERROR ("Persistent File update failed \n");
+            }
+        }
+
+
+        if (rc != BTMGR_RESULT_GENERIC_FAILURE) {
+            /* Max 20 sec timeout - Polled at 1 second interval: Confirmed 4 times */
+            unsigned int ui32sleepTimeOut = 1;
+            unsigned int ui32confirmIdx = 4;
+            
+            do {
+                unsigned int ui32sleepIdx = 5;
+
+                do {
+                    sleep(ui32sleepTimeOut); 
+                    halrc = BTRCore_GetDeviceConnected(gBTRCoreHandle, handle, enBTRCoreSpeakers);
+                } while ((halrc != enBTRCoreSuccess) && (--ui32sleepIdx));
+            } while (--ui32confirmIdx);
+
+            if (halrc != enBTRCoreSuccess) {
+                BTMGRLOG_ERROR ("Failed to Connect to this device - Confirmed\n");
+                rc = BTMGR_RESULT_GENERIC_FAILURE;
+            }
+            else
+                BTMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
+        }
+    } while ((rc == BTMGR_RESULT_GENERIC_FAILURE) && (--ui32retryIdx));
 
 
     if (ui8reActivateAgent) {
@@ -1770,28 +1774,23 @@ BTMGR_StartAudioStreamingOut (
     int deviceReadMTU = 0;
     int deviceWriteMTU = 0;
 
-    if (NULL == gBTRCoreHandle)
-    {
+    if (NULL == gBTRCoreHandle) {
         rc = BTMGR_RESULT_INIT_FAILED;
         BTMGRLOG_ERROR ("BTRCore is not Inited\n");
     }
-    else if((index_of_adapter > btrMgr_GetAdapterCnt()) || (0 == handle))
-    {
+    else if ((index_of_adapter > btrMgr_GetAdapterCnt()) || (0 == handle)) {
         rc = BTMGR_RESULT_INVALID_INPUT;
         BTMGRLOG_ERROR ("Input is invalid\n");
     }
-    else if (gCurStreamingDevHandle == handle)
-    {
+    else if (gCurStreamingDevHandle == handle) {
         BTMGRLOG_ERROR ("Its already streaming out in this device.. Check the volume :)\n");
     }
-    else
-    {
-        if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle != handle))
-        {
+    else {
+        if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle != handle)) {
+
             BTMGRLOG_ERROR ("Its already streaming out. lets stop this and start on other device \n");
             rc = BTMGR_StopAudioStreamingOut(index_of_adapter, gCurStreamingDevHandle);
-            if (rc != BTMGR_RESULT_SUCCESS)
-            {
+            if (rc != BTMGR_RESULT_SUCCESS) {
                 BTMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
                 return rc;
             }
@@ -1799,116 +1798,130 @@ BTMGR_StartAudioStreamingOut (
 
         /* Check whether the device is in the paired list */
         halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, &listOfPDevices);
-        if (enBTRCoreSuccess == halrc)
-        {
-            if (listOfPDevices.numberOfDevices)
-            {
+        if (enBTRCoreSuccess == halrc) {
+            if (listOfPDevices.numberOfDevices) {
                 int i = 0;
-                for (i = 0; i < listOfPDevices.numberOfDevices; i++)
-                {
-                    if (handle == listOfPDevices.devices[i].deviceId)
-                    {
+                for (i = 0; i < listOfPDevices.numberOfDevices; i++) {
+                    if (handle == listOfPDevices.devices[i].deviceId) {
                         isFound = 1;
                         break;
                     }
                 }
-                if (!isFound)
-                {
+
+                if (!isFound) {
                     BTMGRLOG_ERROR ("Failed to find this device in the paired devices list\n");
                     rc = BTMGR_RESULT_GENERIC_FAILURE;
                 }
-                else
-                {
-                    /* Connect the device  - If the device is not connected, Connect to it */
-                    rc = BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref);
-                    if (BTMGR_RESULT_SUCCESS == rc)
-                    {
-                        if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
-                            free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
-                            gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
-                        }
+                else {
+                    unsigned int    ui32retryIdx = 2;
 
-                        gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
-
-                        halrc = BTRCore_GetDeviceMediaInfo(gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &gstBtrCoreDevMediaInfo);
-                        if (enBTRCoreSuccess == halrc) {
-                            if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
-                                BTMGRLOG_WARN("\n"
-                                "Device Media Info SFreq         = %d\n"
-                                "Device Media Info AChan         = %d\n"
-                                "Device Media Info SbcAllocMethod= %d\n"
-                                "Device Media Info SbcSubbands   = %d\n"
-                                "Device Media Info SbcBlockLength= %d\n"
-                                "Device Media Info SbcMinBitpool = %d\n"
-                                "Device Media Info SbcMaxBitpool = %d\n" 
-                                "Device Media Info SbcFrameLen   = %d\n" 
-                                "Device Media Info SbcBitrate    = %d\n",
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen,
-                                ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+                    do {
+                        /* Connect the device  - If the device is not connected, Connect to it */
+                        rc = BTMGR_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref);
+                        if (BTMGR_RESULT_SUCCESS == rc) {
+                            if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+                                free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
+                                gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
                             }
-                        }
-                        
-                        /* Aquire Device Data Path to start the audio casting */
-                        halrc = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
 
-                        if (enBTRCoreSuccess == halrc)
-                        {
-                            /* Now that you got the FD & Read/Write MTU, start casting the audio */
-                            if (BTMGR_RESULT_SUCCESS == btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU))
-                            {
-                                gCurStreamingDevHandle = listOfPDevices.devices[i].deviceId;
-                                BTMGRLOG_INFO("Streaming Started.. Enjoy the show..! :)\n");
+                            gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+                            halrc = BTRCore_GetDeviceMediaInfo(gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &gstBtrCoreDevMediaInfo);
+                            if (enBTRCoreSuccess == halrc) {
+                                if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+                                    BTMGRLOG_WARN("\n"
+                                    "Device Media Info SFreq         = %d\n"
+                                    "Device Media Info AChan         = %d\n"
+                                    "Device Media Info SbcAllocMethod= %d\n"
+                                    "Device Media Info SbcSubbands   = %d\n"
+                                    "Device Media Info SbcBlockLength= %d\n"
+                                    "Device Media Info SbcMinBitpool = %d\n"
+                                    "Device Media Info SbcMaxBitpool = %d\n" 
+                                    "Device Media Info SbcFrameLen   = %d\n" 
+                                    "Device Media Info SbcBitrate    = %d\n",
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen,
+                                    ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+                                }
                             }
-                            else
-                            {
-                                BTMGRLOG_ERROR ("Failed to stream now\n");
+                            
+                            /* Aquire Device Data Path to start the audio casting */
+                            halrc = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
+
+                            if (enBTRCoreSuccess == halrc) {
+                                /* Now that you got the FD & Read/Write MTU, start casting the audio */
+                                if (BTMGR_RESULT_SUCCESS == btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU)) {
+                                    gCurStreamingDevHandle = listOfPDevices.devices[i].deviceId;
+                                    BTMGRLOG_INFO("Streaming Started.. Enjoy the show..! :)\n");
+                                }
+                                else {
+                                    BTMGRLOG_ERROR ("Failed to stream now\n");
+                                    rc = BTMGR_RESULT_GENERIC_FAILURE;
+                                }
+                            }
+                            else {
+                                BTMGRLOG_ERROR ("Failed to get Device Data Path. So Will not be able to stream now\n");
+                                halrc = BTRCore_DisconnectDevice (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers);
+                                if (enBTRCoreSuccess == halrc) {
+                                    /* Max 4 sec timeout - Polled at 1 second interval: Confirmed 2 times */
+                                    unsigned int ui32sleepTimeOut = 1;
+                                    unsigned int ui32confirmIdx = 2;
+                                    
+                                    do {
+                                        unsigned int ui32sleepIdx = 2;
+
+                                        do {
+                                            sleep(ui32sleepTimeOut);
+                                            halrc = BTRCore_GetDeviceDisconnected(gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreSpeakers);
+                                        } while ((halrc != enBTRCoreSuccess) && (--ui32sleepIdx));
+                                    } while (--ui32confirmIdx);
+
+                                    if (halrc != enBTRCoreSuccess) {
+                                        BTMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
+                                        rc = BTMGR_RESULT_GENERIC_FAILURE;
+                                    }
+                                    else
+                                        BTMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
+                                }
+
                                 rc = BTMGR_RESULT_GENERIC_FAILURE;
                             }
                         }
-                        else
-                        {
-                            BTMGRLOG_ERROR ("Failed to get Device Data Path. So Will not be able to stream now\n");
-                            rc = BTMGR_RESULT_GENERIC_FAILURE;
-
-                            if (m_eventCallbackFunction)
-                            {
-                                BTMGR_EventMessage_t newEvent;
-                                memset (&newEvent, 0, sizeof(newEvent));
-
-                                newEvent.m_adapterIndex = index_of_adapter;
-                                newEvent.m_eventType    = BTMGR_EVENT_DEVICE_CONNECTION_FAILED;
-                                newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-                                /*  Post a callback */
-                                m_eventCallbackFunction (newEvent);
-                            }
-
+                        else {
+                            BTMGRLOG_ERROR ("Failed to connect to device and not playing\n");
                         }
-                    }
-                    else
-                    {
-                        BTMGRLOG_ERROR ("Failed to connect to device and not playing\n");
+
+                    } while ((rc == BTMGR_RESULT_GENERIC_FAILURE) && (--ui32retryIdx));
+
+                    if ((rc == BTMGR_RESULT_GENERIC_FAILURE) && m_eventCallbackFunction) {
+                        BTMGR_EventMessage_t newEvent;
+                        memset (&newEvent, 0, sizeof(newEvent));
+
+                        newEvent.m_adapterIndex = index_of_adapter;
+                        newEvent.m_eventType    = BTMGR_EVENT_DEVICE_CONNECTION_FAILED;
+                        newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+                        /*  Post a callback */
+                        m_eventCallbackFunction (newEvent);
                     }
                 }
             }
-            else
-            {
+            else {
                 BTMGRLOG_ERROR ("No device is paired yet; Will not be able to play at this moment\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
         }
-        else
-        {
+        else {
             BTMGRLOG_ERROR ("Failed to get the paired devices list\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
     }
+
     return rc;
 }
 
