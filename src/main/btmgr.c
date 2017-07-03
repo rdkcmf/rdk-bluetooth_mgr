@@ -38,14 +38,15 @@ static BTMgrDeviceHandle        gCurStreamingDevHandle = 0;
 static stBTRCoreAdapter         gDefaultAdapterContext;
 static stBTRCoreListAdapters    gListOfAdapters;
 static stBTRCoreDevMediaInfo    gstBtrCoreDevMediaInfo;
-static tBTRMgrPIHdl  		    piHandle = NULL;
-
+static tBTRMgrPIHdl  		piHandle = NULL;
+static BTMgrDeviceHandle        gLastConnectedDevHandle = 0;
 
 static BTMGR_PairedDevicesList_t   gListOfPairedDevices;
 static unsigned char               gIsDiscoveryInProgress = 0;
 static unsigned char               gIsDeviceConnected = 0;
 static unsigned char               gIsAgentActivated = 0;
 static unsigned char               gAcceptConnection = 1;
+static unsigned char               gIsUserInitiated = 0;
 
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
@@ -80,6 +81,7 @@ static unsigned char btrMgr_GetDiscoveryInProgress (void);
 static unsigned char btrMgr_GetDevPaired (BTMgrDeviceHandle handle); 
 static BTMGR_DeviceType_t btrMgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type);
 static BTMGR_DeviceType_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
+static eBTRMgrRet btrMgr_MapDevstatusInfoToEventInfo (void* p_StatusCB, BTMGR_EventMessage_t*  newEvent, BTMGR_Events_t type);
 static BTMGR_Result_t btrMgr_StartCastingAudio (int outFileFd, int outMTUSize);
 static BTMGR_Result_t btrMgr_StopCastingAudio (void); 
 
@@ -1397,6 +1399,7 @@ BTMGR_ConnectToDevice (
             BTMGRLOG_INFO ("Connected Successfully\n");
             rc = BTMGR_RESULT_SUCCESS;
             gIsDeviceConnected = 1;
+            gLastConnectedDevHandle = handle;
 
             char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
             char lui8profileId[BD_NAME_LEN] = {'\0'};
@@ -1439,8 +1442,10 @@ BTMGR_ConnectToDevice (
                 BTMGRLOG_ERROR ("Failed to Connect to this device - Confirmed\n");
                 rc = BTMGR_RESULT_GENERIC_FAILURE;
             }
-            else
+            else {
                 BTMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
+                gLastConnectedDevHandle = handle;
+            }
         }
     } while ((rc == BTMGR_RESULT_GENERIC_FAILURE) && (--ui32retryIdx));
 
@@ -1532,6 +1537,8 @@ BTMGR_DisconnectFromDevice (
     else {
         BTMGRLOG_INFO ("Disconnected  Successfully\n");
         gIsDeviceConnected = 0;
+        gIsUserInitiated = 1;
+        gLastConnectedDevHandle = 0;
 
         char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
         BTRCore_GetAdapterAddr(gBTRCoreHandle, index_of_adapter, lui8adapterAddr);
@@ -1571,8 +1578,11 @@ BTMGR_DisconnectFromDevice (
             BTMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
             rc = BTMGR_RESULT_GENERIC_FAILURE;
         }
-        else
+        else {
             BTMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
+            gIsUserInitiated = 1;
+            gLastConnectedDevHandle = 0;
+        }
     }
 
     if (ui8reActivateAgent) {
@@ -2055,21 +2065,11 @@ btmgr_DeviceDiscoveryCallback (
     if (btrMgr_GetDiscoveryInProgress() && (m_eventCallbackFunction)) {
         BTMGR_EventMessage_t newEvent;
         memset (&newEvent, 0, sizeof(newEvent));
-        
-        newEvent.m_adapterIndex = 0;
-        newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE;
 
+        btrMgr_MapDevstatusInfoToEventInfo ((void*)&devicefound, &newEvent, BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
         /*  Post a callback */
-        newEvent.m_discoveredDevice.m_deviceHandle = devicefound.deviceId;
-        newEvent.m_discoveredDevice.m_deviceType = btrMgr_MapDeviceTypeFromCore(devicefound.device_type);
-        newEvent.m_discoveredDevice.m_signalLevel = devicefound.RSSI;
-        newEvent.m_discoveredDevice.m_rssi = btrMgr_MapSignalStrengthToRSSI(devicefound.RSSI);
-        strncpy (newEvent.m_discoveredDevice.m_name, devicefound.device_name, (BTMGR_NAME_LEN_MAX - 1));
-        strncpy (newEvent.m_discoveredDevice.m_deviceAddress, devicefound.device_address, (BTMGR_NAME_LEN_MAX - 1));
-        newEvent.m_discoveredDevice.m_isPairedDevice = btrMgr_GetDevPaired(newEvent.m_discoveredDevice.m_deviceHandle);
-
         m_eventCallbackFunction (newEvent);
-    }
+    }    
 
     return;
 }
@@ -2123,6 +2123,36 @@ btmgr_ConnectionInAuthenticationCallback (
     } 
 }
 
+static eBTRMgrRet 
+btrMgr_MapDevstatusInfoToEventInfo (
+    void*                          p_StatusCB,               /* device status info                   */
+    BTMGR_EventMessage_t*          newEvent,                 /* event message                        */
+    BTMGR_Events_t                 type                      /* event type                           */
+) {
+    eBTRMgrRet  retResult    = eBTRMgrSuccess;
+    newEvent->m_adapterIndex = 0;
+    newEvent->m_eventType    = type;
+    newEvent->m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;/* Application will have to get the list explicitly for list;Lets return the max value */
+
+    if (BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE != type) {
+       newEvent->m_pairedDevice.m_deviceHandle            = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
+       newEvent->m_pairedDevice.m_deviceType              = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass;
+       newEvent->m_pairedDevice.m_isLastConnectedDevice   = (gLastConnectedDevHandle == newEvent->m_pairedDevice.m_deviceHandle)?1:0;
+       strncpy (newEvent->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTMGR_NAME_LEN_MAX-1));
+    }
+    else {
+       newEvent->m_discoveredDevice.m_deviceHandle        = ((stBTRCoreScannedDevices*)p_StatusCB)->deviceId;
+       newEvent->m_discoveredDevice.m_signalLevel         = ((stBTRCoreScannedDevices*)p_StatusCB)->RSSI;
+       newEvent->m_discoveredDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreScannedDevices*)p_StatusCB)->device_type);
+       newEvent->m_discoveredDevice.m_rssi                = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreScannedDevices*)p_StatusCB)->RSSI);
+       newEvent->m_discoveredDevice.m_isPairedDevice      = btrMgr_GetDevPaired(newEvent->m_discoveredDevice.m_deviceHandle);
+       strncpy (newEvent->m_discoveredDevice.m_name, ((stBTRCoreScannedDevices*)p_StatusCB)->device_name, (BTMGR_NAME_LEN_MAX-1));
+       strncpy (newEvent->m_discoveredDevice.m_deviceAddress, ((stBTRCoreScannedDevices*)p_StatusCB)->device_address, (BTMGR_NAME_LEN_MAX-1));
+    }
+
+    return retResult; 
+}
+
 
 static void
 btmgr_DeviceStatusCallback (
@@ -2132,40 +2162,59 @@ btmgr_DeviceStatusCallback (
     BTMGR_EventMessage_t newEvent;
     memset (&newEvent, 0, sizeof(newEvent));
 
-    newEvent.m_numOfDevices = BTMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-
     BTMGRLOG_INFO ("Received status callback\n");
 
     if ((p_StatusCB) && (m_eventCallbackFunction)) {
 
-        switch (p_StatusCB->eDeviceCurrState) {
-        case enBTRCoreDevStInitialized:
+     switch (p_StatusCB->eDeviceCurrState) {
+   
+       case enBTRCoreDevStInitialized:
             break;
-        case enBTRCoreDevStConnecting:
+       case enBTRCoreDevStConnecting:
             break;
-        case enBTRCoreDevStConnected:
-            newEvent.m_eventType = BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
-            m_eventCallbackFunction(newEvent);      // Post a callback
-            break;
-        case enBTRCoreDevStDisconnected:
-            newEvent.m_eventType = BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE;
-            m_eventCallbackFunction (newEvent);     // Post a callback
+       case enBTRCoreDevStConnected:
+         if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState) { /*  notify user device back   */
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTMGR_EVENT_DEVICE_FOUND);  
+         }
+         else {
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE);  
+         }
+         m_eventCallbackFunction(newEvent);                        /*     Post a callback        */
+         break;
 
-            if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
-                /* update the flags as the device is NOT Connected */
-                gIsDeviceConnected = 0;
-                /* Stop the playback which already stopped internally but to free up the memory */
-                BTMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
-            }
+       case enBTRCoreDevStDisconnected:
+         btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
+         m_eventCallbackFunction (newEvent);                       /*     Post a callback        */
 
-            break;
-        case enBTRCoreDevStPlaying:
-            break;
-        default:
-            break;
-        }
+         if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
+             /* update the flags as the device is NOT Connected                                  */
+             gIsDeviceConnected = 0;
+             /* Stop the playback which already stopped internally but to free up the memory     */
+             BTMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+         }
+         break;
+
+       case enBTRCoreDevStLost:
+         if( !gIsUserInitiated ) {
+             btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTMGR_EVENT_DEVICE_OUT_OF_RANGE);
+             m_eventCallbackFunction (newEvent);                   /*     Post a callback        */
+
+             if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
+                 /* update the flags as the device is NOT Connected                              */
+                 gIsDeviceConnected = 0;
+                 /* Stop the playback which already stopped internally but to free up the memory */
+                 BTMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+             }
+         }
+         gIsUserInitiated = 0;
+         break;
+
+       case enBTRCoreDevStPlaying:
+         break;
+       default:
+         break;
+      }
     }
-
     return;
 }
 

@@ -22,6 +22,9 @@
 #include <unistd.h>
 #include "btmgr.h"
 
+volatile int wait = 1;
+int uselection = 0;
+
 static void printOptions (void)
 {
     printf ("\n\n");
@@ -44,6 +47,7 @@ static void printOptions (void)
     printf ("17. Start Streaming\n");
     printf ("18. Stop Streaming\n");
     printf ("19. Get Streaming Status\n");
+    printf ("20. Check auto connection of external Device\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -79,9 +83,69 @@ void getName (char* mychoice)
         *tmp = '\0';
 }
 
+const char* getEventAsString (BTMGR_Events_t etype)
+{
+  char *event = "\0";
+  switch(etype)
+  {
+    case BTMGR_EVENT_DEVICE_OUT_OF_RANGE               : event = "DEVICE_OUT_OF_RANGE_OR_LOST";       break;
+    case BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE           : event = "DEVICE_DISCOVERY_UPDATE";           break;
+    case BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE         : event = "DEVICE_DISCOVERY_COMPLETE";         break;
+    case BTMGR_EVENT_DEVICE_PAIRING_COMPLETE           : event = "DEVICE_PAIRING_COMPLETE";           break; 
+    case BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE         : event = "DEVICE_UNPAIRING_COMPLETE";         break;
+    case BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE        : event = "DEVICE_CONNECTION_COMPLETE";        break;
+    case BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE        : event = "DEVICE_DISCONNECT_COMPLETE";        break;
+    case BTMGR_EVENT_DEVICE_PAIRING_FAILED             : event = "DEVICE_PAIRING_FAILED";             break;
+    case BTMGR_EVENT_DEVICE_UNPAIRING_FAILED           : event = "DEVICE_UNPAIRING_FAILED";           break;
+    case BTMGR_EVENT_DEVICE_CONNECTION_FAILED          : event = "DEVICE_CONNECTION_FAILED";          break;     
+    case BTMGR_EVENT_DEVICE_DISCONNECT_FAILED          : event = "DEVICE_DISCONNECT_FAILED";          break;
+    case BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";    break;
+    case BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST"; break;
+    case BTMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                      break;
+    default                                            : event = "##INVALID##";
+  }
+  return event;
+}
+
+
 void eventCallback (BTMGR_EventMessage_t event)
 {
-    printf ("@@@@@@@@ eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_eventType);
+    printf ("\n\t@@@@@@@@ eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_eventType);
+
+    switch(event.m_eventType)
+    {
+      case BTMGR_EVENT_DEVICE_OUT_OF_RANGE: 
+                                  printf("\tReceived %s Event from BTMgr\n", getEventAsString(event.m_eventType));
+                                  printf("\tYour device %s has either been Lost or Out of Range\n", event.m_pairedDevice.m_name);
+                                  break;
+      case BTMGR_EVENT_DEVICE_FOUND: 
+                                  printf("\tReceived %s Event from BTMgr\n", getEventAsString(event.m_eventType));
+                                  printf("\tYour device %s is Up and Ready\n", event.m_pairedDevice.m_name);
+
+                                  if(event.m_pairedDevice.m_isLastConnectedDevice) {
+                                    if( 20 == uselection ) {
+                                       printf("\tDo you want to Connect? (1 for Yes / 0 for No)\n\t");
+                                       if ( getUserSelection() ) {
+                                         if (BTMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1) == BTMGR_RESULT_SUCCESS)
+                                            printf ("\tConnection Success....\n");
+                                         else
+                                            printf ("\tConnection Failed.....\n");
+                                       }
+                                       else {
+                                            printf ("\tDevice Connection skipped\n");
+                                       }
+                                       wait = 0;
+                                    }
+                                    else {
+                                       printf("\tDefault Action: Accept connection from Last connected device..\n");
+                                       BTMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1);
+                                    }
+                                  }
+                                  break;
+
+     default :                    printf("\tReceived %s Event from BTMgr\n", getEventAsString(event.m_eventType));  
+    }
+                                      
     return;
 }
 
@@ -389,6 +453,14 @@ int main()
                         printf ("\nSuccess....; Streaming status = %u\n", index);
                 }
                 break;
+            case 20:
+               {
+                   uselection=20;
+                   printf ("\nNow you can power Off and power On to check the auto connection..\n");
+                   while(wait) { usleep(1000000); }
+                   uselection=0; wait=1;
+               }
+               break;
             case 55:
                 loop = 0;
                 break;

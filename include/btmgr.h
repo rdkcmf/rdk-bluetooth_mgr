@@ -52,6 +52,7 @@ typedef enum _BTMGR_Events_t {
     BTMGR_EVENT_DEVICE_DISCONNECT_FAILED,
     BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
     BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
+    BTMGR_EVENT_DEVICE_FOUND,
     BTMGR_EVENT_MAX
 } BTMGR_Events_t;
 
@@ -146,6 +147,7 @@ typedef struct _BTMGR_PairedDevices_t {
     unsigned short m_vendorID;
     unsigned char m_isLowEnergyDevice;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    unsigned char m_isLastConnectedDevice;
 } BTMGR_PairedDevices_t;
 
 typedef struct _BTMGR_DiscoveredDevices_t {
@@ -193,6 +195,7 @@ typedef struct _BTMGR_EventMessage_t {
     union {
         BTMGR_DiscoveredDevices_t m_discoveredDevice;
         BTMGR_ExternalDevice_t m_externalDevice;
+        BTMGR_PairedDevices_t m_pairedDevice;
         unsigned short m_numOfDevices;
     };
 } BTMGR_EventMessage_t;

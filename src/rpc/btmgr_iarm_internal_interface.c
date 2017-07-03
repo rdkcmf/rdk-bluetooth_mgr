@@ -864,6 +864,10 @@ _EventCallback (
         BTMGRLOG_WARN ("Post External Device Connect Request event\n");
         IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&eventData, sizeof(eventData));
     }
+    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_FOUND) {
+        BTMGRLOG_WARN ("Post External Device Found Back event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_FOUND, (void *)&eventData, sizeof(eventData));
+    }
     
 
     return;
