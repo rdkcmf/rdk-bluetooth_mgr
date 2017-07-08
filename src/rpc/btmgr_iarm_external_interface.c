@@ -813,6 +813,8 @@ const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type)
         return "TV";
     else if (type == BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE)
         return "VIDEO CONFERENCING";
+    else if (type == BTMGR_DEVICE_TYPE_SMARTPHONE)
+        return "SMARTPHONE";
     else
         return "UNKNOWN DEVICE";
 }
@@ -834,20 +836,20 @@ _btmgr_deviceCallback (
         BTMGR_EventMessage_t *pReceivedEvent = (BTMGR_EventMessage_t*)pData;
         BTMGR_EventMessage_t newEvent;
 
-        if ((BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE        == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE    == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE  == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE    == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE  == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_PAIRING_FAILED      == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED    == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED   == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED   == eventId) ||
-            (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST == eventId) ||
+        if ((BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE               == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE           == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE         == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE           == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE         == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE        == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE        == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_PAIRING_FAILED             == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED           == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED          == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED          == eventId) ||
             (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    == eventId) ||
-            (BTMGR_IARM_EVENT_DEVICE_FOUND               == eventId)) {
+            (BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST == eventId) ||
+            (BTMGR_IARM_EVENT_DEVICE_FOUND                      == eventId)) {
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTMGR_EventMessage_t));
 

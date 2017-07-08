@@ -74,6 +74,7 @@ typedef enum _BTMGR_DeviceType_t {
     BTMGR_DEVICE_TYPE_VIDEO_MONITOR,
     BTMGR_DEVICE_TYPE_TV,
     BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE,
+    BTMGR_DEVICE_TYPE_SMARTPHONE,
     BTMGR_DEVICE_TYPE_END
 } BTMGR_DeviceType_t;
 
@@ -179,23 +180,23 @@ typedef struct _BTMGR_DiscoveredDevicesList_t {
 } BTMGR_DiscoveredDevicesList_t;
 
 typedef struct _BTMGR_ExternalDevice_t {
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceType_t m_deviceType;
-    char m_name [BTMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    BTMGR_DeviceServiceList_t m_serviceInfo;
-    unsigned short m_vendorID;
-    unsigned char m_isLowEnergyDevice;
-    char m_externalDevicePIN[BTMGR_NAME_LEN_MAX];
+    BTMgrDeviceHandle           m_deviceHandle;
+    BTMGR_DeviceType_t          m_deviceType;
+    char                        m_name [BTMGR_NAME_LEN_MAX];
+    char                        m_deviceAddress [BTMGR_NAME_LEN_MAX];
+    BTMGR_DeviceServiceList_t   m_serviceInfo;
+    unsigned short              m_vendorID;
+    unsigned char               m_isLowEnergyDevice;
+    unsigned int                m_externalDevicePIN;
 } BTMGR_ExternalDevice_t;
 
 typedef struct _BTMGR_EventMessage_t {
     unsigned char m_adapterIndex;
     BTMGR_Events_t m_eventType;
     union {
-        BTMGR_DiscoveredDevices_t m_discoveredDevice;
-        BTMGR_ExternalDevice_t m_externalDevice;
-        BTMGR_PairedDevices_t m_pairedDevice;
+        BTMGR_DiscoveredDevices_t   m_discoveredDevice;
+        BTMGR_ExternalDevice_t      m_externalDevice;
+        BTMGR_PairedDevices_t       m_pairedDevice;
         unsigned short m_numOfDevices;
     };
 } BTMGR_EventMessage_t;
