@@ -16,235 +16,240 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#ifndef __BTMGR_H__
-#define __BTMGR_H__
+#ifndef __BTR_MGR_H__
+#define __BTR_MGR_H__
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#define BTMGR_NAME_LEN_MAX            64
-#define BTMGR_DEVICE_COUNT_MAX        32
-#define BTMGR_ADAPTER_COUNT_MAX       16
-#define BTMGR_MAX_DEVICE_PROFILE      32
+#define BTRMGR_NAME_LEN_MAX            64
+#define BTRMGR_DEVICE_COUNT_MAX        32
+#define BTRMGR_ADAPTER_COUNT_MAX       16
+#define BTRMGR_MAX_DEVICE_PROFILE      32
 
-typedef unsigned long long int BTMgrDeviceHandle;
+typedef unsigned long long int BTRMgrDeviceHandle;
 
-typedef enum _BTMGR_Result_t {
-    BTMGR_RESULT_SUCCESS = 0,
-    BTMGR_RESULT_GENERIC_FAILURE = -1,
-    BTMGR_RESULT_INVALID_INPUT = -2,
-    BTMGR_RESULT_INIT_FAILED = -3
-} BTMGR_Result_t;
+typedef enum _BTRMGR_Result_t {
+    BTRMGR_RESULT_SUCCESS = 0,
+    BTRMGR_RESULT_GENERIC_FAILURE = -1,
+    BTRMGR_RESULT_INVALID_INPUT = -2,
+    BTRMGR_RESULT_INIT_FAILED = -3
+} BTRMGR_Result_t;
 
-typedef enum _BTMGR_Events_t {
-    BTMGR_EVENT_DEVICE_OUT_OF_RANGE = 100,
-    BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE,
-    BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE,
-    BTMGR_EVENT_DEVICE_PAIRING_COMPLETE,
-    BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE,
-    BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE,
-    BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE,
-    BTMGR_EVENT_DEVICE_PAIRING_FAILED,
-    BTMGR_EVENT_DEVICE_UNPAIRING_FAILED,
-    BTMGR_EVENT_DEVICE_CONNECTION_FAILED,
-    BTMGR_EVENT_DEVICE_DISCONNECT_FAILED,
-    BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
-    BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
-    BTMGR_EVENT_DEVICE_FOUND,
-    BTMGR_EVENT_MAX
-} BTMGR_Events_t;
+typedef enum _BTRMGR_Events_t {
+    BTRMGR_EVENT_DEVICE_OUT_OF_RANGE = 100,
+    BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE,
+    BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE,
+    BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE,
+    BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE,
+    BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE,
+    BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE,
+    BTRMGR_EVENT_DEVICE_PAIRING_FAILED,
+    BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED,
+    BTRMGR_EVENT_DEVICE_CONNECTION_FAILED,
+    BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED,
+    BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
+    BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
+    BTRMGR_EVENT_DEVICE_FOUND,
+    BTRMGR_EVENT_MAX
+} BTRMGR_Events_t;
 
-typedef enum _BTMGR_DeviceType_t {
-    BTMGR_DEVICE_TYPE_UNKNOWN,
-    BTMGR_DEVICE_TYPE_WEARABLE_HEADSET,
-    BTMGR_DEVICE_TYPE_HANDSFREE,
-    BTMGR_DEVICE_TYPE_RESERVED,
-    BTMGR_DEVICE_TYPE_MICROPHONE,
-    BTMGR_DEVICE_TYPE_LOUDSPEAKER,
-    BTMGR_DEVICE_TYPE_HEADPHONES,
-    BTMGR_DEVICE_TYPE_PORTABLE_AUDIO,
-    BTMGR_DEVICE_TYPE_CAR_AUDIO,
-    BTMGR_DEVICE_TYPE_STB,
-    BTMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE,
-    BTMGR_DEVICE_TYPE_VCR,
-    BTMGR_DEVICE_TYPE_VIDEO_CAMERA,
-    BTMGR_DEVICE_TYPE_CAMCODER,
-    BTMGR_DEVICE_TYPE_VIDEO_MONITOR,
-    BTMGR_DEVICE_TYPE_TV,
-    BTMGR_DEVICE_TYPE_VIDEO_CONFERENCE,
-    BTMGR_DEVICE_TYPE_SMARTPHONE,
-    BTMGR_DEVICE_TYPE_END
-} BTMGR_DeviceType_t;
+typedef enum _BTRMGR_DeviceType_t {
+    BTRMGR_DEVICE_TYPE_UNKNOWN,
+    BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET,
+    BTRMGR_DEVICE_TYPE_HANDSFREE,
+    BTRMGR_DEVICE_TYPE_RESERVED,
+    BTRMGR_DEVICE_TYPE_MICROPHONE,
+    BTRMGR_DEVICE_TYPE_LOUDSPEAKER,
+    BTRMGR_DEVICE_TYPE_HEADPHONES,
+    BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO,
+    BTRMGR_DEVICE_TYPE_CAR_AUDIO,
+    BTRMGR_DEVICE_TYPE_STB,
+    BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE,
+    BTRMGR_DEVICE_TYPE_VCR,
+    BTRMGR_DEVICE_TYPE_VIDEO_CAMERA,
+    BTRMGR_DEVICE_TYPE_CAMCODER,
+    BTRMGR_DEVICE_TYPE_VIDEO_MONITOR,
+    BTRMGR_DEVICE_TYPE_TV,
+    BTRMGR_DEVICE_TYPE_VIDEO_CONFERENCE,
+    BTRMGR_DEVICE_TYPE_SMARTPHONE,
+    BTRMGR_DEVICE_TYPE_END
+} BTRMGR_DeviceType_t;
 
-typedef enum _BTMGR_StreamOut_Type_t {
-    BTMGR_STREAM_PRIMARY = 0,
-    BTMGR_STREAM_SECONDARY,
-} BTMGR_StreamOut_Type_t;
+typedef enum _BTRMGR_StreamOut_Type_t {
+    BTRMGR_STREAM_PRIMARY = 0,
+    BTRMGR_STREAM_SECONDARY,
+} BTRMGR_StreamOut_Type_t;
 
-typedef enum _BTMGR_DeviceConnect_Type_t {
-    BTMGR_DEVICE_TYPE_AUDIOSINK     = 1 << 0,
-    BTMGR_DEVICE_TYPE_HEADSET       = 1 << 1,
-    BTMGR_DEVICE_TYPE_OTHER         = 1 << 2,
-} BTMGR_DeviceConnect_Type_t;
+typedef enum _BTRMGR_DeviceConnect_Type_t {
+    BTRMGR_DEVICE_TYPE_AUDIOSINK     = 1 << 0,
+    BTRMGR_DEVICE_TYPE_HEADSET       = 1 << 1,
+    BTRMGR_DEVICE_TYPE_OTHER         = 1 << 2,
+} BTRMGR_DeviceConnect_Type_t;
 
-typedef enum _BTMGR_DevicePower_t {
-    BTMGR_DEVICE_POWER_ACTIVE = 0,
-    BTMGR_DEVICE_POWER_LOW,
-    BTMGR_DEVICE_POWER_STANDBY
-} BTMGR_DevicePower_t;
+typedef enum _BTRMGR_DevicePower_t {
+    BTRMGR_DEVICE_POWER_ACTIVE = 0,
+    BTRMGR_DEVICE_POWER_LOW,
+    BTRMGR_DEVICE_POWER_STANDBY
+} BTRMGR_DevicePower_t;
 
-typedef enum _BTMGR_RSSIValue_type_t {
-    BTMGR_RSSI_NONE = 0,      //!< No signal (0 bar)
-    BTMGR_RSSI_POOR,          //!< Poor (1 bar)
-    BTMGR_RSSI_FAIR,          //!< Fair (2 bars)
-    BTMGR_RSSI_GOOD,          //!< Good (3 bars)
-    BTMGR_RSSI_EXCELLENT      //!< Excellent (4 bars)
-} BTMGR_RSSIValue_t;
+typedef enum _BTRMGR_RSSIValue_type_t {
+    BTRMGR_RSSI_NONE = 0,      //!< No signal (0 bar)
+    BTRMGR_RSSI_POOR,          //!< Poor (1 bar)
+    BTRMGR_RSSI_FAIR,          //!< Fair (2 bars)
+    BTRMGR_RSSI_GOOD,          //!< Good (3 bars)
+    BTRMGR_RSSI_EXCELLENT      //!< Excellent (4 bars)
+} BTRMGR_RSSIValue_t;
 
-typedef struct _BTMGR_DeviceService_t {
+typedef struct _BTRMGR_DeviceService_t {
     unsigned short m_uuid;
-    char m_profile[BTMGR_NAME_LEN_MAX];
-} BTMGR_DeviceService_t;
+    char m_profile[BTRMGR_NAME_LEN_MAX];
+} BTRMGR_DeviceService_t;
 
-typedef struct _BTMGR_DeviceServiceList_t {
+typedef struct _BTRMGR_DeviceServiceList_t {
     unsigned short m_numOfService;
-    BTMGR_DeviceService_t m_profileInfo[BTMGR_MAX_DEVICE_PROFILE];
-} BTMGR_DeviceServiceList_t;
+    BTRMGR_DeviceService_t m_profileInfo[BTRMGR_MAX_DEVICE_PROFILE];
+} BTRMGR_DeviceServiceList_t;
 
-typedef struct _BTMGR_DevicesProperty_t {
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceType_t m_deviceType;
-    char m_name [BTMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    BTMGR_RSSIValue_t m_rssi;
+typedef struct _BTRMGR_DevicesProperty_t {
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceType_t m_deviceType;
+    char m_name [BTRMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_RSSIValue_t m_rssi;
     int m_signalLevel;
     unsigned short m_vendorID;
     unsigned char m_isPaired;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
     unsigned char m_isLowEnergyDevice;
-    BTMGR_DeviceServiceList_t m_serviceInfo;
-} BTMGR_DevicesProperty_t;
+    BTRMGR_DeviceServiceList_t m_serviceInfo;
+} BTRMGR_DevicesProperty_t;
 
-typedef struct _BTMGR_ConnectedDevice_t {
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceType_t m_deviceType;
-    char m_name [BTMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    BTMGR_DeviceServiceList_t m_serviceInfo;
+typedef struct _BTRMGR_ConnectedDevice_t {
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceType_t m_deviceType;
+    char m_name [BTRMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_DeviceServiceList_t m_serviceInfo;
     unsigned short m_vendorID;
     unsigned char m_isLowEnergyDevice;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
-    BTMGR_DevicePower_t m_powerStatus;
-} BTMGR_ConnectedDevice_t;
+    BTRMGR_DevicePower_t m_powerStatus;
+} BTRMGR_ConnectedDevice_t;
 
-typedef struct _BTMGR_PairedDevices_t {
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceType_t m_deviceType;
-    char m_name [BTMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    BTMGR_DeviceServiceList_t m_serviceInfo;
+typedef struct _BTRMGR_PairedDevices_t {
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceType_t m_deviceType;
+    char m_name [BTRMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_DeviceServiceList_t m_serviceInfo;
     unsigned short m_vendorID;
     unsigned char m_isLowEnergyDevice;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
     unsigned char m_isLastConnectedDevice;
-} BTMGR_PairedDevices_t;
+} BTRMGR_PairedDevices_t;
 
-typedef struct _BTMGR_DiscoveredDevices_t {
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceType_t m_deviceType;
-    char m_name [BTMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTMGR_NAME_LEN_MAX];
+typedef struct _BTRMGR_DiscoveredDevices_t {
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceType_t m_deviceType;
+    char m_name [BTRMGR_NAME_LEN_MAX];
+    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
     unsigned short m_vendorID;
     unsigned char m_isPairedDevice;
     unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
     unsigned char m_isLowEnergyDevice;
-    BTMGR_RSSIValue_t m_rssi;
+    BTRMGR_RSSIValue_t m_rssi;
     int m_signalLevel;
-} BTMGR_DiscoveredDevices_t;
+} BTRMGR_DiscoveredDevices_t;
 
-typedef struct _BTMGR_ConnectedDevicesList_t {
+typedef struct _BTRMGR_ConnectedDevicesList_t {
     unsigned short m_numOfDevices;
-    BTMGR_ConnectedDevice_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
-} BTMGR_ConnectedDevicesList_t;
+    BTRMGR_ConnectedDevice_t m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
+} BTRMGR_ConnectedDevicesList_t;
 
-typedef struct _BTMGR_PairedDevicesList_t {
+typedef struct _BTRMGR_PairedDevicesList_t {
     unsigned short m_numOfDevices;
-    BTMGR_PairedDevices_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
-} BTMGR_PairedDevicesList_t;
+    BTRMGR_PairedDevices_t m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
+} BTRMGR_PairedDevicesList_t;
 
-typedef struct _BTMGR_DiscoveredDevicesList_t {
+typedef struct _BTRMGR_DiscoveredDevicesList_t {
     unsigned short m_numOfDevices;
-    BTMGR_DiscoveredDevices_t m_deviceProperty[BTMGR_DEVICE_COUNT_MAX];
-} BTMGR_DiscoveredDevicesList_t;
+    BTRMGR_DiscoveredDevices_t m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
+} BTRMGR_DiscoveredDevicesList_t;
 
-typedef struct _BTMGR_ExternalDevice_t {
-    BTMgrDeviceHandle           m_deviceHandle;
-    BTMGR_DeviceType_t          m_deviceType;
-    char                        m_name [BTMGR_NAME_LEN_MAX];
-    char                        m_deviceAddress [BTMGR_NAME_LEN_MAX];
-    BTMGR_DeviceServiceList_t   m_serviceInfo;
+typedef struct _BTRMGR_ExternalDevice_t {
+    BTRMgrDeviceHandle           m_deviceHandle;
+    BTRMGR_DeviceType_t          m_deviceType;
+    char                        m_name [BTRMGR_NAME_LEN_MAX];
+    char                        m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_DeviceServiceList_t   m_serviceInfo;
     unsigned short              m_vendorID;
     unsigned char               m_isLowEnergyDevice;
     unsigned int                m_externalDevicePIN;
-} BTMGR_ExternalDevice_t;
+} BTRMGR_ExternalDevice_t;
 
-typedef struct _BTMGR_EventMessage_t {
+typedef struct _BTRMGR_EventMessage_t {
     unsigned char m_adapterIndex;
-    BTMGR_Events_t m_eventType;
+    BTRMGR_Events_t m_eventType;
     union {
-        BTMGR_DiscoveredDevices_t   m_discoveredDevice;
-        BTMGR_ExternalDevice_t      m_externalDevice;
-        BTMGR_PairedDevices_t       m_pairedDevice;
+        BTRMGR_DiscoveredDevices_t   m_discoveredDevice;
+        BTRMGR_ExternalDevice_t      m_externalDevice;
+        BTRMGR_PairedDevices_t       m_pairedDevice;
         unsigned short m_numOfDevices;
     };
-} BTMGR_EventMessage_t;
+} BTRMGR_EventMessage_t;
 
-typedef void (*BTMGR_EventCallback)(BTMGR_EventMessage_t);
-
-
-BTMGR_Result_t BTMGR_Init(void);
-BTMGR_Result_t BTMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters);
-
-BTMGR_Result_t BTMGR_SetAdapterName(unsigned char index_of_adapter, const char* pNameOfAdapter);
-BTMGR_Result_t BTMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameOfAdapter);
-
-BTMGR_Result_t BTMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char power_status);
-BTMGR_Result_t BTMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char *pPowerStatus);
-
-BTMGR_Result_t BTMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsigned char discoverable, unsigned short timeout);
-BTMGR_Result_t BTMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsigned char *pDiscoverable);
-
-BTMGR_Result_t BTMGR_StartDeviceDiscovery(unsigned char index_of_adapter);
-BTMGR_Result_t BTMGR_StopDeviceDiscovery(unsigned char index_of_adapter);
-BTMGR_Result_t BTMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTMGR_DiscoveredDevicesList_t *pDiscoveredDevices);
-
-BTMGR_Result_t BTMGR_PairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
-BTMGR_Result_t BTMGR_UnpairDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
-BTMGR_Result_t BTMGR_GetPairedDevices(unsigned char index_of_adapter, BTMGR_PairedDevicesList_t *pPairedDevices);
-
-BTMGR_Result_t BTMGR_ConnectToDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs);
-BTMGR_Result_t BTMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
-BTMGR_Result_t BTMGR_GetConnectedDevices(unsigned char index_of_adapter, BTMGR_ConnectedDevicesList_t *pConnectedDevices);
-
-BTMGR_Result_t BTMGR_GetDeviceProperties(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DevicesProperty_t *pDeviceProperty);
-
-BTMGR_Result_t BTMGR_RegisterEventCallback(BTMGR_EventCallback eventCallback);
-
-BTMGR_Result_t BTMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle, BTMGR_DeviceConnect_Type_t connectAs);
-BTMGR_Result_t BTMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTMgrDeviceHandle handle);
-BTMGR_Result_t BTMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
-BTMGR_Result_t BTMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTMGR_StreamOut_Type_t type);
-
-BTMGR_Result_t BTMGR_ResetAdapter(unsigned char index_of_adapter);
-BTMGR_Result_t BTMGR_DeInit(void);
+typedef void (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t);
 
 
-const char* BTMGR_GetDeviceTypeAsString(BTMGR_DeviceType_t type);
+BTRMGR_Result_t BTRMGR_Init(void);
+BTRMGR_Result_t BTRMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters);
+
+BTRMGR_Result_t BTRMGR_SetAdapterName(unsigned char index_of_adapter, const char* pNameOfAdapter);
+BTRMGR_Result_t BTRMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameOfAdapter);
+
+BTRMGR_Result_t BTRMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char power_status);
+BTRMGR_Result_t BTRMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char *pPowerStatus);
+
+BTRMGR_Result_t BTRMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsigned char discoverable, unsigned short timeout);
+BTRMGR_Result_t BTRMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsigned char *pDiscoverable);
+
+BTRMGR_Result_t BTRMGR_StartDeviceDiscovery(unsigned char index_of_adapter);
+BTRMGR_Result_t BTRMGR_StopDeviceDiscovery(unsigned char index_of_adapter);
+BTRMGR_Result_t BTRMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTRMGR_DiscoveredDevicesList_t *pDiscoveredDevices);
+
+BTRMGR_Result_t BTRMGR_PairDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
+BTRMGR_Result_t BTRMGR_UnpairDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
+BTRMGR_Result_t BTRMGR_GetPairedDevices(unsigned char index_of_adapter, BTRMGR_PairedDevicesList_t *pPairedDevices);
+
+BTRMGR_Result_t BTRMGR_ConnectToDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
+BTRMGR_Result_t BTRMGR_GetConnectedDevices(unsigned char index_of_adapter, BTRMGR_ConnectedDevicesList_t *pConnectedDevices);
+
+BTRMGR_Result_t BTRMGR_GetDeviceProperties(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DevicesProperty_t *pDeviceProperty);
+
+BTRMGR_Result_t BTRMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
+BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
+BTRMGR_Result_t BTRMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTRMGR_StreamOut_Type_t type);
+
+BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
+BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
+
+BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char index_of_adapter);
+
+BTRMGR_Result_t BTRMGR_DeInit(void);
+
+BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback eventCallback);
+
+
+const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __BTMGR_H__ */
+#endif /* __BTR_MGR_H__ */

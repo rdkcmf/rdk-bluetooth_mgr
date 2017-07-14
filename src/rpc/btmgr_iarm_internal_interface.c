@@ -23,40 +23,73 @@
 #include "btmgr_priv.h"
 #include "btmgr_iarm_interface.h"
 
-static unsigned char gIsBTMGR_Internal_Inited = 0;
 
+/* Static Function Prototypes */
+static IARM_Result_t btrMgr_GetNumberOfAdapters (void* arg);
+static IARM_Result_t btrMgr_SetAdapterName (void* arg);
+static IARM_Result_t btrMgr_GetAdapterName (void* arg);
+static IARM_Result_t btrMgr_SetAdapterPowerStatus (void* arg); 
+static IARM_Result_t btrMgr_GetAdapterPowerStatus (void* arg); 
+static IARM_Result_t btrMgr_SetAdapterDiscoverable (void* arg); 
+static IARM_Result_t btrMgr_IsAdapterDiscoverable (void* arg);
+static IARM_Result_t btrMgr_ChangeDeviceDiscoveryStatus (void* arg);
+static IARM_Result_t btrMgr_GetDiscoveredDevices (void* arg);
+static IARM_Result_t btrMgr_PairDevice (void* arg); 
+static IARM_Result_t btrMgr_UnpairDevice (void* arg); 
+static IARM_Result_t btrMgr_GetPairedDevices (void* arg);
+static IARM_Result_t btrMgr_ConnectToDevice (void* arg);
+static IARM_Result_t btrMgr_DisconnectFromDevice (void* arg);
+static IARM_Result_t btrMgr_GetConnectedDevices (void* arg); 
+static IARM_Result_t btrMgr_GetDeviceProperties (void* arg); 
+static IARM_Result_t btrMgr_StartAudioStreamingOut (void* arg); 
+static IARM_Result_t btrMgr_StopAudioStreamingOut (void* arg); 
+static IARM_Result_t btrMgr_IsAudioStreamingOut (void* arg);
+static IARM_Result_t btrMgr_SetAudioStreamOutType (void* arg); 
+static IARM_Result_t btrMgr_StartAudioStreamingIn (void* arg); 
+static IARM_Result_t btrMgr_StopAudioStreamingIn (void* arg); 
+static IARM_Result_t btrMgr_IsAudioStreamingIn (void* arg);
+static IARM_Result_t btrMgr_ResetAdapter (void* arg);
+static IARM_Result_t btrMgr_DeInit (void* arg);
+
+/* Callbacks Prototypes */
+static void btrMgr_EventCallback (BTRMGR_EventMessage_t events); 
+
+static unsigned char gIsBTRMGR_Internal_Inited = 0;
+
+
+/* Static Function Definition */
 static IARM_Result_t
-_GetNumberOfAdapters (
+btrMgr_GetNumberOfAdapters (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
     unsigned char   numOfAdapters = 0;
     unsigned char*  pNumberOfAdapters = (unsigned char*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pNumberOfAdapters) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetNumberOfAdapters(&numOfAdapters);
-    if (BTMGR_RESULT_SUCCESS == rc) {
+    rc = BTRMGR_GetNumberOfAdapters(&numOfAdapters);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
         *pNumberOfAdapters = numOfAdapters;
-        BTMGRLOG_INFO ("Success; Number of Adapters = %d\n", numOfAdapters);
+        BTRMGRLOG_INFO ("Success; Number of Adapters = %d\n", numOfAdapters);
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -64,35 +97,35 @@ _GetNumberOfAdapters (
 }
 
 static IARM_Result_t
-_SetAdapterName (
+btrMgr_SetAdapterName (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterName_t* pName = (BTMGR_IARMAdapterName_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterName_t* pName = (BTRMGR_IARMAdapterName_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pName) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_SetAdapterName(pName->m_adapterIndex, pName->m_name);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_SetAdapterName(pName->m_adapterIndex, pName->m_name);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -100,35 +133,35 @@ _SetAdapterName (
 }
 
 static IARM_Result_t
-_GetAdapterName (
+btrMgr_GetAdapterName (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterName_t* pName = (BTMGR_IARMAdapterName_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterName_t* pName = (BTRMGR_IARMAdapterName_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pName) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetAdapterName(pName->m_adapterIndex, pName->m_name);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success ; Adapter name is %s\n", pName->m_name);
+    rc = BTRMGR_GetAdapterName(pName->m_adapterIndex, pName->m_name);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success ; Adapter name is %s\n", pName->m_name);
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -136,35 +169,35 @@ _GetAdapterName (
 }
 
 static IARM_Result_t
-_SetAdapterPowerStatus (
+btrMgr_SetAdapterPowerStatus (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterPower_t* pPowerStatus = (BTMGR_IARMAdapterPower_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterPower_t* pPowerStatus = (BTRMGR_IARMAdapterPower_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPowerStatus) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_SetAdapterPowerStatus(pPowerStatus->m_adapterIndex, pPowerStatus->m_powerStatus);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_SetAdapterPowerStatus(pPowerStatus->m_adapterIndex, pPowerStatus->m_powerStatus);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -172,35 +205,35 @@ _SetAdapterPowerStatus (
 }
 
 static IARM_Result_t
-_GetAdapterPowerStatus (
+btrMgr_GetAdapterPowerStatus (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterPower_t* pPowerStatus = (BTMGR_IARMAdapterPower_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterPower_t* pPowerStatus = (BTRMGR_IARMAdapterPower_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPowerStatus) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetAdapterPowerStatus(pPowerStatus->m_adapterIndex, &pPowerStatus->m_powerStatus);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_GetAdapterPowerStatus(pPowerStatus->m_adapterIndex, &pPowerStatus->m_powerStatus);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -208,35 +241,35 @@ _GetAdapterPowerStatus (
 }
 
 static IARM_Result_t
-_SetAdapterDiscoverable (
+btrMgr_SetAdapterDiscoverable (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterDiscoverable_t* pDiscoverable = (BTMGR_IARMAdapterDiscoverable_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterDiscoverable_t* pDiscoverable = (BTRMGR_IARMAdapterDiscoverable_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDiscoverable) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_SetAdapterDiscoverable(pDiscoverable->m_adapterIndex, pDiscoverable->m_isDiscoverable, pDiscoverable->m_timeout);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_SetAdapterDiscoverable(pDiscoverable->m_adapterIndex, pDiscoverable->m_isDiscoverable, pDiscoverable->m_timeout);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -244,35 +277,35 @@ _SetAdapterDiscoverable (
 }
 
 static IARM_Result_t
-_IsAdapterDiscoverable (
+btrMgr_IsAdapterDiscoverable (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterDiscoverable_t* pDiscoverable = (BTMGR_IARMAdapterDiscoverable_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterDiscoverable_t* pDiscoverable = (BTRMGR_IARMAdapterDiscoverable_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDiscoverable) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_IsAdapterDiscoverable(pDiscoverable->m_adapterIndex, &pDiscoverable->m_isDiscoverable);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_IsAdapterDiscoverable(pDiscoverable->m_adapterIndex, &pDiscoverable->m_isDiscoverable);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -280,39 +313,39 @@ _IsAdapterDiscoverable (
 }
 
 static IARM_Result_t
-_ChangeDeviceDiscoveryStatus (
+btrMgr_ChangeDeviceDiscoveryStatus (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMAdapterDiscover_t* pAdapterIndex = (BTMGR_IARMAdapterDiscover_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAdapterDiscover_t* pAdapterIndex = (BTRMGR_IARMAdapterDiscover_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pAdapterIndex) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
     if (pAdapterIndex->m_setDiscovery)
-        rc = BTMGR_StartDeviceDiscovery(pAdapterIndex->m_adapterIndex);
+        rc = BTRMGR_StartDeviceDiscovery(pAdapterIndex->m_adapterIndex);
     else
-        rc = BTMGR_StopDeviceDiscovery(pAdapterIndex->m_adapterIndex);
+        rc = BTRMGR_StopDeviceDiscovery(pAdapterIndex->m_adapterIndex);
 
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -320,35 +353,35 @@ _ChangeDeviceDiscoveryStatus (
 }
 
 static IARM_Result_t
-_GetDiscoveredDevices (
+btrMgr_GetDiscoveredDevices (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMDiscoveredDevices_t* pDiscoveredDevices = (BTMGR_IARMDiscoveredDevices_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMDiscoveredDevices_t* pDiscoveredDevices = (BTRMGR_IARMDiscoveredDevices_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDiscoveredDevices) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetDiscoveredDevices(pDiscoveredDevices->m_adapterIndex, &pDiscoveredDevices->m_devices);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_GetDiscoveredDevices(pDiscoveredDevices->m_adapterIndex, &pDiscoveredDevices->m_devices);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -356,37 +389,37 @@ _GetDiscoveredDevices (
 }
 
 static IARM_Result_t
-_PairDevice (
+btrMgr_PairDevice (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMPairDevice_t* pPairDevice = (BTMGR_IARMPairDevice_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMPairDevice_t* pPairDevice = (BTRMGR_IARMPairDevice_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPairDevice) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_PairDevice(pPairDevice->m_adapterIndex, pPairDevice->m_deviceHandle);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_PairDevice(pPairDevice->m_adapterIndex, pPairDevice->m_deviceHandle);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
 #if 0
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
 #endif
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -394,37 +427,37 @@ _PairDevice (
 }
 
 static IARM_Result_t
-_UnpairDevice (
+btrMgr_UnpairDevice (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMPairDevice_t* pUnPairDevice = (BTMGR_IARMPairDevice_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMPairDevice_t* pUnPairDevice = (BTRMGR_IARMPairDevice_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pUnPairDevice) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_UnpairDevice(pUnPairDevice->m_adapterIndex, pUnPairDevice->m_deviceHandle);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_UnpairDevice(pUnPairDevice->m_adapterIndex, pUnPairDevice->m_deviceHandle);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
 #if 0
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
 #endif
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -432,35 +465,35 @@ _UnpairDevice (
 }
 
 static IARM_Result_t
-_GetPairedDevices (
+btrMgr_GetPairedDevices (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMPairedDevices_t* pPairedDevices = (BTMGR_IARMPairedDevices_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMPairedDevices_t* pPairedDevices = (BTRMGR_IARMPairedDevices_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pPairedDevices) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetPairedDevices(pPairedDevices->m_adapterIndex, &pPairedDevices->m_devices);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_GetPairedDevices(pPairedDevices->m_adapterIndex, &pPairedDevices->m_devices);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -468,35 +501,35 @@ _GetPairedDevices (
 }
 
 static IARM_Result_t 
-_ConnectToDevice (
+btrMgr_ConnectToDevice (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMConnectDevice_t* pConnect = (BTMGR_IARMConnectDevice_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMConnectDevice_t* pConnect = (BTRMGR_IARMConnectDevice_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pConnect) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_ConnectToDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle, pConnect->m_connectAs);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_ConnectToDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle, pConnect->m_connectAs);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -504,35 +537,35 @@ _ConnectToDevice (
 }
 
 static IARM_Result_t
-_DisconnectFromDevice (
+btrMgr_DisconnectFromDevice (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMConnectDevice_t* pConnect = (BTMGR_IARMConnectDevice_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMConnectDevice_t* pConnect = (BTRMGR_IARMConnectDevice_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pConnect) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_DisconnectFromDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_DisconnectFromDevice(pConnect->m_adapterIndex, pConnect->m_deviceHandle);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -540,35 +573,35 @@ _DisconnectFromDevice (
 }
 
 static IARM_Result_t
-_GetConnectedDevices (
+btrMgr_GetConnectedDevices (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMConnectedDevices_t* pConnectedDevices = (BTMGR_IARMConnectedDevices_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMConnectedDevices_t* pConnectedDevices = (BTRMGR_IARMConnectedDevices_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pConnectedDevices) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetConnectedDevices(pConnectedDevices->m_adapterIndex, &pConnectedDevices->m_devices);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_GetConnectedDevices(pConnectedDevices->m_adapterIndex, &pConnectedDevices->m_devices);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -576,35 +609,35 @@ _GetConnectedDevices (
 }
 
 static IARM_Result_t
-_GetDeviceProperties (
+btrMgr_GetDeviceProperties (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMDDeviceProperty_t* pDeviceProperty = (BTMGR_IARMDDeviceProperty_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMDDeviceProperty_t* pDeviceProperty = (BTRMGR_IARMDDeviceProperty_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pDeviceProperty) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_GetDeviceProperties(pDeviceProperty->m_adapterIndex, pDeviceProperty->m_deviceHandle, &pDeviceProperty->m_deviceProperty);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_GetDeviceProperties(pDeviceProperty->m_adapterIndex, pDeviceProperty->m_deviceHandle, &pDeviceProperty->m_deviceProperty);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -613,35 +646,35 @@ _GetDeviceProperties (
 
 
 static IARM_Result_t
-_StartAudioStreaming (
+btrMgr_StartAudioStreamingOut (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMStreaming_t*  pStartStream = (BTMGR_IARMStreaming_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreaming_t*  pStartStream = (BTRMGR_IARMStreaming_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStartStream) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_StartAudioStreamingOut(pStartStream->m_adapterIndex, pStartStream->m_deviceHandle, pStartStream->m_audioPref);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_StartAudioStreamingOut(pStartStream->m_adapterIndex, pStartStream->m_deviceHandle, pStartStream->m_audioPref);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -649,69 +682,71 @@ _StartAudioStreaming (
 }
 
 static IARM_Result_t
-_StopAudioStreaming (
+btrMgr_StopAudioStreamingOut (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMStreaming_t* pStopStream = (BTMGR_IARMStreaming_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreaming_t* pStopStream = (BTRMGR_IARMStreaming_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStopStream) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_StopAudioStreamingOut(pStopStream->m_adapterIndex, pStopStream->m_deviceHandle);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_StopAudioStreamingOut(pStopStream->m_adapterIndex, pStopStream->m_deviceHandle);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
     return retCode;
 }
 
-static IARM_Result_t _IsAudioStreaming(void *arg)
-{
+static IARM_Result_t 
+btrMgr_IsAudioStreamingOut (
+    void*   arg
+) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMStreamingStatus_t* pStreamStatus = (BTMGR_IARMStreamingStatus_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreamingStatus_t* pStreamStatus = (BTRMGR_IARMStreamingStatus_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStreamStatus) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_IsAudioStreamingOut(pStreamStatus->m_adapterIndex, &pStreamStatus->m_streamingStatus);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_IsAudioStreamingOut(pStreamStatus->m_adapterIndex, &pStreamStatus->m_streamingStatus);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -719,35 +754,35 @@ static IARM_Result_t _IsAudioStreaming(void *arg)
 }
 
 static IARM_Result_t
-_SetAudioStreamOutType (
+btrMgr_SetAudioStreamOutType (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
-    BTMGR_IARMStreamingType_t* pStartStream = (BTMGR_IARMStreamingType_t*) arg;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreamingType_t* pStartStream = (BTRMGR_IARMStreamingType_t*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pStartStream) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_SetAudioStreamingOutType(pStartStream->m_adapterIndex, pStartStream->m_audioOutType);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_SetAudioStreamingOutType(pStartStream->m_adapterIndex, pStartStream->m_audioOutType);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -755,35 +790,144 @@ _SetAudioStreamOutType (
 }
 
 static IARM_Result_t
-_ResetAdapter (
+btrMgr_StartAudioStreamingIn (
     void*   arg
 ) {
     IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
-    BTMGR_Result_t  rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreaming_t*  pStartStream = (BTRMGR_IARMStreaming_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pStartStream) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+
+    rc = BTRMGR_StartAudioStreamingIn(pStartStream->m_adapterIndex, pStartStream->m_deviceHandle, pStartStream->m_audioPref);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+
+    return retCode;
+}
+
+static IARM_Result_t
+btrMgr_StopAudioStreamingIn (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreaming_t* pStopStream = (BTRMGR_IARMStreaming_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pStopStream) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+
+    rc = BTRMGR_StopAudioStreamingIn(pStopStream->m_adapterIndex, pStopStream->m_deviceHandle);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+
+    return retCode;
+}
+
+static IARM_Result_t 
+btrMgr_IsAudioStreamingIn (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMStreamingStatus_t* pStreamStatus = (BTRMGR_IARMStreamingStatus_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pStreamStatus) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+
+    rc = BTRMGR_IsAudioStreamingIn(pStreamStatus->m_adapterIndex, &pStreamStatus->m_streamingStatus);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+
+    return retCode;
+}
+
+
+static IARM_Result_t
+btrMgr_ResetAdapter (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
     unsigned char*  pAdapterIndex =  (unsigned char*) arg;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    if (!gIsBTMGR_Internal_Inited) {
+    if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
-        BTMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
         return retCode;
     }
 
     if (!pAdapterIndex) {
         retCode = IARM_RESULT_INVALID_PARAM;
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
 
-    rc = BTMGR_ResetAdapter (*pAdapterIndex);
-    if (BTMGR_RESULT_SUCCESS == rc) {
-        BTMGRLOG_INFO ("Success\n");
+    rc = BTRMGR_ResetAdapter (*pAdapterIndex);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
-        BTMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
 
@@ -792,152 +936,157 @@ _ResetAdapter (
 }
 
 static IARM_Result_t
-_DeInit (
+btrMgr_DeInit (
     void*   arg
 ) {
-    if (gIsBTMGR_Internal_Inited)
-        BTMGR_DeInit();
+    if (gIsBTRMGR_Internal_Inited)
+        BTRMGR_DeInit();
 
     return IARM_RESULT_SUCCESS;
 }
 
 
+/* Public Functions */
 void
-_EventCallback (
-    BTMGR_EventMessage_t events
+BTRMGR_BeginIARMMode (
+    void
 ) {
-    BTMGR_EventMessage_t eventData;
 
-    BTMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_INFO ("Entering\n");
 
-    memcpy (&eventData, &events, sizeof(BTMGR_EventMessage_t));
+    if (!gIsBTRMGR_Internal_Inited) {
+        gIsBTRMGR_Internal_Inited = 1;
+        IARM_Bus_Init(IARM_BUS_BTRMGR_NAME);
+        IARM_Bus_Connect();
 
-    if (eventData.m_eventType == BTMGR_EVENT_DEVICE_OUT_OF_RANGE) {
-        BTMGRLOG_WARN ("Post Device Out of Range event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, (void *)&eventData, sizeof(eventData));
+        BTRMGRLOG_INFO ("IARM Interface Initializing\n");
+
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS, btrMgr_GetNumberOfAdapters);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_ADAPTER_NAME, btrMgr_SetAdapterName);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_ADAPTER_NAME, btrMgr_GetAdapterName);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_ADAPTER_POWERSTATUS, btrMgr_SetAdapterPowerStatus);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_ADAPTER_POWERSTATUS, btrMgr_GetAdapterPowerStatus);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE, btrMgr_SetAdapterDiscoverable);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE, btrMgr_IsAdapterDiscoverable);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, btrMgr_ChangeDeviceDiscoveryStatus);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES, btrMgr_GetDiscoveredDevices);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_PAIR_DEVICE, btrMgr_PairDevice);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_UNPAIR_DEVICE, btrMgr_UnpairDevice);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_PAIRED_DEVICES, btrMgr_GetPairedDevices);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_CONNECT_TO_DEVICE, btrMgr_ConnectToDevice);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DISCONNECT_FROM_DEVICE, btrMgr_DisconnectFromDevice);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_CONNECTED_DEVICES, btrMgr_GetConnectedDevices);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_DEVICE_PROPERTIES, btrMgr_GetDeviceProperties);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_OUT, btrMgr_StartAudioStreamingOut);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_OUT, btrMgr_StopAudioStreamingOut);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_OUT, btrMgr_IsAudioStreamingOut);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_AUDIO_STREAM_OUT_TYPE, btrMgr_SetAudioStreamOutType);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN, btrMgr_StartAudioStreamingIn);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN, btrMgr_StopAudioStreamingIn);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN, btrMgr_IsAudioStreamingIn);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_RESET_ADAPTER, btrMgr_ResetAdapter);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
+
+        IARM_Bus_RegisterEvent(BTRMGR_IARM_EVENT_MAX);
+
+        /* Register a callback */
+        BTRMGR_RegisterEventCallback(btrMgr_EventCallback);
+
+        BTRMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
-        BTMGRLOG_WARN ("Post Discovery Status update\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, (void *)&eventData, sizeof(eventData));
+    else {
+        BTRMGRLOG_INFO ("IARM Interface Already Inited\n");
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE) {
-        BTMGRLOG_WARN ("Post Discovery Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, (void *)&eventData, sizeof(eventData));
+
+    return;
+}
+
+void
+BTRMGR_TermIARMMode (
+    void
+) {
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (gIsBTRMGR_Internal_Inited) {
+        BTRMGRLOG_INFO ("IARM Interface Being terminated\n");
+        IARM_Bus_Disconnect();
+        IARM_Bus_Term();
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_PAIRING_COMPLETE) {
-        BTMGRLOG_WARN ("Post Device Pairing Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
+    else {
+        BTRMGRLOG_INFO ("IARM Interface Not Inited\n");
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE) {
-        BTMGRLOG_WARN ("Post Device Pairing Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
+}
+
+
+/*  Incoming Callbacks */
+static void
+btrMgr_EventCallback (
+    BTRMGR_EventMessage_t events
+) {
+    BTRMGR_EventMessage_t eventData;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    memcpy (&eventData, &events, sizeof(BTRMGR_EventMessage_t));
+
+    if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_OUT_OF_RANGE) {
+        BTRMGRLOG_WARN ("Post Device Out of Range event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE) {
-        BTMGRLOG_WARN ("Post Device Connection Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
+        BTRMGRLOG_WARN ("Post Discovery Status update\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE) {
-        BTMGRLOG_WARN ("Post Device Disconnected event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE) {
+        BTRMGRLOG_WARN ("Post Discovery Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_PAIRING_FAILED) {
-        BTMGRLOG_WARN ("Post Device Pairing Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_PAIRING_FAILED, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE) {
+        BTRMGRLOG_WARN ("Post Device Pairing Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_UNPAIRING_FAILED) {
-        BTMGRLOG_WARN ("Post Device UnPairing Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE) {
+        BTRMGRLOG_WARN ("Post Device Pairing Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_CONNECTION_FAILED) {
-        BTMGRLOG_WARN ("Post Device Connection Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE) {
+        BTRMGRLOG_WARN ("Post Device Connection Complete event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_DISCONNECT_FAILED) {
-        BTMGRLOG_WARN ("Post Device Disconnect Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE) {
+        BTRMGRLOG_WARN ("Post Device Disconnected event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
-        BTMGRLOG_WARN ("Post External Device Pair Request event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_PAIRING_FAILED) {
+        BTRMGRLOG_WARN ("Post Device Pairing Failed event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST) {
-        BTMGRLOG_WARN ("Post External Device Connect Request event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED) {
+        BTRMGRLOG_WARN ("Post Device UnPairing Failed event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED, (void *)&eventData, sizeof(eventData));
     }
-    else if (eventData.m_eventType == BTMGR_EVENT_DEVICE_FOUND) {
-        BTMGRLOG_WARN ("Post External Device Found Back event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTMGR_NAME, (IARM_EventId_t) BTMGR_IARM_EVENT_DEVICE_FOUND, (void *)&eventData, sizeof(eventData));
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_FAILED) {
+        BTRMGRLOG_WARN ("Post Device Connection Failed event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED) {
+        BTRMGRLOG_WARN ("Post Device Disconnect Failed event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
+        BTRMGRLOG_WARN ("Post External Device Pair Request event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST) {
+        BTRMGRLOG_WARN ("Post External Device Connect Request event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_FOUND) {
+        BTRMGRLOG_WARN ("Post External Device Found Back event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_FOUND, (void *)&eventData, sizeof(eventData));
     }
     
 
     return;
 }
 
-
-void
-btmgr_BeginIARMMode (
-    void
-) {
-
-    BTMGRLOG_INFO ("Entering\n");
-
-    if (!gIsBTMGR_Internal_Inited) {
-        gIsBTMGR_Internal_Inited = 1;
-        IARM_Bus_Init(IARM_BUS_BTMGR_NAME);
-        IARM_Bus_Connect();
-
-        BTMGRLOG_INFO ("IARM Interface Initializing\n");
-
-        IARM_Bus_RegisterCall("GetNumberOfAdapters", _GetNumberOfAdapters);
-        IARM_Bus_RegisterCall("SetAdapterName", _SetAdapterName);
-        IARM_Bus_RegisterCall("GetAdapterName", _GetAdapterName);
-        IARM_Bus_RegisterCall("SetAdapterPowerStatus", _SetAdapterPowerStatus);
-        IARM_Bus_RegisterCall("GetAdapterPowerStatus", _GetAdapterPowerStatus);
-        IARM_Bus_RegisterCall("SetAdapterDiscoverable", _SetAdapterDiscoverable);
-        IARM_Bus_RegisterCall("IsAdapterDiscoverable", _IsAdapterDiscoverable);
-        IARM_Bus_RegisterCall("SetDeviceDiscoveryStatus", _ChangeDeviceDiscoveryStatus);
-        IARM_Bus_RegisterCall("GetDiscoveredDevices", _GetDiscoveredDevices);
-        IARM_Bus_RegisterCall("PairDevice", _PairDevice);
-        IARM_Bus_RegisterCall("UnpairDevice", _UnpairDevice);
-        IARM_Bus_RegisterCall("GetPairedDevices", _GetPairedDevices);
-        IARM_Bus_RegisterCall("ConnectToDevice", _ConnectToDevice);
-        IARM_Bus_RegisterCall("DisconnectFromDevice", _DisconnectFromDevice);
-        IARM_Bus_RegisterCall("GetConnectedDevices", _GetConnectedDevices);
-        IARM_Bus_RegisterCall("GetDeviceProperties", _GetDeviceProperties);
-
-        IARM_Bus_RegisterCall("StartAudioStreaming", _StartAudioStreaming);
-        IARM_Bus_RegisterCall("StopAudioStreaming", _StopAudioStreaming);
-        IARM_Bus_RegisterCall("IsAudioStreaming", _IsAudioStreaming);
-        IARM_Bus_RegisterCall("SetAudioStreamOutType", _SetAudioStreamOutType);
-        IARM_Bus_RegisterCall("ResetAdapter", _ResetAdapter);
-        IARM_Bus_RegisterCall("DeInit", _DeInit);
-
-        IARM_Bus_RegisterEvent(BTMGR_IARM_EVENT_MAX);
-
-        /* Register a callback */
-        BTMGR_RegisterEventCallback(_EventCallback);
-
-        BTMGRLOG_INFO ("IARM Interface Inited Successfully\n");
-    }
-    else {
-        BTMGRLOG_INFO ("IARM Interface Already Inited\n");
-    }
-
-    return;
-}
-
-void
-btmgr_TermIARMMode (
-    void
-) {
-    BTMGRLOG_INFO ("Entering\n");
-
-    if (gIsBTMGR_Internal_Inited) {
-        BTMGRLOG_INFO ("IARM Interface Being terminated\n");
-        IARM_Bus_Disconnect();
-        IARM_Bus_Term();
-    }
-    else {
-        BTMGRLOG_INFO ("IARM Interface Not Inited\n");
-    }
-}

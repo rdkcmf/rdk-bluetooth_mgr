@@ -27,29 +27,31 @@
 #include <unistd.h>
 #include "btmgr.h"
 
-extern void btmgr_BeginIARMMode();
-extern void btmgr_TermIARMMode();
+extern void BTRMGR_BeginIARMMode();
+extern void BTRMGR_TermIARMMode();
 
-int main ()
-{
+int
+main (
+    void
+) {
     time_t curr = 0;
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
-    btmgr_BeginIARMMode();
+    BTRMGR_BeginIARMMode();
 
-    rc = BTMGR_Init();
-    if (BTMGR_RESULT_SUCCESS == rc)
-    {
-        while(1)
-        {
+    rc = BTRMGR_Init();
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        while(1) {
             time(&curr);
             printf ("I-ARM BTMgr Bus: HeartBeat at %s\n", ctime(&curr));
             sleep(10);
         }
     }
-    else
+    else {
         printf ("I-ARM BTMgr Bus: Failed it init\n");
+    }
 
-    btmgr_TermIARMMode();
+    BTRMGR_TermIARMMode();
+
     return 0;
 }

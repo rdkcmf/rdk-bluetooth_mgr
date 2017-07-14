@@ -27,11 +27,11 @@
 
 #include "btrMgr_Types.h"
 
-#define BTMGR_NAME_LEN_MAX            64
-#define BTMGR_MAX_PERSISTENT_PROFILE_COUNT 5
-#define BTMGR_MAX_PERSISTENT_DEVICE_COUNT	5
-#define BTMGR_PERSISTENT_DATA_PATH "/opt/lib/bluetooth/btmgrPersist.json"
-#define BTMGR_A2DP_SINK_PROFILE_ID "0x110b"
+#define BTRMGR_NAME_LEN_MAX            64
+#define BTRMGR_MAX_PERSISTENT_PROFILE_COUNT 5
+#define BTRMGR_MAX_PERSISTENT_DEVICE_COUNT	5
+#define BTRMGR_PERSISTENT_DATA_PATH "/opt/lib/bluetooth/btmgrPersist.json"
+#define BTRMGR_A2DP_SINK_PROFILE_ID "0x110b"
 
 
 typedef void* tBTRMgrPIHdl;
@@ -44,38 +44,38 @@ typedef struct _stBTRMgrPersistDevice {
 
 typedef struct _stBTRMgrPersistProfile {
     unsigned char numOfDevices;
-    char profileId[BTMGR_NAME_LEN_MAX];
-    stBTRMgrPersistDevice deviceList[BTMGR_MAX_PERSISTENT_DEVICE_COUNT];
+    char profileId[BTRMGR_NAME_LEN_MAX];
+    stBTRMgrPersistDevice deviceList[BTRMGR_MAX_PERSISTENT_DEVICE_COUNT];
 } stBTRMgrPersistProfile;
 
 
-typedef struct _BTMGR_PersistentData_t {
-    char adapterId[BTMGR_NAME_LEN_MAX];
+typedef struct _BTRMGR_PersistentData_t {
+    char adapterId[BTRMGR_NAME_LEN_MAX];
     unsigned short numOfProfiles;
-    stBTRMgrPersistProfile profileList[BTMGR_NAME_LEN_MAX];
-} BTMGR_PersistentData_t;
+    stBTRMgrPersistProfile profileList[BTRMGR_NAME_LEN_MAX];
+} BTRMGR_PersistentData_t;
 
 
-typedef struct _BTMGR_Profile_t {
-    char adapterId[BTMGR_NAME_LEN_MAX];
-    char profileId[BTMGR_NAME_LEN_MAX];
+typedef struct _BTRMGR_Profile_t {
+    char adapterId[BTRMGR_NAME_LEN_MAX];
+    char profileId[BTRMGR_NAME_LEN_MAX];
     unsigned long long deviceId;
     int isConnect;
-} BTMGR_Profile_t;
+} BTRMGR_Profile_t;
 
 /* Interfaces */
 eBTRMgrRet BTRMgr_PI_Init (tBTRMgrPIHdl* hBTRMgrPiHdl);
 eBTRMgrRet BTRMgr_PI_DeInit (tBTRMgrPIHdl hBTRMgrPiHdl);
 
-// Read all bluetooth profiles from json file and load to BTMGR_PersistentProfileList_t
-eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_PersistentData_t* persistentData);
+// Read all bluetooth profiles from json file and load to BTRMGR_PersistentProfileList_t
+eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentData_t* persistentData);
 
-eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_PersistentData_t* persistentData);
+eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentData_t* persistentData);
 
 //Add a single bluetooth profile to json file
-eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_Profile_t persistProfile);
+eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile);
 
 //Remove a single bluetooth profile from json file
-eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTMGR_Profile_t persistProfile);
+eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile);
 
 #endif /* __BTR_MGR_PERSIST_IFCE_H__ */

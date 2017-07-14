@@ -64,9 +64,9 @@ static int getUserSelection (void)
     return mychoice;
 }
 
-static BTMgrDeviceHandle getDeviceSelection(void)
+static BTRMgrDeviceHandle getDeviceSelection(void)
 {
-    BTMgrDeviceHandle mychoice;
+    BTRMgrDeviceHandle mychoice;
     printf("Enter a choice...\n");
     scanf("%llu", &mychoice);
     getchar();//to catch newline
@@ -83,50 +83,50 @@ void getName (char* mychoice)
         *tmp = '\0';
 }
 
-const char* getEventAsString (BTMGR_Events_t etype)
+const char* getEventAsString (BTRMGR_Events_t etype)
 {
   char *event = "\0";
   switch(etype)
   {
-    case BTMGR_EVENT_DEVICE_OUT_OF_RANGE               : event = "DEVICE_OUT_OF_RANGE_OR_LOST";       break;
-    case BTMGR_EVENT_DEVICE_DISCOVERY_UPDATE           : event = "DEVICE_DISCOVERY_UPDATE";           break;
-    case BTMGR_EVENT_DEVICE_DISCOVERY_COMPLETE         : event = "DEVICE_DISCOVERY_COMPLETE";         break;
-    case BTMGR_EVENT_DEVICE_PAIRING_COMPLETE           : event = "DEVICE_PAIRING_COMPLETE";           break; 
-    case BTMGR_EVENT_DEVICE_UNPAIRING_COMPLETE         : event = "DEVICE_UNPAIRING_COMPLETE";         break;
-    case BTMGR_EVENT_DEVICE_CONNECTION_COMPLETE        : event = "DEVICE_CONNECTION_COMPLETE";        break;
-    case BTMGR_EVENT_DEVICE_DISCONNECT_COMPLETE        : event = "DEVICE_DISCONNECT_COMPLETE";        break;
-    case BTMGR_EVENT_DEVICE_PAIRING_FAILED             : event = "DEVICE_PAIRING_FAILED";             break;
-    case BTMGR_EVENT_DEVICE_UNPAIRING_FAILED           : event = "DEVICE_UNPAIRING_FAILED";           break;
-    case BTMGR_EVENT_DEVICE_CONNECTION_FAILED          : event = "DEVICE_CONNECTION_FAILED";          break;     
-    case BTMGR_EVENT_DEVICE_DISCONNECT_FAILED          : event = "DEVICE_DISCONNECT_FAILED";          break;
-    case BTMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";    break;
-    case BTMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST"; break;
-    case BTMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                      break;
+    case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE               : event = "DEVICE_OUT_OF_RANGE_OR_LOST";       break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE           : event = "DEVICE_DISCOVERY_UPDATE";           break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE         : event = "DEVICE_DISCOVERY_COMPLETE";         break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE           : event = "DEVICE_PAIRING_COMPLETE";           break; 
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE         : event = "DEVICE_UNPAIRING_COMPLETE";         break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE        : event = "DEVICE_CONNECTION_COMPLETE";        break;
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE        : event = "DEVICE_DISCONNECT_COMPLETE";        break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_FAILED             : event = "DEVICE_PAIRING_FAILED";             break;
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED           : event = "DEVICE_UNPAIRING_FAILED";           break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED          : event = "DEVICE_CONNECTION_FAILED";          break;     
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED          : event = "DEVICE_DISCONNECT_FAILED";          break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";    break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST"; break;
+    case BTRMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                      break;
     default                                            : event = "##INVALID##";
   }
   return event;
 }
 
 
-void eventCallback (BTMGR_EventMessage_t event)
+void eventCallback (BTRMGR_EventMessage_t event)
 {
     printf ("\n\t@@@@@@@@ eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_eventType);
 
     switch(event.m_eventType)
     {
-      case BTMGR_EVENT_DEVICE_OUT_OF_RANGE: 
-                                  printf("\tReceived %s Event from BTMgr\n", getEventAsString(event.m_eventType));
+      case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE: 
+                                  printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
                                   printf("\tYour device %s has either been Lost or Out of Range\n", event.m_pairedDevice.m_name);
                                   break;
-      case BTMGR_EVENT_DEVICE_FOUND: 
-                                  printf("\tReceived %s Event from BTMgr\n", getEventAsString(event.m_eventType));
+      case BTRMGR_EVENT_DEVICE_FOUND: 
+                                  printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
                                   printf("\tYour device %s is Up and Ready\n", event.m_pairedDevice.m_name);
 
                                   if(event.m_pairedDevice.m_isLastConnectedDevice) {
                                     if( 20 == uselection ) {
                                        printf("\tDo you want to Connect? (1 for Yes / 0 for No)\n\t");
                                        if ( getUserSelection() ) {
-                                         if (BTMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1) == BTMGR_RESULT_SUCCESS)
+                                         if (BTRMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1) == BTRMGR_RESULT_SUCCESS)
                                             printf ("\tConnection Success....\n");
                                          else
                                             printf ("\tConnection Failed.....\n");
@@ -138,12 +138,12 @@ void eventCallback (BTMGR_EventMessage_t event)
                                     }
                                     else {
                                        printf("\tDefault Action: Accept connection from Last connected device..\n");
-                                       BTMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1);
+                                       BTRMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1);
                                     }
                                   }
                                   break;
 
-     default :                    printf("\tReceived %s Event from BTMgr\n", getEventAsString(event.m_eventType));  
+     default :                    printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
     }
                                       
     return;
@@ -152,20 +152,20 @@ void eventCallback (BTMGR_EventMessage_t event)
 
 int main()
 {
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     int loop = 1, i = 0;
     char array[32] = "";
-    BTMgrDeviceHandle handle = 0;
+    BTRMgrDeviceHandle handle = 0;
 
-    rc = BTMGR_Init();
+    rc = BTRMGR_Init();
 
-    if (BTMGR_RESULT_SUCCESS != rc)
+    if (BTRMGR_RESULT_SUCCESS != rc)
     {
-        printf ("Failed to init BTMgr.. Quiting.. \n");
+        printf ("Failed to init BTRMgr.. Quiting.. \n");
         loop = 0;
     }
 
-    BTMGR_RegisterEventCallback (eventCallback);
+    BTRMGR_RegisterEventCallback (eventCallback);
 
     while(loop)
     {
@@ -176,8 +176,8 @@ int main()
             case 1:
                 {
                     unsigned char numOfAdapters = 0;
-                    rc = BTMGR_GetNumberOfAdapters(&numOfAdapters);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_GetNumberOfAdapters(&numOfAdapters);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess.... Count = %d\n", numOfAdapters);
@@ -190,8 +190,8 @@ int main()
                     getName(array);
 
                     printf ("We received @@%s@@ from you..  Hope this is correct. Let me try to set it..\n", array);
-                    rc = BTMGR_SetAdapterName(0, array);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_SetAdapterName(0, array);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
@@ -200,8 +200,8 @@ int main()
             case 3:
                 {
                     memset (array, '\0', sizeof(array));
-                    rc = BTMGR_GetAdapterName(0, array);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_GetAdapterName(0, array);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("We received @@%s@@\n", array);
@@ -214,8 +214,8 @@ int main()
                     printf ("Please set the power status \t");
                     power_status = (unsigned char) getUserSelection();
 
-                    rc = BTMGR_SetAdapterPowerStatus(0, power_status);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_SetAdapterPowerStatus(0, power_status);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("Success\n");
@@ -225,8 +225,8 @@ int main()
                 {
                     unsigned char power_status = 0;
 
-                    rc = BTMGR_GetAdapterPowerStatus (0, &power_status);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_GetAdapterPowerStatus (0, &power_status);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("Success; Status = %u\n", power_status);
@@ -243,8 +243,8 @@ int main()
                     printf ("Please set the timeout for the discoverable \t");
                     timeout = (unsigned char) getUserSelection();
 
-                    rc = BTMGR_SetAdapterDiscoverable(0, power_status, timeout);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_SetAdapterDiscoverable(0, power_status, timeout);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("Success;\n");
@@ -254,8 +254,8 @@ int main()
                 {
                     unsigned char power_status = 0;
 
-                    rc = BTMGR_IsAdapterDiscoverable(0, &power_status);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_IsAdapterDiscoverable(0, &power_status);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("Success; Status = %u\n", power_status);
@@ -263,8 +263,8 @@ int main()
                 break;
             case 8:
                 {
-                    rc = BTMGR_StartDeviceDiscovery(0);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_StartDeviceDiscovery(0);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("Success;\n");
@@ -272,8 +272,8 @@ int main()
                 break;
             case 9:
                 {
-                    rc = BTMGR_StopDeviceDiscovery(0);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_StopDeviceDiscovery(0);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("Success;\n");
@@ -281,11 +281,11 @@ int main()
                 break;
             case 10:
                 {
-                    BTMGR_DiscoveredDevicesList_t discoveredDevices;
+                    BTRMGR_DiscoveredDevicesList_t discoveredDevices;
 
                     memset (&discoveredDevices, 0, sizeof(discoveredDevices));
-                    rc = BTMGR_GetDiscoveredDevices(0, &discoveredDevices);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_GetDiscoveredDevices(0, &discoveredDevices);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                     {
@@ -308,8 +308,8 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to pair \t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTMGR_PairDevice(0, handle);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_PairDevice(0, handle);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
@@ -321,8 +321,8 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to Unpair \t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTMGR_UnpairDevice(0, handle);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_UnpairDevice(0, handle);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
@@ -330,11 +330,11 @@ int main()
                 break;
             case 13:
                 {
-                    BTMGR_PairedDevicesList_t pairedDevices;
+                    BTRMGR_PairedDevicesList_t pairedDevices;
 
                     memset (&pairedDevices, 0, sizeof(pairedDevices));
-                    rc = BTMGR_GetPairedDevices(0, &pairedDevices);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_GetPairedDevices(0, &pairedDevices);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                     {
@@ -357,8 +357,8 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to Connect \t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTMGR_ConnectToDevice(0, handle, BTMGR_DEVICE_TYPE_AUDIOSINK);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_ConnectToDevice(0, handle, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
@@ -370,8 +370,8 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to DisConnect \t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTMGR_DisconnectFromDevice(0, handle);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_DisconnectFromDevice(0, handle);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....\n");
@@ -379,7 +379,7 @@ int main()
                 break;
             case 16:
                 {
-                    BTMGR_DevicesProperty_t deviceProperty;
+                    BTRMGR_DevicesProperty_t deviceProperty;
                     int i = 0;
 
                     handle = 0;
@@ -389,8 +389,8 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to query \t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTMGR_GetDeviceProperties(0, handle, &deviceProperty);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_GetDeviceProperties(0, handle, &deviceProperty);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                     {
@@ -413,18 +413,18 @@ int main()
                 break;
             case 17:
                 {
-                    BTMGR_DeviceConnect_Type_t stream_pref;
+                    BTRMGR_DeviceConnect_Type_t stream_pref;
 
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device that you want to start play\t: ");
                     handle = getDeviceSelection();
 
                     printf ("Please set the Streaming Pref \t");
-                    stream_pref = (BTMGR_DeviceConnect_Type_t) getUserSelection();
+                    stream_pref = (BTRMGR_DeviceConnect_Type_t) getUserSelection();
 
 
-                    rc = BTMGR_StartAudioStreamingOut(0, handle, stream_pref);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_StartAudioStreamingOut(0, handle, stream_pref);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess.... \n");
@@ -436,8 +436,8 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to stop play\t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTMGR_StopAudioStreamingOut(0, handle);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_StopAudioStreamingOut(0, handle);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess.... \n");
@@ -446,8 +446,8 @@ int main()
             case 19:
                 {
                     unsigned char index = 0;
-                    rc = BTMGR_IsAudioStreamingOut(0, &index);
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    rc = BTRMGR_IsAudioStreamingOut(0, &index);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....; Streaming status = %u\n", index);
@@ -470,6 +470,6 @@ int main()
         }
     }
 
-    BTMGR_DeInit();
+    BTRMGR_DeInit();
     return 0;
 }

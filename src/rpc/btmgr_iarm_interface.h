@@ -23,96 +23,124 @@
 #define __BT_MGR_IARM_INTERFACE_H__
 
 
-#define IARM_BUS_BTMGR_NAME        "BTMgrBus"
+#define IARM_BUS_BTRMGR_NAME        "BTRMgrBus"
 
-typedef enum _BTMGR_IARMEvents_t {
-    BTMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE,
-    BTMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE,
-    BTMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE,
-    BTMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE,
-    BTMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE,
-    BTMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE,
-    BTMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE,
-    BTMGR_IARM_EVENT_DEVICE_PAIRING_FAILED,
-    BTMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED,
-    BTMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED,
-    BTMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED,
-    BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
-    BTMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
-    BTMGR_IARM_EVENT_DEVICE_FOUND,
-    BTMGR_IARM_EVENT_MAX
-} BTMGR_IARM_Events_t;
 
-typedef struct _BTMGR_IARMAdapterName_t {
+#define BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS           "GetNumberOfAdapters"
+#define BTRMGR_IARM_METHOD_SET_ADAPTER_NAME                 "SetAdapterName"
+#define BTRMGR_IARM_METHOD_GET_ADAPTER_NAME                 "GetAdapterName"
+#define BTRMGR_IARM_METHOD_SET_ADAPTER_POWERSTATUS          "SetAdapterPowerStatus"
+#define BTRMGR_IARM_METHOD_GET_ADAPTER_POWERSTATUS          "GetAdapterPowerStatus"
+#define BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE         "SetAdapterDiscoverable"
+#define BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE          "IsAdapterDiscoverable"
+#define BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS   "SetDeviceDiscoveryStatus"
+#define BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES           "GetDiscoveredDevices"
+#define BTRMGR_IARM_METHOD_PAIR_DEVICE                      "PairDevice"
+#define BTRMGR_IARM_METHOD_UNPAIR_DEVICE                    "UnpairDevice"
+#define BTRMGR_IARM_METHOD_GET_PAIRED_DEVICES               "GetPairedDevices"
+#define BTRMGR_IARM_METHOD_CONNECT_TO_DEVICE                "ConnectToDevice"
+#define BTRMGR_IARM_METHOD_DISCONNECT_FROM_DEVICE           "DisconnectFromDevice"
+#define BTRMGR_IARM_METHOD_GET_CONNECTED_DEVICES            "GetConnectedDevices"
+#define BTRMGR_IARM_METHOD_GET_DEVICE_PROPERTIES            "GetDeviceProperties"
+#define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_OUT        "StartAudioStreamingOut"
+#define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_OUT         "StopAudioStreamingOut"
+#define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_OUT           "IsAudioStreamingOut"
+#define BTRMGR_IARM_METHOD_SET_AUDIO_STREAM_OUT_TYPE        "SetAudioStreamOutType"
+#define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN         "StartAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN          "StopAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN            "IsAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
+#define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
+
+
+typedef enum _BTRMGR_IARMEvents_t {
+    BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE,
+    BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE,
+    BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE,
+    BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE,
+    BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE,
+    BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE,
+    BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE,
+    BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED,
+    BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED,
+    BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED,
+    BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED,
+    BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST,
+    BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
+    BTRMGR_IARM_EVENT_DEVICE_FOUND,
+    BTRMGR_IARM_EVENT_MAX
+} BTRMGR_IARM_Events_t;
+
+typedef struct _BTRMGR_IARMAdapterName_t {
     unsigned char m_adapterIndex;
-    char m_name[BTMGR_NAME_LEN_MAX];
-} BTMGR_IARMAdapterName_t;
+    char m_name[BTRMGR_NAME_LEN_MAX];
+} BTRMGR_IARMAdapterName_t;
 
-typedef struct _BTMGR_IARMPairDevice_t {
+typedef struct _BTRMGR_IARMPairDevice_t {
     unsigned char m_adapterIndex;
-    BTMgrDeviceHandle m_deviceHandle;
-} BTMGR_IARMPairDevice_t;
+    BTRMgrDeviceHandle m_deviceHandle;
+} BTRMGR_IARMPairDevice_t;
 
-typedef struct _BTMGR_IARMConnectDevice_t {
+typedef struct _BTRMGR_IARMConnectDevice_t {
     unsigned char m_adapterIndex;
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceConnect_Type_t m_connectAs;
-} BTMGR_IARMConnectDevice_t;
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceConnect_Type_t m_connectAs;
+} BTRMGR_IARMConnectDevice_t;
 
-typedef struct _BTMGR_IARMAdapterPower_t {
+typedef struct _BTRMGR_IARMAdapterPower_t {
     unsigned char m_adapterIndex;
     unsigned char m_powerStatus;
-} BTMGR_IARMAdapterPower_t;
+} BTRMGR_IARMAdapterPower_t;
 
-typedef struct _BTMGR_IARMAdapterDiscoverable_t {
+typedef struct _BTRMGR_IARMAdapterDiscoverable_t {
     unsigned char m_adapterIndex;
     unsigned char m_isDiscoverable;
     unsigned short m_timeout;
-} BTMGR_IARMAdapterDiscoverable_t;
+} BTRMGR_IARMAdapterDiscoverable_t;
 
-typedef struct _BTMGR_IARMAdapterDiscover_t {
+typedef struct _BTRMGR_IARMAdapterDiscover_t {
     unsigned char m_adapterIndex;
     unsigned char m_setDiscovery;
-} BTMGR_IARMAdapterDiscover_t;
+} BTRMGR_IARMAdapterDiscover_t;
 
-typedef struct _BTMGR_IARMDDeviceProperty_t {
+typedef struct _BTRMGR_IARMDDeviceProperty_t {
     unsigned char m_adapterIndex;
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DevicesProperty_t m_deviceProperty;
-} BTMGR_IARMDDeviceProperty_t;
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DevicesProperty_t m_deviceProperty;
+} BTRMGR_IARMDDeviceProperty_t;
 
-typedef struct _BTMGR_IARMDiscoveredDevices_t{
+typedef struct _BTRMGR_IARMDiscoveredDevices_t{
     unsigned char m_adapterIndex;
-    BTMGR_DiscoveredDevicesList_t m_devices;
-} BTMGR_IARMDiscoveredDevices_t;
+    BTRMGR_DiscoveredDevicesList_t m_devices;
+} BTRMGR_IARMDiscoveredDevices_t;
 
-typedef struct _BTMGR_IARMPairedDevices_t{
+typedef struct _BTRMGR_IARMPairedDevices_t{
     unsigned char m_adapterIndex;
-    BTMGR_PairedDevicesList_t m_devices;
-} BTMGR_IARMPairedDevices_t;
+    BTRMGR_PairedDevicesList_t m_devices;
+} BTRMGR_IARMPairedDevices_t;
 
-typedef struct _BTMGR_IARMConnectedDevices_t{
+typedef struct _BTRMGR_IARMConnectedDevices_t{
     unsigned char m_adapterIndex;
-    BTMGR_ConnectedDevicesList_t m_devices;
-} BTMGR_IARMConnectedDevices_t;
+    BTRMGR_ConnectedDevicesList_t m_devices;
+} BTRMGR_IARMConnectedDevices_t;
 
-typedef struct _BTMGR_IARMStreaming_t {
+typedef struct _BTRMGR_IARMStreaming_t {
     unsigned char m_adapterIndex;
-    BTMgrDeviceHandle m_deviceHandle;
-    BTMGR_DeviceConnect_Type_t m_audioPref;
-} BTMGR_IARMStreaming_t;
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceConnect_Type_t m_audioPref;
+} BTRMGR_IARMStreaming_t;
 
-typedef struct _BTMGR_IARMStreamingStatus_t {
+typedef struct _BTRMGR_IARMStreamingStatus_t {
     unsigned char m_adapterIndex;
     unsigned char m_streamingStatus;
-} BTMGR_IARMStreamingStatus_t;
+} BTRMGR_IARMStreamingStatus_t;
 
-typedef struct _BTMGR_IARMStreamingType_t {
+typedef struct _BTRMGR_IARMStreamingType_t {
     unsigned char m_adapterIndex;
-    BTMGR_StreamOut_Type_t m_audioOutType;
-} BTMGR_IARMStreamingType_t;
+    BTRMGR_StreamOut_Type_t m_audioOutType;
+} BTRMGR_IARMStreamingType_t;
 
-void btmgr_BeginIARMMode();
-void btmgr_TermIARMMode();
+void BTRMGR_BeginIARMMode();
+void BTRMGR_TermIARMMode();
 
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

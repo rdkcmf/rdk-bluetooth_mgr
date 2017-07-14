@@ -16,8 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#ifndef __BTMGR_PRIV_H__
-#define __BTMGR_PRIV_H__
+#ifndef __BTR_MGR_PRIV_H__
+#define __BTR_MGR_PRIV_H__
 
 #include "rdk_debug.h"
 
@@ -28,27 +28,27 @@
 extern int b_rdk_logger_enabled;
 
 #define LOG_ERROR(format, ...)   if(b_rdk_logger_enabled) {\
-    RDK_LOG(RDK_LOG_ERROR,  "LOG.RDK.BTMGR", format, __VA_ARGS__);\
+    RDK_LOG(RDK_LOG_ERROR,  "LOG.RDK.BTRMGR", format, __VA_ARGS__);\
     } else {\
     fprintf (stderr, format, __VA_ARGS__);\
 }   
 #define LOG_WARN(format, ...)    if(b_rdk_logger_enabled) {\
-    RDK_LOG(RDK_LOG_WARN,   "LOG.RDK.BTMGR", format, __VA_ARGS__);\
+    RDK_LOG(RDK_LOG_WARN,   "LOG.RDK.BTRMGR", format, __VA_ARGS__);\
     } else {\
     fprintf (stderr, format, __VA_ARGS__);\
 }
 #define LOG_INFO(format, ...)    if(b_rdk_logger_enabled) {\
-    RDK_LOG(RDK_LOG_INFO,   "LOG.RDK.BTMGR", format, __VA_ARGS__);\
+    RDK_LOG(RDK_LOG_INFO,   "LOG.RDK.BTRMGR", format, __VA_ARGS__);\
     } else {\
     fprintf (stderr, format, __VA_ARGS__);\
 }
 #define LOG_DEBUG(format, ...)   if(b_rdk_logger_enabled) {\
-    RDK_LOG(RDK_LOG_DEBUG,  "LOG.RDK.BTMGR", format, __VA_ARGS__);\
+    RDK_LOG(RDK_LOG_DEBUG,  "LOG.RDK.BTRMGR", format, __VA_ARGS__);\
     } else {\
     fprintf (stderr, format, __VA_ARGS__);\
 }
 #define LOG_TRACE(format, ...)   if(b_rdk_logger_enabled) {\
-    RDK_LOG(RDK_LOG_TRACE1, "LOG.RDK.BTMGR", format, __VA_ARGS__);\
+    RDK_LOG(RDK_LOG_TRACE1, "LOG.RDK.BTRMGR", format, __VA_ARGS__);\
     } else {\
     fprintf (stderr, format, __VA_ARGS__);\
 }
@@ -63,12 +63,12 @@ extern int b_rdk_logger_enabled;
 #endif
 
 
-#define BTMGRLOG_ERROR(format, ...)       LOG_ERROR(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#define BTMGRLOG_WARN(format,  ...)       LOG_WARN(PREFIX(format),  __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#define BTMGRLOG_INFO(format,  ...)       LOG_INFO(PREFIX(format),  __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#define BTMGRLOG_DEBUG(format, ...)       LOG_DEBUG(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#define BTMGRLOG_TRACE(format, ...)       LOG_TRACE(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define BTRMGRLOG_ERROR(format, ...)       LOG_ERROR(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define BTRMGRLOG_WARN(format,  ...)       LOG_WARN(PREFIX(format),  __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define BTRMGRLOG_INFO(format,  ...)       LOG_INFO(PREFIX(format),  __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define BTRMGRLOG_DEBUG(format, ...)       LOG_DEBUG(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define BTRMGRLOG_TRACE(format, ...)       LOG_TRACE(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 
 
-#endif /* __BTMGR_PRIV_H__ */
+#endif /* __BTR_MGR_PRIV_H__ */

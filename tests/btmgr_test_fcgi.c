@@ -202,17 +202,17 @@ unsigned long long int gLastPlaying = 0;
 
 void startStreaming (unsigned long long int handle )
 {
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
     /* Connect to a device first */
-    rc = BTMGR_ConnectToDevice(0, handle, BTMGR_DEVICE_TYPE_AUDIOSINK);
-    if (BTMGR_RESULT_SUCCESS != rc)
+    rc = BTRMGR_ConnectToDevice(0, handle, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+    if (BTRMGR_RESULT_SUCCESS != rc)
         printf ("<tr>" "<td> Connection establishment failed\n </td>" "</tr>" "</table> ");
     else
     {
         sleep(5);
-        rc = BTMGR_StartAudioStreamingOut(0, handle, BTMGR_DEVICE_TYPE_AUDIOSINK);
-        if (BTMGR_RESULT_SUCCESS != rc)
+        rc = BTRMGR_StartAudioStreamingOut(0, handle, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+        if (BTRMGR_RESULT_SUCCESS != rc)
             printf ("<tr>" "<td> Failed to Stream out to this device\n </td>" "</tr>" "</table> ");
         else
         {
@@ -224,10 +224,10 @@ void startStreaming (unsigned long long int handle )
 
 void stopStreaming ()
 {
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
-    rc = BTMGR_StopAudioStreamingOut(0, gLastPlaying);
-    if (BTMGR_RESULT_SUCCESS != rc)
+    rc = BTRMGR_StopAudioStreamingOut(0, gLastPlaying);
+    if (BTRMGR_RESULT_SUCCESS != rc)
         printf ("<tr>" "<td> Failed to Stop Streaming... :( </td>" "</tr>" "</table> ");
     else
     {
@@ -239,7 +239,7 @@ void stopStreaming ()
 void GetNumberOfAdapters ()
 {
     unsigned char numOfAdapters = 0;
-    if (BTMGR_RESULT_SUCCESS != BTMGR_GetNumberOfAdapters(&numOfAdapters))
+    if (BTRMGR_RESULT_SUCCESS != BTRMGR_GetNumberOfAdapters(&numOfAdapters))
         printf ("<tr>" "<td> Failed to get the count\n\n\n</td>" "</tr>" "</table> ");
     else
         printf ("<tr>" "<td> We found %d Bluetooth adapters in this Platform\n\n\n</td>" "</tr>" "</table> ", numOfAdapters);
@@ -252,7 +252,7 @@ int main ()
     int initOnce = 0;
     char *pInput = NULL;
     char array[32] = "";
-    BTMGR_Result_t rc = BTMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
     while (FCGI_Accept() >= 0)
     {
@@ -269,9 +269,9 @@ int main ()
             {
                 if (0 == initOnce)
                 {
-                    rc = BTMGR_Init();
+                    rc = BTRMGR_Init();
 
-                    if (BTMGR_RESULT_SUCCESS != rc)
+                    if (BTRMGR_RESULT_SUCCESS != rc)
                     {
                         fprintf (stderr, "Failed to init BTMgr.. Quiting.. \n");
                         return 0;
@@ -298,8 +298,8 @@ int main ()
                         char temp1[32] = "ON";
                         char temp2[32] = "OFF";
 
-                        rc = BTMGR_GetAdapterPowerStatus (0, &power_status);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        rc = BTRMGR_GetAdapterPowerStatus (0, &power_status);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             power_status = 1;
 
                         if (0 == power_status)
@@ -323,9 +323,9 @@ int main ()
                         if (0 == strcmp("OFF", (pInput+length)))
                             power = 0;
 
-                        rc = BTMGR_SetAdapterPowerStatus(0, power);
+                        rc = BTRMGR_SetAdapterPowerStatus(0, power);
 
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed tp Set the Power... </td>" "</tr>" "</table> ");
                         else
                             printf ("<tr>" "<td> Successfully Set the power... </td>" "</tr>" "</table> ");
@@ -338,8 +338,8 @@ int main ()
                         strncpy (array, (pInput+length), 30);
                         findAndReplaceSplCharWithSpace(array);
 
-                        rc = BTMGR_SetAdapterName(0, array);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        rc = BTRMGR_SetAdapterName(0, array);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to Set the name as %s... </td>" "</tr>" "</table> ", array);
                         else
                             printf ("<tr>" "<td> Successfully Set the name to %s... </td>" "</tr>" "</table> ", array);
@@ -353,8 +353,8 @@ int main ()
                         strncpy (array, (pInput+length), 30);
                         handle = strtoll(array, NULL, 0);
 
-                        rc = BTMGR_PairDevice(0, handle);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        rc = BTRMGR_PairDevice(0, handle);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to Pair to %s </td>" "</tr>" "</table> ", array);
                         else
                             printf ("<tr>" "<td> Successfully Pair to %s </td>" "</tr>" "</table> ", array);
@@ -369,9 +369,9 @@ int main ()
                         strncpy (array, (pInput+length), 30);
                         handle = strtoll(array, NULL, 0);
 
-                        rc = BTMGR_UnpairDevice(0, handle);
+                        rc = BTRMGR_UnpairDevice(0, handle);
 
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to UnPair to %s </td>" "</tr>" "</table> ", array);
                         else
                             printf ("<tr>" "<td> Successfully UnPair to %s </td>" "</tr>" "</table> ", array);
@@ -380,8 +380,8 @@ int main ()
                     {
                         memset (array, '\0', sizeof(array));
 
-                        rc = BTMGR_GetAdapterName(0, array);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        rc = BTRMGR_GetAdapterName(0, array);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                         {
                             printf ("<tr>" "<td> Failed to Get the name of this Device </td>" "</tr>" "</table> ");
                         }
@@ -399,23 +399,23 @@ int main ()
                     }
                     else if (NULL != (pInput = strstr (func, pStartDiscovery)))
                     {
-                        rc = BTMGR_StartDeviceDiscovery(0);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        rc = BTRMGR_StartDeviceDiscovery(0);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to Start Discovery... </td>" "</tr>" "</table> ");
                         else
                             printf ("<tr>" "<td> Discovery Start Successfully... </td>" "</tr>" "</table> ");
                     }
                     else if (NULL != (pInput = strstr (func, pShowDiscovered)))
                     {
-                        BTMGR_DiscoveredDevicesList_t discoveredDevices;
-                        rc = BTMGR_StopDeviceDiscovery(0);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        BTRMGR_DiscoveredDevicesList_t discoveredDevices;
+                        rc = BTRMGR_StopDeviceDiscovery(0);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Stopping Discovery Failed... </td>" "</tr>" "</table> ");
                         else
                         {
                             memset (&discoveredDevices, 0, sizeof(discoveredDevices));
-                            rc = BTMGR_GetDiscoveredDevices(0, &discoveredDevices);
-                            if (BTMGR_RESULT_SUCCESS != rc)
+                            rc = BTRMGR_GetDiscoveredDevices(0, &discoveredDevices);
+                            if (BTRMGR_RESULT_SUCCESS != rc)
                             {
                                 printf ("<tr>" "<td> Failed to Get the Discovered Devices List... </td>" "</tr>" "</table> ");
                             }
@@ -439,11 +439,11 @@ int main ()
                     }
                     else if (NULL != (pInput = strstr (func, pShowAllPaired)))
                     {
-                        BTMGR_PairedDevicesList_t pairedDevices;
+                        BTRMGR_PairedDevicesList_t pairedDevices;
                         memset (&pairedDevices, 0, sizeof(pairedDevices));
 
-                        rc = BTMGR_GetPairedDevices(0, &pairedDevices);
-                        if (BTMGR_RESULT_SUCCESS != rc)
+                        rc = BTRMGR_GetPairedDevices(0, &pairedDevices);
+                        if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to Get the Paired Devices List... </td>" "</tr>" "</table> ");
                         else
                         {

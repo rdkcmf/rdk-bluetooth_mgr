@@ -64,13 +64,13 @@ BTRMgr_SI_Init (
 #endif
 
     if ((pstBtrMgrSiHdl = (stBTRMgrSIHdl*)g_malloc0 (sizeof(stBTRMgrSIHdl))) == NULL) {
-        BTMGRLOG_ERROR ("Unable to allocate memory\n");
+        BTRMGRLOG_ERROR ("Unable to allocate memory\n");
         return eBTRMgrSIInitFailure;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstInit(&(pstBtrMgrSiHdl->hBTRMgrSiGstHdl))) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIInitFailure;
     }
 #else
@@ -110,7 +110,7 @@ BTRMgr_SI_DeInit (
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstDeInit(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
     pstBtrMgrSiHdl->hBTRMgrSiGstHdl = NULL;
@@ -208,7 +208,7 @@ BTRMgr_SI_Start (
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStart(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, aiInBufMaxSize, aiBTDevFd, aiBTDevMTU)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
 #else
@@ -240,7 +240,7 @@ BTRMgr_SI_Stop (
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStop(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
 #else
@@ -272,7 +272,7 @@ BTRMgr_SI_Pause (
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstPause(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
 #else
@@ -302,7 +302,7 @@ BTRMgr_SI_Resume (
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstResume(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
 #else
@@ -335,7 +335,7 @@ BTRMgr_SI_SendBuffer (
     //TODO: Implement ping-pong/triple/circular buffering if needed
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstSendBuffer(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, pcInBuf, aiInBufSize)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
 #else
@@ -363,7 +363,7 @@ BTRMgr_SI_SendEOS (
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstSendEOS(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
-        BTMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
+        BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrSIFailure;
     }
 #else
