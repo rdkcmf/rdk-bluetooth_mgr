@@ -24,6 +24,7 @@
 
 volatile int wait = 1;
 int uselection = 0;
+BTRMgrDeviceHandle gDeviceHandle = 0;
 
 static void printOptions (void)
 {
@@ -48,6 +49,10 @@ static void printOptions (void)
     printf ("18. Stop Streaming\n");
     printf ("19. Get Streaming Status\n");
     printf ("20. Check auto connection of external Device\n");
+    printf ("21. Accept External Pair Request\n");
+    printf ("22. Deny External Pair Request\n");
+    printf ("23. Accept External Connect Request\n");
+    printf ("24. Deny External Connect Request\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -112,38 +117,57 @@ void eventCallback (BTRMGR_EventMessage_t event)
 {
     printf ("\n\t@@@@@@@@ eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_eventType);
 
-    switch(event.m_eventType)
-    {
-      case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE: 
-                                  printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
-                                  printf("\tYour device %s has either been Lost or Out of Range\n", event.m_pairedDevice.m_name);
-                                  break;
-      case BTRMGR_EVENT_DEVICE_FOUND: 
-                                  printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
-                                  printf("\tYour device %s is Up and Ready\n", event.m_pairedDevice.m_name);
+    switch(event.m_eventType) {
+    case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE: 
+        printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tYour device %s has either been Lost or Out of Range\n", event.m_pairedDevice.m_name);
+        break;
+    case BTRMGR_EVENT_DEVICE_FOUND: 
+        printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tYour device %s is Up and Ready\n", event.m_pairedDevice.m_name);
 
-                                  if(event.m_pairedDevice.m_isLastConnectedDevice) {
-                                    if( 20 == uselection ) {
-                                       printf("\tDo you want to Connect? (1 for Yes / 0 for No)\n\t");
-                                       if ( getUserSelection() ) {
-                                         if (BTRMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1) == BTRMGR_RESULT_SUCCESS)
-                                            printf ("\tConnection Success....\n");
-                                         else
-                                            printf ("\tConnection Failed.....\n");
-                                       }
-                                       else {
-                                            printf ("\tDevice Connection skipped\n");
-                                       }
-                                       wait = 0;
-                                    }
-                                    else {
-                                       printf("\tDefault Action: Accept connection from Last connected device..\n");
-                                       BTRMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1);
-                                    }
-                                  }
-                                  break;
-
-     default :                    printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
+        if(event.m_pairedDevice.m_isLastConnectedDevice) {
+            if( 20 == uselection ) {
+                printf("\tDo you want to Connect? (1 for Yes / 0 for No)\n\t");
+                if ( getUserSelection() ) {
+                    if (BTRMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1) == BTRMGR_RESULT_SUCCESS)
+                        printf ("\tConnection Success....\n");
+                    else
+                        printf ("\tConnection Failed.....\n");
+                }
+                else {
+                    printf ("\tDevice Connection skipped\n");
+                }
+                wait = 0;
+            }
+            else {
+                printf("\tDefault Action: Accept connection from Last connected device..\n");
+                BTRMGR_StartAudioStreamingOut(0, event.m_pairedDevice.m_deviceHandle, 1);
+            }
+        }
+        break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST:
+        printf ("\tReceiver External Pair Request\n");
+        printf ("\t DevHandle =  %lld\n", event.m_externalDevice.m_deviceHandle);
+        printf ("\t DevName   = %s\n", event.m_externalDevice.m_name);
+        printf ("\t DevAddr   = %s\n", event.m_externalDevice.m_deviceAddress);
+        printf ("\t PassCode  = %d\n", event.m_externalDevice.m_externalDevicePIN);
+        printf ("\t Enter Option 21 to Accept Pairing Request\n");
+        printf ("\t Enter Option 22 to Deny Pairing Request\n");
+        gDeviceHandle = event.m_externalDevice.m_deviceHandle;
+        break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST:
+        printf ("\tReceiver External Connect Request\n");
+        printf ("\t DevHandle =  %lld\n", event.m_externalDevice.m_deviceHandle);
+        printf ("\t DevName   = %s\n", event.m_externalDevice.m_name);
+        printf ("\t DevAddr   = %s\n", event.m_externalDevice.m_deviceAddress);
+        printf ("\t Enter Option 23 to Accept Connect Request\n");
+        printf ("\t Enter Option 24 to Deny Connect Request\n");
+        gDeviceHandle = event.m_externalDevice.m_deviceHandle;
+        break;
+     default:
+        printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
+        break;
     }
                                       
     return;
@@ -459,6 +483,66 @@ int main()
                    printf ("\nNow you can power Off and power On to check the auto connection..\n");
                    while(wait) { usleep(1000000); }
                    uselection=0; wait=1;
+               }
+               break;
+            case 21:
+               {
+                   BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+                   memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+
+                   lstBtrMgrEvtRsp.m_deviceHandle = gDeviceHandle;
+                   lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST;
+                   lstBtrMgrEvtRsp.m_eventResp = 1;
+
+                   if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                       printf ("Failed to send event response");
+                   }
+                   gDeviceHandle = 0;
+               }
+               break;
+            case 22:
+               {
+                   BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+                   memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+
+                   lstBtrMgrEvtRsp.m_deviceHandle = gDeviceHandle;
+                   lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST;
+                   lstBtrMgrEvtRsp.m_eventResp = 0;
+
+                   if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                       printf ("Failed to send event response");
+                   }
+                   gDeviceHandle = 0;
+               }
+               break;
+            case 23:
+               {
+                   BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+                   memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+
+                   lstBtrMgrEvtRsp.m_deviceHandle = gDeviceHandle;
+                   lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST;
+                   lstBtrMgrEvtRsp.m_eventResp = 1;
+
+                   if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                       printf ("Failed to send event response");
+                   }
+                   gDeviceHandle = 0;
+               }
+               break;
+            case 24:
+               {
+                   BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+                   memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+
+                   lstBtrMgrEvtRsp.m_deviceHandle = gDeviceHandle;
+                   lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST;
+                   lstBtrMgrEvtRsp.m_eventResp = 0;
+
+                   if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                       printf ("Failed to send event response");
+                   }
+                   gDeviceHandle = 0;
                }
                break;
             case 55:

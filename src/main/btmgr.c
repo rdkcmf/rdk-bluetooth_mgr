@@ -33,20 +33,21 @@
 #include "btrMgr_persistIface.h"
 
 
-static tBTRCoreHandle           gBTRCoreHandle = NULL;
-static BTRMgrDeviceHandle        gCurStreamingDevHandle = 0;
-static stBTRCoreAdapter         gDefaultAdapterContext;
-static stBTRCoreListAdapters    gListOfAdapters;
-static stBTRCoreDevMediaInfo    gstBtrCoreDevMediaInfo;
-static tBTRMgrPIHdl  		    piHandle = NULL;
-static BTRMgrDeviceHandle        gLastConnectedDevHandle = 0;
-
+//TODO: Move to a local handle. Mutex protect all
+static tBTRCoreHandle               gBTRCoreHandle = NULL;
+static BTRMgrDeviceHandle           gCurStreamingDevHandle = 0;
+static stBTRCoreAdapter             gDefaultAdapterContext;
+static stBTRCoreListAdapters        gListOfAdapters;
+static stBTRCoreDevMediaInfo        gstBtrCoreDevMediaInfo;
+static tBTRMgrPIHdl  		        piHandle = NULL;
+static BTRMgrDeviceHandle           gLastConnectedDevHandle = 0;
 static BTRMGR_PairedDevicesList_t   gListOfPairedDevices;
-static unsigned char               gIsDiscoveryInProgress = 0;
-static unsigned char               gIsDeviceConnected = 0;
-static unsigned char               gIsAgentActivated = 0;
-static unsigned char               gAcceptConnection = 1;
-static unsigned char               gIsUserInitiated = 0;
+static unsigned char                gIsDiscoveryInProgress = 0;
+static unsigned char                gIsDeviceConnected = 0;
+static unsigned char                gIsAgentActivated = 0;
+static unsigned char                gEventRespReceived = 0;
+static unsigned char                gAcceptConnection = 0;
+static unsigned char                gIsUserInitiated = 0;
 
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
@@ -242,6 +243,58 @@ btrMgr_MapSignalStrengthToRSSI (
         rssi = BTRMGR_RSSI_POOR;
 
     return rssi;
+}
+
+static eBTRMgrRet 
+btrMgr_MapDevstatusInfoToEventInfo (
+    void*                           p_StatusCB,               /* device status info                   */
+    BTRMGR_EventMessage_t*          newEvent,                 /* event message                        */
+    BTRMGR_Events_t                 type                      /* event type                           */
+) {
+    eBTRMgrRet  retResult    = eBTRMgrSuccess;
+    newEvent->m_adapterIndex = 0;
+    newEvent->m_eventType    = type;
+    newEvent->m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;/* Application will have to get the list explicitly for list;Lets return the max value */
+
+    if (!p_StatusCB)
+        return eBTRMgrFailure;
+
+    
+    if (type == BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
+        newEvent->m_discoveredDevice.m_deviceHandle        = ((stBTRCoreScannedDevice*)p_StatusCB)->deviceId;
+        newEvent->m_discoveredDevice.m_signalLevel         = ((stBTRCoreScannedDevice*)p_StatusCB)->RSSI;
+        newEvent->m_discoveredDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreScannedDevice*)p_StatusCB)->device_type);
+        newEvent->m_discoveredDevice.m_rssi                = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreScannedDevice*)p_StatusCB)->RSSI);
+        newEvent->m_discoveredDevice.m_isPairedDevice      = btrMgr_GetDevPaired(newEvent->m_discoveredDevice.m_deviceHandle);
+        strncpy(newEvent->m_discoveredDevice.m_name, ((stBTRCoreScannedDevice*)p_StatusCB)->device_name, (BTRMGR_NAME_LEN_MAX-1));
+        strncpy(newEvent->m_discoveredDevice.m_deviceAddress, ((stBTRCoreScannedDevice*)p_StatusCB)->device_address, (BTRMGR_NAME_LEN_MAX-1));
+    }
+    else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
+        newEvent->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.deviceId;
+        newEvent->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.device_type);
+        newEvent->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.vendor_id;
+        newEvent->m_externalDevice.m_isLowEnergyDevice   = 0;
+        newEvent->m_externalDevice.m_externalDevicePIN   = ((stBTRCoreConnCBInfo*)p_StatusCB)->ui32devPassKey;
+        strncpy(newEvent->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(newEvent->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
+    }
+    else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST) {
+        newEvent->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.deviceId;
+        newEvent->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_type);
+        newEvent->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.vendor_id;
+        newEvent->m_externalDevice.m_isLowEnergyDevice   = 0;
+        strncpy(newEvent->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(newEvent->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
+    }
+    else {
+       newEvent->m_pairedDevice.m_deviceHandle            = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
+       newEvent->m_pairedDevice.m_deviceType              = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass;
+       newEvent->m_pairedDevice.m_isLastConnectedDevice   = (gLastConnectedDevHandle == newEvent->m_pairedDevice.m_deviceHandle)?1:0;
+       strncpy(newEvent->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTRMGR_NAME_LEN_MAX-1));
+    }
+
+
+    return retResult; 
 }
 
 static BTRMGR_Result_t
@@ -2009,6 +2062,73 @@ BTRMGR_IsAudioStreamingIn (
 }
 
 BTRMGR_Result_t
+BTRMGR_SetEventResponse (
+    unsigned char           index_of_adapter,
+    BTRMGR_EventResponse_t* apstBTRMgrEvtRsp
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+
+    if (!gBTRCoreHandle) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if ((!apstBTRMgrEvtRsp) || (index_of_adapter > btrMgr_GetAdapterCnt())) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+
+    }
+
+
+    switch (apstBTRMgrEvtRsp->m_eventType) {
+    case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE:
+        break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE:
+        break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE:
+        break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE:
+        break;
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE:
+        break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE:
+        break;
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE:
+        break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_FAILED:
+        break;
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED:
+        break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED:
+        break;
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED:
+        break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST:
+        gEventRespReceived = 1;
+        if (apstBTRMgrEvtRsp->m_eventResp) {
+            gAcceptConnection = 1;
+        }
+        break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST:
+        gEventRespReceived = 1;
+        if (apstBTRMgrEvtRsp->m_eventResp) {
+            gAcceptConnection = 1;
+        }
+        break;
+    case BTRMGR_EVENT_DEVICE_FOUND:
+        break;
+    case BTRMGR_EVENT_MAX:
+    default:
+        break;
+    }
+
+
+    BTRMGRLOG_ERROR ("Audio-In support is not implemented yet\n");
+    return rc;
+
+}
+
+BTRMGR_Result_t
 BTRMGR_ResetAdapter (
     unsigned char index_of_adapter
 ) {
@@ -2099,8 +2219,7 @@ btrMgr_DeviceDiscoveryCallback (
         memset (&newEvent, 0, sizeof(newEvent));
 
         btrMgr_MapDevstatusInfoToEventInfo ((void*)&devicefound, &newEvent, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
-        /*  Post a callback */
-        m_eventCallbackFunction (newEvent);
+        m_eventCallbackFunction (newEvent); /*  Post a callback */
     }
 
     return;
@@ -2119,35 +2238,31 @@ btrMgr_ConnectionInIntimationCallback (
         BTRMGR_EventMessage_t newEvent;
         memset (&newEvent, 0, sizeof(newEvent));
 
-        newEvent.m_adapterIndex = 0;
-        newEvent.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST;
-
-        /* Post a callback */
-        newEvent.m_externalDevice.m_deviceHandle        = apstConnCbInfo->stFoundDevice.deviceId;
-        newEvent.m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.device_type);
-        newEvent.m_externalDevice.m_vendorID            = apstConnCbInfo->stFoundDevice.vendor_id;
-        newEvent.m_externalDevice.m_isLowEnergyDevice   = 0;
-        newEvent.m_externalDevice.m_externalDevicePIN   = apstConnCbInfo->ui32devPassKey;
-        strncpy (newEvent.m_externalDevice.m_name, apstConnCbInfo->stFoundDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
-        strncpy (newEvent.m_externalDevice.m_deviceAddress, apstConnCbInfo->stFoundDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
-
-        m_eventCallbackFunction (newEvent);
+        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &newEvent, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);  
+        m_eventCallbackFunction (newEvent); /* Post a callback */
     }
     
 
-    do {
-        usleep(20000);
-    } while (gAcceptConnection == 0);
+    /* Max 15 sec timeout - Polled at 500ms second interval */
+    {
+        unsigned int ui32sleepIdx = 30;
+
+        do {
+            usleep(500000);
+        } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+        gEventRespReceived = 0;
+    }
 
     BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
     if (gAcceptConnection == 1) {
         BTRMGRLOG_ERROR ("Pin-Passkey accepted\n");
-        //gAcceptConnection = 0;//reset variabhle for the next connection
+        gAcceptConnection = 0;  //reset variabhle for the next connection
         return 1;
     }
     else {
         BTRMGRLOG_ERROR ("Pin-Passkey Rejected\n");
-        //gAcceptConnection = 0;//reset variabhle for the next connection
+        gAcceptConnection = 0;  //reset variabhle for the next connection
         return 0;
     }
 
@@ -2162,66 +2277,34 @@ btrMgr_ConnectionInAuthenticationCallback (
         BTRMGR_EventMessage_t newEvent;
         memset (&newEvent, 0, sizeof(newEvent));
 
-        newEvent.m_adapterIndex = 0;
-        newEvent.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST;
-
-        /* Post a callback */
-        newEvent.m_externalDevice.m_deviceHandle        = apstConnCbInfo->stKnownDevice.deviceId;
-        newEvent.m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stKnownDevice.device_type);
-        newEvent.m_externalDevice.m_vendorID            = apstConnCbInfo->stKnownDevice.vendor_id;
-        newEvent.m_externalDevice.m_isLowEnergyDevice   = 0;
-        strncpy (newEvent.m_externalDevice.m_name, apstConnCbInfo->stKnownDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
-        strncpy (newEvent.m_externalDevice.m_deviceAddress, apstConnCbInfo->stKnownDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
-
-        m_eventCallbackFunction (newEvent);
+        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &newEvent, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
+        m_eventCallbackFunction (newEvent);     /* Post a callback */
     }
 
-    do {
-        usleep(20000);
-    } while (gAcceptConnection == 0);
+    /* Max 15 sec timeout - Polled at 500ms second interval */
+    {
+        unsigned int ui32sleepIdx = 30;
+
+        do {
+            usleep(500000);
+        } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+        gEventRespReceived = 0;
+    }
 
     BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
     if (gAcceptConnection == 1) {
         BTRMGRLOG_ERROR ("Connection accepted\n");
-        //gAcceptConnection = 0;//reset variabhle for the next connection
+        gAcceptConnection = 0;    //reset variabhle for the next connection
         return 1;
     }   
     else {
         BTRMGRLOG_ERROR ("Connection denied\n");
-        //gAcceptConnection = 0;//reset variabhle for the next connection
+        gAcceptConnection = 0;    //reset variabhle for the next connection
         return 0;
     } 
 }
 
-static eBTRMgrRet 
-btrMgr_MapDevstatusInfoToEventInfo (
-    void*                          p_StatusCB,               /* device status info                   */
-    BTRMGR_EventMessage_t*          newEvent,                 /* event message                        */
-    BTRMGR_Events_t                 type                      /* event type                           */
-) {
-    eBTRMgrRet  retResult    = eBTRMgrSuccess;
-    newEvent->m_adapterIndex = 0;
-    newEvent->m_eventType    = type;
-    newEvent->m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;/* Application will have to get the list explicitly for list;Lets return the max value */
-
-    if (BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE != type) {
-       newEvent->m_pairedDevice.m_deviceHandle            = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
-       newEvent->m_pairedDevice.m_deviceType              = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass;
-       newEvent->m_pairedDevice.m_isLastConnectedDevice   = (gLastConnectedDevHandle == newEvent->m_pairedDevice.m_deviceHandle)?1:0;
-       strncpy (newEvent->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTRMGR_NAME_LEN_MAX-1));
-    }
-    else {
-       newEvent->m_discoveredDevice.m_deviceHandle        = ((stBTRCoreScannedDevice*)p_StatusCB)->deviceId;
-       newEvent->m_discoveredDevice.m_signalLevel         = ((stBTRCoreScannedDevice*)p_StatusCB)->RSSI;
-       newEvent->m_discoveredDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreScannedDevice*)p_StatusCB)->device_type);
-       newEvent->m_discoveredDevice.m_rssi                = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreScannedDevice*)p_StatusCB)->RSSI);
-       newEvent->m_discoveredDevice.m_isPairedDevice      = btrMgr_GetDevPaired(newEvent->m_discoveredDevice.m_deviceHandle);
-       strncpy (newEvent->m_discoveredDevice.m_name, ((stBTRCoreScannedDevice*)p_StatusCB)->device_name, (BTRMGR_NAME_LEN_MAX-1));
-       strncpy (newEvent->m_discoveredDevice.m_deviceAddress, ((stBTRCoreScannedDevice*)p_StatusCB)->device_address, (BTRMGR_NAME_LEN_MAX-1));
-    }
-
-    return retResult; 
-}
 
 
 static void
@@ -2243,18 +2326,20 @@ btrMgr_DeviceStatusCallback (
        case enBTRCoreDevStConnecting:
             break;
        case enBTRCoreDevStConnected:
-         if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState) { /*  notify user device back   */
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_FOUND);  
-         }
-         else {
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);  
-         }
-         m_eventCallbackFunction(newEvent);                        /*     Post a callback        */
+            if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState) { /*  notify user device back   */
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_FOUND);  
+                m_eventCallbackFunction(newEvent);  /* Post a callback */
+            }
+            else {
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);  
+                m_eventCallbackFunction(newEvent);  /* Post a callback */
+            }
+
          break;
 
        case enBTRCoreDevStDisconnected:
          btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
-         m_eventCallbackFunction (newEvent);                       /*     Post a callback        */
+         m_eventCallbackFunction (newEvent);    /* Post a callback */
 
          if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
              /* update the flags as the device is NOT Connected                                  */
@@ -2267,7 +2352,7 @@ btrMgr_DeviceStatusCallback (
        case enBTRCoreDevStLost:
          if( !gIsUserInitiated ) {
              btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_OUT_OF_RANGE);
-             m_eventCallbackFunction (newEvent);                   /*     Post a callback        */
+             m_eventCallbackFunction (newEvent);    /* Post a callback */
 
              if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
                  /* update the flags as the device is NOT Connected                              */

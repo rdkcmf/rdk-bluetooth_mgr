@@ -104,102 +104,111 @@ typedef enum _BTRMGR_RSSIValue_type_t {
 } BTRMGR_RSSIValue_t;
 
 typedef struct _BTRMGR_DeviceService_t {
-    unsigned short m_uuid;
-    char m_profile[BTRMGR_NAME_LEN_MAX];
+    unsigned short  m_uuid;
+    char            m_profile[BTRMGR_NAME_LEN_MAX];
 } BTRMGR_DeviceService_t;
 
 typedef struct _BTRMGR_DeviceServiceList_t {
-    unsigned short m_numOfService;
-    BTRMGR_DeviceService_t m_profileInfo[BTRMGR_MAX_DEVICE_PROFILE];
+    unsigned short          m_numOfService;
+    BTRMGR_DeviceService_t  m_profileInfo[BTRMGR_MAX_DEVICE_PROFILE];
 } BTRMGR_DeviceServiceList_t;
 
 typedef struct _BTRMGR_DevicesProperty_t {
-    BTRMgrDeviceHandle m_deviceHandle;
-    BTRMGR_DeviceType_t m_deviceType;
-    char m_name [BTRMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
-    BTRMGR_RSSIValue_t m_rssi;
-    int m_signalLevel;
-    unsigned short m_vendorID;
-    unsigned char m_isPaired;
-    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
-    unsigned char m_isLowEnergyDevice;
-    BTRMGR_DeviceServiceList_t m_serviceInfo;
+    BTRMgrDeviceHandle          m_deviceHandle;
+    BTRMGR_DeviceType_t         m_deviceType;
+    char                        m_name [BTRMGR_NAME_LEN_MAX];
+    char                        m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_RSSIValue_t          m_rssi;
+    int                         m_signalLevel;
+    unsigned short              m_vendorID;
+    unsigned char               m_isPaired;
+    unsigned char               m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    unsigned char               m_isLowEnergyDevice;
+    BTRMGR_DeviceServiceList_t  m_serviceInfo;
 } BTRMGR_DevicesProperty_t;
 
 typedef struct _BTRMGR_ConnectedDevice_t {
-    BTRMgrDeviceHandle m_deviceHandle;
-    BTRMGR_DeviceType_t m_deviceType;
-    char m_name [BTRMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
-    BTRMGR_DeviceServiceList_t m_serviceInfo;
-    unsigned short m_vendorID;
-    unsigned char m_isLowEnergyDevice;
-    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
-    BTRMGR_DevicePower_t m_powerStatus;
+    BTRMgrDeviceHandle          m_deviceHandle;
+    BTRMGR_DeviceType_t         m_deviceType;
+    char                        m_name [BTRMGR_NAME_LEN_MAX];
+    char                        m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_DeviceServiceList_t  m_serviceInfo;
+    unsigned short              m_vendorID;
+    unsigned char               m_isLowEnergyDevice;
+    unsigned char               m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    BTRMGR_DevicePower_t        m_powerStatus;
 } BTRMGR_ConnectedDevice_t;
 
 typedef struct _BTRMGR_PairedDevices_t {
-    BTRMgrDeviceHandle m_deviceHandle;
-    BTRMGR_DeviceType_t m_deviceType;
-    char m_name [BTRMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
-    BTRMGR_DeviceServiceList_t m_serviceInfo;
-    unsigned short m_vendorID;
-    unsigned char m_isLowEnergyDevice;
-    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
-    unsigned char m_isLastConnectedDevice;
+    BTRMgrDeviceHandle          m_deviceHandle;
+    BTRMGR_DeviceType_t         m_deviceType;
+    char                        m_name [BTRMGR_NAME_LEN_MAX];
+    char                        m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_DeviceServiceList_t  m_serviceInfo;
+    unsigned short              m_vendorID;
+    unsigned char               m_isLowEnergyDevice;
+    unsigned char               m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    unsigned char               m_isLastConnectedDevice;
 } BTRMGR_PairedDevices_t;
 
 typedef struct _BTRMGR_DiscoveredDevices_t {
-    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMgrDeviceHandle  m_deviceHandle;
     BTRMGR_DeviceType_t m_deviceType;
-    char m_name [BTRMGR_NAME_LEN_MAX];
-    char m_deviceAddress [BTRMGR_NAME_LEN_MAX];
-    unsigned short m_vendorID;
-    unsigned char m_isPairedDevice;
-    unsigned char m_isConnected; /* This must be used only when m_isPaired is TRUE */
-    unsigned char m_isLowEnergyDevice;
-    BTRMGR_RSSIValue_t m_rssi;
-    int m_signalLevel;
+    char                m_name [BTRMGR_NAME_LEN_MAX];
+    char                m_deviceAddress [BTRMGR_NAME_LEN_MAX];
+    unsigned short      m_vendorID;
+    unsigned char       m_isPairedDevice;
+    unsigned char       m_isConnected; /* This must be used only when m_isPaired is TRUE */
+    unsigned char       m_isLowEnergyDevice;
+    BTRMGR_RSSIValue_t  m_rssi;
+    int                 m_signalLevel;
 } BTRMGR_DiscoveredDevices_t;
 
 typedef struct _BTRMGR_ConnectedDevicesList_t {
-    unsigned short m_numOfDevices;
-    BTRMGR_ConnectedDevice_t m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
+    unsigned short              m_numOfDevices;
+    BTRMGR_ConnectedDevice_t    m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
 } BTRMGR_ConnectedDevicesList_t;
 
 typedef struct _BTRMGR_PairedDevicesList_t {
-    unsigned short m_numOfDevices;
-    BTRMGR_PairedDevices_t m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
+    unsigned short          m_numOfDevices;
+    BTRMGR_PairedDevices_t  m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
 } BTRMGR_PairedDevicesList_t;
 
 typedef struct _BTRMGR_DiscoveredDevicesList_t {
-    unsigned short m_numOfDevices;
-    BTRMGR_DiscoveredDevices_t m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
+    unsigned short              m_numOfDevices;
+    BTRMGR_DiscoveredDevices_t  m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
 } BTRMGR_DiscoveredDevicesList_t;
 
 typedef struct _BTRMGR_ExternalDevice_t {
-    BTRMgrDeviceHandle           m_deviceHandle;
-    BTRMGR_DeviceType_t          m_deviceType;
+    BTRMgrDeviceHandle          m_deviceHandle;
+    BTRMGR_DeviceType_t         m_deviceType;
     char                        m_name [BTRMGR_NAME_LEN_MAX];
     char                        m_deviceAddress [BTRMGR_NAME_LEN_MAX];
-    BTRMGR_DeviceServiceList_t   m_serviceInfo;
+    BTRMGR_DeviceServiceList_t  m_serviceInfo;
     unsigned short              m_vendorID;
     unsigned char               m_isLowEnergyDevice;
     unsigned int                m_externalDevicePIN;
 } BTRMGR_ExternalDevice_t;
 
 typedef struct _BTRMGR_EventMessage_t {
-    unsigned char m_adapterIndex;
+    unsigned char   m_adapterIndex;
     BTRMGR_Events_t m_eventType;
     union {
-        BTRMGR_DiscoveredDevices_t   m_discoveredDevice;
-        BTRMGR_ExternalDevice_t      m_externalDevice;
-        BTRMGR_PairedDevices_t       m_pairedDevice;
-        unsigned short m_numOfDevices;
+        BTRMGR_DiscoveredDevices_t  m_discoveredDevice;
+        BTRMGR_ExternalDevice_t     m_externalDevice;
+        BTRMGR_PairedDevices_t      m_pairedDevice;
+        unsigned short              m_numOfDevices;
     };
 } BTRMGR_EventMessage_t;
+
+typedef struct _BTRMGR_EventResponse_t {
+    BTRMGR_Events_t     m_eventType;
+    BTRMgrDeviceHandle  m_deviceHandle;
+    union {
+        unsigned char   m_eventResp;
+    };
+} BTRMGR_EventResponse_t;
+
 
 typedef void (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t);
 
@@ -238,6 +247,8 @@ BTRMGR_Result_t BTRMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, 
 BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
 BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
 BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
+
+BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char index_of_adapter, BTRMGR_EventResponse_t* apstBTRMgrEvtRsp);
 
 BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char index_of_adapter);
 

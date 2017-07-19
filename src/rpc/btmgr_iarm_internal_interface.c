@@ -48,6 +48,7 @@ static IARM_Result_t btrMgr_SetAudioStreamOutType (void* arg);
 static IARM_Result_t btrMgr_StartAudioStreamingIn (void* arg); 
 static IARM_Result_t btrMgr_StopAudioStreamingIn (void* arg); 
 static IARM_Result_t btrMgr_IsAudioStreamingIn (void* arg);
+static IARM_Result_t btrMgr_SetEventResponse (void* arg);
 static IARM_Result_t btrMgr_ResetAdapter (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
 
@@ -893,6 +894,40 @@ btrMgr_IsAudioStreamingIn (
         BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
+    return retCode;
+}
+
+
+static IARM_Result_t
+btrMgr_SetEventResponse (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMEventResp_t* pIArmEvtResp = (BTRMGR_IARMEventResp_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pIArmEvtResp) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_SetEventResponse(pIArmEvtResp->m_adapterIndex, &pIArmEvtResp->m_stBTRMgrEvtRsp);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
 
     return retCode;
 }
@@ -930,10 +965,9 @@ btrMgr_ResetAdapter (
         BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
     }
 
-
     return retCode;
-
 }
+
 
 static IARM_Result_t
 btrMgr_DeInit (
@@ -984,6 +1018,7 @@ BTRMGR_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN, btrMgr_StartAudioStreamingIn);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN, btrMgr_StopAudioStreamingIn);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN, btrMgr_IsAudioStreamingIn);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE, btrMgr_SetEventResponse);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_RESET_ADAPTER, btrMgr_ResetAdapter);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
 

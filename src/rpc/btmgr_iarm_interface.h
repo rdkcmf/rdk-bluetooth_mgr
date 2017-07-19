@@ -49,6 +49,7 @@
 #define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN         "StartAudioStreamingIn"
 #define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN          "StopAudioStreamingIn"
 #define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN            "IsAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE               "SetEventResponse"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
 
@@ -139,6 +140,11 @@ typedef struct _BTRMGR_IARMStreamingType_t {
     unsigned char m_adapterIndex;
     BTRMGR_StreamOut_Type_t m_audioOutType;
 } BTRMGR_IARMStreamingType_t;
+
+typedef struct _BTRMGR_IARMEventResp_t {
+    unsigned char   m_adapterIndex;
+    BTRMGR_EventResponse_t m_stBTRMgrEvtRsp;
+} BTRMGR_IARMEventResp_t;
 
 void BTRMGR_BeginIARMMode();
 void BTRMGR_TermIARMMode();

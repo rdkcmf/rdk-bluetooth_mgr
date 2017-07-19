@@ -854,6 +854,36 @@ BTRMGR_IsAudioStreamingIn (
     return rc;
 }
 
+BTRMGR_Result_t
+BTRMGR_SetEventResponse (
+    unsigned char           index_of_adapter,
+    BTRMGR_EventResponse_t* apstBTRMgrEvtRsp
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMEventResp_t lstBtrMgrIArmEvtResp;
+
+    if ((BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (apstBTRMgrEvtRsp == NULL)) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    lstBtrMgrIArmEvtResp.m_adapterIndex = index_of_adapter;
+    memcpy(&lstBtrMgrIArmEvtResp.m_stBTRMgrEvtRsp, apstBTRMgrEvtRsp, sizeof(BTRMGR_EventResponse_t));
+
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE, (void *)&lstBtrMgrIArmEvtResp, sizeof(lstBtrMgrIArmEvtResp));
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
 
 BTRMGR_Result_t
 BTRMGR_ResetAdapter (
