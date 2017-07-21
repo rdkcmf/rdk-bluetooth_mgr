@@ -17,16 +17,16 @@
  * limitations under the License.
 */
 /**
- * @file btrMgr_serviceIfce.h
+ * @file btrMgr_IarmInternalIfce.h
  *
- * @description This file defines bluetooth manager's Service interfaces
+ * @description This file defines bluetooth manager's data streaming interfaces to external BT devices
  *
  */
-#ifndef __BTR_MGR_SERVICE_IFCE_H__
-#define __BTR_MGR_SERVICE_IFCE_H__
 
+#ifndef __BTR_MGR_IARM_INTERNAL_IFCE_H__
+#define __BTR_MGR_IARM_INTERNAL_IFCE_H__
 
+void BTRMgr_BeginIARMMode();
+void BTRMgr_TermIARMMode();
 
-
-
-#endif /* __BTR_MGR_SERVICE_IFCE_H__ */
+#endif /* __BTR_MGR_IARM_INTERNAL_IFCE_H__ */

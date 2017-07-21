@@ -22,6 +22,7 @@
 #include "btmgr.h"
 #include "btmgr_priv.h"
 #include "btmgr_iarm_interface.h"
+#include "btrMgr_IarmInternalIfce.h"
 
 
 /* Static Function Prototypes */
@@ -982,7 +983,7 @@ btrMgr_DeInit (
 
 /* Public Functions */
 void
-BTRMGR_BeginIARMMode (
+BTRMgr_BeginIARMMode (
     void
 ) {
 
@@ -1037,7 +1038,7 @@ BTRMGR_BeginIARMMode (
 }
 
 void
-BTRMGR_TermIARMMode (
+BTRMgr_TermIARMMode (
     void
 ) {
     BTRMGRLOG_INFO ("Entering\n");

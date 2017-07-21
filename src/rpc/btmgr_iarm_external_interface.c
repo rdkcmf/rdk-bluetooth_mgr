@@ -760,7 +760,7 @@ BTRMGR_SetAudioStreamingOutType (
 
 BTRMGR_Result_t
 BTRMGR_StartAudioStreamingIn (
-    unsigned char               index_of_adapter,
+    unsigned char               ui8AdapterIdx,
     BTRMgrDeviceHandle          handle,
     BTRMGR_DeviceConnect_Type_t streamOutPref
 ) {
@@ -768,14 +768,14 @@ BTRMGR_StartAudioStreamingIn (
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTRMGR_IARMStreaming_t streaming;
 
-    if ((BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle)) {
+    if ((BTRMGR_ADAPTER_COUNT_MAX < ui8AdapterIdx) || (0 == handle)) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return rc;
     }
 
 
-    streaming.m_adapterIndex = index_of_adapter;
+    streaming.m_adapterIndex = ui8AdapterIdx;
     streaming.m_deviceHandle = handle;
     streaming.m_audioPref = streamOutPref;
 
@@ -793,21 +793,21 @@ BTRMGR_StartAudioStreamingIn (
 
 BTRMGR_Result_t
 BTRMGR_StopAudioStreamingIn (
-    unsigned char       index_of_adapter,
+    unsigned char       ui8AdapterIdx,
     BTRMgrDeviceHandle  handle
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTRMGR_IARMStreaming_t streaming;
 
-    if ((BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (0 == handle)) {
+    if ((BTRMGR_ADAPTER_COUNT_MAX < ui8AdapterIdx) || (0 == handle)) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return rc;
     }
 
 
-    streaming.m_adapterIndex = index_of_adapter;
+    streaming.m_adapterIndex = ui8AdapterIdx;
     streaming.m_deviceHandle = handle;
 
     retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN, (void*) &streaming, sizeof(streaming));
@@ -824,21 +824,21 @@ BTRMGR_StopAudioStreamingIn (
 
 BTRMGR_Result_t
 BTRMGR_IsAudioStreamingIn (
-    unsigned char   index_of_adapter,
+    unsigned char   ui8AdapterIdx,
     unsigned char*  pStreamingStatus
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTRMGR_IARMStreamingStatus_t status;
 
-    if ((BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pStreamingStatus)) {
+    if ((BTRMGR_ADAPTER_COUNT_MAX < ui8AdapterIdx) || (NULL == pStreamingStatus)) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return rc;
     }
 
 
-    status.m_adapterIndex = index_of_adapter;
+    status.m_adapterIndex = ui8AdapterIdx;
     status.m_streamingStatus = 0;
 
     retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN, (void *)&status, sizeof(status));

@@ -27,7 +27,6 @@
 #define __BTR_MGR_STREAMOUT_H__
 
 typedef void* tBTRMgrSoHdl;
-#include "btrMgr_Types.h"
 
 /* Interfaces */
 eBTRMgrRet BTRMgr_SO_Init (tBTRMgrSoHdl* phBTRMgrSoHdl);

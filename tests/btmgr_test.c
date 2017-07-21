@@ -53,6 +53,8 @@ static void printOptions (void)
     printf ("22. Deny External Pair Request\n");
     printf ("23. Accept External Connect Request\n");
     printf ("24. Deny External Connect Request\n");
+    printf ("25. Start Streaming-In\n");
+    printf ("26. Stop Streaming-In\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -545,6 +547,38 @@ int main()
                    gDeviceHandle = 0;
                }
                break;
+            case 25: 
+                {
+                    BTRMGR_DeviceConnect_Type_t stream_pref;
+
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device that you want to start play from\t: ");
+                    handle = getDeviceSelection();
+
+                    printf ("Please set the Streaming Pref \t");
+                    stream_pref = (BTRMGR_DeviceConnect_Type_t) getUserSelection();
+
+
+                    rc = BTRMGR_StartAudioStreamingIn(0, handle, stream_pref);
+                    if (BTRMGR_RESULT_SUCCESS != rc) 
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess.... \n");
+                }
+                break;
+            case 26: 
+                {
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device that you want to stop play from\t: ");
+                    handle = getDeviceSelection();
+
+                    rc = BTRMGR_StopAudioStreamingIn(0, handle);
+                    if (BTRMGR_RESULT_SUCCESS != rc) 
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess.... \n");
+                }
+                break;
             case 55:
                 loop = 0;
                 break;

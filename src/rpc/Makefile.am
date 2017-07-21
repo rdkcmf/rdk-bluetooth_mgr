@@ -18,12 +18,12 @@
 ##########################################################################
 SUBDIRS =
 if USE_RPC
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/src/main -I${top_srcdir}/include -I${top_srcdir}/include/priv ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/priv -I${top_srcdir}/include/rpc ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) -ldbus-1  -lIARMBus -lrdkloggers
 
 lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btmgr_iarm_external_interface.c
 libBTMgr_la_includedir = $(includedir)
 libBTMgr_la_include_HEADERS = ${top_srcdir}/include/btmgr.h
-include_HEADERS = ${top_srcdir}/src/rpc/btmgr_iarm_interface.h
+include_HEADERS = ${top_srcdir}/include/rpc/btmgr_iarm_interface.h
 endif

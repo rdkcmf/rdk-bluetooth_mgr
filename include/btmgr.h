@@ -86,7 +86,8 @@ typedef enum _BTRMGR_StreamOut_Type_t {
 typedef enum _BTRMGR_DeviceConnect_Type_t {
     BTRMGR_DEVICE_TYPE_AUDIOSINK     = 1 << 0,
     BTRMGR_DEVICE_TYPE_HEADSET       = 1 << 1,
-    BTRMGR_DEVICE_TYPE_OTHER         = 1 << 2,
+    BTRMGR_DEVICE_TYPE_AUDIOSRC      = 1 << 2,
+    BTRMGR_DEVICE_TYPE_OTHER         = 1 << 3,
 } BTRMGR_DeviceConnect_Type_t;
 
 typedef enum _BTRMGR_DevicePower_t {
@@ -244,9 +245,9 @@ BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTR
 BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
 BTRMGR_Result_t BTRMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTRMGR_StreamOut_Type_t type);
 
-BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
-BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
-BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
+BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char ui8AdapterIdx, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char ui8AdapterIdx, BTRMgrDeviceHandle handle);
+BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char ui8AdapterIdx, unsigned char *pStreamingStatus);
 
 BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char index_of_adapter, BTRMGR_EventResponse_t* apstBTRMgrEvtRsp);
 

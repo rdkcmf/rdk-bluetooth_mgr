@@ -19,11 +19,12 @@
 #ifndef __BTR_MGR_PRIV_H__
 #define __BTR_MGR_PRIV_H__
 
-#include "rdk_debug.h"
 
 #define PREFIX(format)  "%d\t: %s - " format
 
 #ifdef RDK_LOGGER_ENABLED
+
+#include "rdk_debug.h"
 
 extern int b_rdk_logger_enabled;
 

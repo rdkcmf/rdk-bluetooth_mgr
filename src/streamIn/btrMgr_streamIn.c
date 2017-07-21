@@ -34,17 +34,19 @@
 #include <glib.h>
 
 /* Interface lib Headers */
-#include "btrMgr_streamIn.h"
 #include "btmgr_priv.h"         //for rdklogger
 
 /* Local Headers */
+#include "btrMgr_Types.h"
+#include "btrMgr_mediaTypes.h"
+#include "btrMgr_streamIn.h"
 #ifdef USE_GST1
 #include "btrMgr_streamInGst.h"
 #endif
 
 /* Local types */
 typedef struct _stBTRMgrSIHdl {
-    stBTRMgrSIStatus    lstBtrMgrSiStatus;
+    stBTRMgrMediaStatus lstBtrMgrSiStatus;
 #ifdef USE_GST1
     tBTRMgrSiGstHdl     hBTRMgrSiGstHdl;
 #endif
@@ -52,11 +54,11 @@ typedef struct _stBTRMgrSIHdl {
 
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_Init (
     tBTRMgrSiHdl*   phBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = NULL;
 
 #ifdef USE_GST1
@@ -65,27 +67,27 @@ BTRMgr_SI_Init (
 
     if ((pstBtrMgrSiHdl = (stBTRMgrSIHdl*)g_malloc0 (sizeof(stBTRMgrSIHdl))) == NULL) {
         BTRMGRLOG_ERROR ("Unable to allocate memory\n");
-        return eBTRMgrSIInitFailure;
+        return eBTRMgrInitFailure;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstInit(&(pstBtrMgrSiHdl->hBTRMgrSiGstHdl))) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIInitFailure;
+        leBtrMgrSiRet = eBTRMgrInitFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    if (leBtrMgrSiRet != eBTRMgrSISuccess) {
+    if (leBtrMgrSiRet != eBTRMgrSuccess) {
         BTRMgr_SI_DeInit((tBTRMgrSiHdl)pstBtrMgrSiHdl);
         return leBtrMgrSiRet;
     }
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState = eBTRMgrSIStateInitialized;
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiSFreq = eBTRMgrSISFreq48K;
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiSFmt  = eBTRMgrSISFmt16bit;
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiAChan = eBTRMgrSIAChanJStereo;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState = eBTRMgrStateInitialized;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFreq = eBTRMgrSFreq48K;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFmt  = eBTRMgrSFmt16bit;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrAChan = eBTRMgrAChanJStereo;
 
     *phBTRMgrSiHdl = (tBTRMgrSiHdl)pstBtrMgrSiHdl;
 
@@ -93,11 +95,11 @@ BTRMgr_SI_Init (
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_DeInit (
     tBTRMgrSiHdl    hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -105,20 +107,20 @@ BTRMgr_SI_DeInit (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstDeInit(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
     pstBtrMgrSiHdl->hBTRMgrSiGstHdl = NULL;
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState  = eBTRMgrSIStateDeInitialized;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState  = eBTRMgrStateDeInitialized;
 
     g_free((void*)pstBtrMgrSiHdl);
     pstBtrMgrSiHdl = NULL;
@@ -127,11 +129,11 @@ BTRMgr_SI_DeInit (
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_GetDefaultSettings (
     tBTRMgrSiHdl hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -140,18 +142,18 @@ BTRMgr_SI_GetDefaultSettings (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     return leBtrMgrSiRet;
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_GetCurrentSettings (
     tBTRMgrSiHdl hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -160,19 +162,19 @@ BTRMgr_SI_GetCurrentSettings (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     return leBtrMgrSiRet;
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_GetStatus (
-    tBTRMgrSiHdl      hBTRMgrSiHdl,
-    stBTRMgrSIStatus* apstBtrMgrSiStatus
+    tBTRMgrSiHdl            hBTRMgrSiHdl,
+    stBTRMgrMediaStatus*    apstBtrMgrSiStatus
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -181,21 +183,21 @@ BTRMgr_SI_GetStatus (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     return leBtrMgrSiRet;
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_Start (
     tBTRMgrSiHdl    hBTRMgrSiHdl,
     int             aiInBufMaxSize,
     int             aiBTDevFd,
     int             aiBTDevMTU
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -203,19 +205,19 @@ BTRMgr_SI_Start (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStart(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, aiInBufMaxSize, aiBTDevFd, aiBTDevMTU)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState  = eBTRMgrSIStatePlaying;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState  = eBTRMgrStatePlaying;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.ui32OverFlowCnt = 0;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.ui32UnderFlowCnt= 0;
 
@@ -223,11 +225,11 @@ BTRMgr_SI_Start (
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_Stop (
     tBTRMgrSiHdl hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -235,19 +237,19 @@ BTRMgr_SI_Stop (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStop(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState  = eBTRMgrSIStateStopped;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState  = eBTRMgrStateStopped;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.ui32OverFlowCnt = 0;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.ui32UnderFlowCnt= 0;
 
@@ -255,11 +257,11 @@ BTRMgr_SI_Stop (
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_Pause (
     tBTRMgrSiHdl hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -267,29 +269,29 @@ BTRMgr_SI_Pause (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstPause(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState  = eBTRMgrSIStatePaused;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState  = eBTRMgrStatePaused;
 
     return leBtrMgrSiRet;
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_Resume (
     tBTRMgrSiHdl hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet  = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -297,31 +299,31 @@ BTRMgr_SI_Resume (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstResume(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState  = eBTRMgrSIStatePlaying;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState  = eBTRMgrStatePlaying;
 
     return leBtrMgrSiRet;
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_SendBuffer (
     tBTRMgrSiHdl    hBTRMgrSiHdl,
     char*           pcInBuf,
     int             aiInBufSize
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -329,14 +331,14 @@ BTRMgr_SI_SendBuffer (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
     //TODO: Implement ping-pong/triple/circular buffering if needed
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstSendBuffer(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, pcInBuf, aiInBufSize)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
@@ -346,11 +348,11 @@ BTRMgr_SI_SendBuffer (
 }
 
 
-eBTRMgrSIRet
+eBTRMgrRet
 BTRMgr_SI_SendEOS (
     tBTRMgrSiHdl    hBTRMgrSiHdl
 ) {
-    eBTRMgrSIRet    leBtrMgrSiRet = eBTRMgrSISuccess;
+    eBTRMgrRet      leBtrMgrSiRet = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
 
 #ifdef USE_GST1
@@ -358,19 +360,19 @@ BTRMgr_SI_SendEOS (
 #endif
 
     if (pstBtrMgrSiHdl == NULL) {
-        return eBTRMgrSINotInitialized;
+        return eBTRMgrNotInitialized;
     }
 
 #ifdef USE_GST1
     if ((leBtrMgrSiGstRet = BTRMgr_SI_GstSendEOS(pstBtrMgrSiHdl->hBTRMgrSiGstHdl)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
-        leBtrMgrSiRet = eBTRMgrSIFailure;
+        leBtrMgrSiRet = eBTRMgrFailure;
     }
 #else
     // TODO: Implement Stream out functionality using generic libraries
 #endif
 
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSiState  = eBTRMgrSIStateCompleted;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState  = eBTRMgrStateCompleted;
 
     return leBtrMgrSiRet;
 }

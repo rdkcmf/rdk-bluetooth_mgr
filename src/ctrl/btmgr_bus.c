@@ -25,10 +25,10 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
-#include "btmgr.h"
 
-extern void BTRMGR_BeginIARMMode();
-extern void BTRMGR_TermIARMMode();
+#include "btmgr.h"
+#include "btrMgr_IarmInternalIfce.h"
+
 
 int
 main (
@@ -37,7 +37,7 @@ main (
     time_t curr = 0;
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
-    BTRMGR_BeginIARMMode();
+    BTRMgr_BeginIARMMode();
 
     rc = BTRMGR_Init();
     if (BTRMGR_RESULT_SUCCESS == rc) {
@@ -51,7 +51,7 @@ main (
         printf ("I-ARM BTMgr Bus: Failed it init\n");
     }
 
-    BTRMGR_TermIARMMode();
+    BTRMgr_TermIARMMode();
 
     return 0;
 }

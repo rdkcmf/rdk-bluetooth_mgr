@@ -146,7 +146,5 @@ typedef struct _BTRMGR_IARMEventResp_t {
     BTRMGR_EventResponse_t m_stBTRMgrEvtRsp;
 } BTRMGR_IARMEventResp_t;
 
-void BTRMGR_BeginIARMMode();
-void BTRMGR_TermIARMMode();
 
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */
