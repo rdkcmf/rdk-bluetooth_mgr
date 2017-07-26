@@ -291,6 +291,14 @@ btrMgr_MapDevstatusInfoToEventInfo (
         strncpy(newEvent->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
         strncpy(newEvent->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
     }
+    else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST) {
+        newEvent->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.deviceId;
+        newEvent->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_type);
+        newEvent->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.vendor_id;
+        newEvent->m_externalDevice.m_isLowEnergyDevice   = 0;
+        strncpy(newEvent->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(newEvent->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
+    }
     else {
        newEvent->m_pairedDevice.m_deviceHandle            = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
        newEvent->m_pairedDevice.m_deviceType              = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass;
@@ -2300,6 +2308,12 @@ BTRMGR_SetEventResponse (
         gEventRespReceived = 1;
         if (apstBTRMgrEvtRsp->m_eventResp) {
             gAcceptConnection = 1;
+        }
+        break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST:
+        if (apstBTRMgrEvtRsp->m_eventResp && apstBTRMgrEvtRsp->m_deviceHandle) {
+            BTRMGR_DeviceConnect_Type_t stream_pref = BTRMGR_DEVICE_TYPE_AUDIOSRC;
+            rc = BTRMGR_StartAudioStreamingIn(index_of_adapter, apstBTRMgrEvtRsp->m_deviceHandle, stream_pref);
         }
         break;
     case BTRMGR_EVENT_DEVICE_FOUND:

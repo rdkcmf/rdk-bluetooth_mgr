@@ -83,6 +83,7 @@ BTRMGR_Init (
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, btrMgrdeviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_FOUND, btrMgrdeviceCallback);
         BTRMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
@@ -1014,20 +1015,21 @@ btrMgrdeviceCallback (
         BTRMGR_EventMessage_t *pReceivedEvent = (BTRMGR_EventMessage_t*)pData;
         BTRMGR_EventMessage_t newEvent;
 
-        if ((BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE               == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE           == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE         == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE           == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE         == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE        == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE        == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED             == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED           == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED          == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED          == eventId) ||
-            (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    == eventId) ||
-            (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_FOUND                      == eventId)) {
+        if ((BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE                  == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE              == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE            == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE              == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE            == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE           == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE           == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED                == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED              == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED             == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED             == eventId) ||
+            (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST       == eventId) ||
+            (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST    == eventId) ||
+            (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST   == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_FOUND                         == eventId)) {
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));
 
