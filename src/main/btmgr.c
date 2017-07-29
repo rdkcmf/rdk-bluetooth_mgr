@@ -292,12 +292,12 @@ btrMgr_MapDevstatusInfoToEventInfo (
         strncpy(newEvent->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
     }
     else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST) {
-        newEvent->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.deviceId;
-        newEvent->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_type);
-        newEvent->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.vendor_id;
+        newEvent->m_externalDevice.m_deviceHandle        = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
+        newEvent->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
+        newEvent->m_externalDevice.m_vendorID            = 0;
         newEvent->m_externalDevice.m_isLowEnergyDevice   = 0;
-        strncpy(newEvent->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_name, (BTRMGR_NAME_LEN_MAX - 1));
-        strncpy(newEvent->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.device_address, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(newEvent->m_externalDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(newEvent->m_externalDevice.m_deviceAddress,  "TO BE FILLED", (BTRMGR_NAME_LEN_MAX - 1));
     }
     else {
        newEvent->m_pairedDevice.m_deviceHandle            = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
@@ -2518,13 +2518,13 @@ btrMgr_DeviceStatusCallback (
 
     if ((p_StatusCB) && (m_eventCallbackFunction)) {
 
-     switch (p_StatusCB->eDeviceCurrState) {
-   
-       case enBTRCoreDevStInitialized:
+        switch (p_StatusCB->eDeviceCurrState) {
+
+        case enBTRCoreDevStInitialized:
             break;
-       case enBTRCoreDevStConnecting:
+        case enBTRCoreDevStConnecting:
             break;
-       case enBTRCoreDevStConnected:
+        case enBTRCoreDevStConnected:
             if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState) { /*  notify user device back   */
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_FOUND);  
                 m_eventCallbackFunction(newEvent);  /* Post a callback */
@@ -2533,41 +2533,44 @@ btrMgr_DeviceStatusCallback (
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);  
                 m_eventCallbackFunction(newEvent);  /* Post a callback */
             }
-
          break;
 
-       case enBTRCoreDevStDisconnected:
-         btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
-         m_eventCallbackFunction (newEvent);    /* Post a callback */
+        case enBTRCoreDevStDisconnected:
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
+            m_eventCallbackFunction (newEvent);    /* Post a callback */
 
-         if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
-             /* update the flags as the device is NOT Connected                                  */
-             gIsDeviceConnected = 0;
-             /* Stop the playback which already stopped internally but to free up the memory     */
-             BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
-         }
-         break;
+            if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
+                /* update the flags as the device is NOT Connected                                  */
+                gIsDeviceConnected = 0;
+                /* Stop the playback which already stopped internally but to free up the memory     */
+                BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+            }
+            break;
 
-       case enBTRCoreDevStLost:
-         if( !gIsUserInitiated ) {
-             btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_OUT_OF_RANGE);
-             m_eventCallbackFunction (newEvent);    /* Post a callback */
+        case enBTRCoreDevStLost:
+            if( !gIsUserInitiated ) {
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_OUT_OF_RANGE);
+                m_eventCallbackFunction (newEvent);    /* Post a callback */
 
-             if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
-                 /* update the flags as the device is NOT Connected                              */
-                 gIsDeviceConnected = 0;
-                 /* Stop the playback which already stopped internally but to free up the memory */
-                 BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
-             }
-         }
-         gIsUserInitiated = 0;
-         break;
+                if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
+                    /* update the flags as the device is NOT Connected                              */
+                    gIsDeviceConnected = 0;
+                    /* Stop the playback which already stopped internally but to free up the memory */
+                    BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+                }
+            }
+            gIsUserInitiated = 0;
+            break;
 
-       case enBTRCoreDevStPlaying:
+        case enBTRCoreDevStPlaying:
+            if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST);
+                m_eventCallbackFunction (newEvent);    /* Post a callback */
+            }
          break;
-       default:
+        default:
          break;
-      }
+        }
     }
     return;
 }

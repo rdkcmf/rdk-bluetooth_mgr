@@ -53,8 +53,10 @@ static void printOptions (void)
     printf ("22. Deny External Pair Request\n");
     printf ("23. Accept External Connect Request\n");
     printf ("24. Deny External Connect Request\n");
-    printf ("25. Start Streaming-In\n");
-    printf ("26. Stop Streaming-In\n");
+    printf ("25. Accept External Playback Request\n");
+    printf ("26. Deny External Playback Request\n");
+    printf ("27. Start Streaming-In\n");
+    printf ("28. Stop Streaming-In\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -165,6 +167,15 @@ void eventCallback (BTRMGR_EventMessage_t event)
         printf ("\t DevAddr   = %s\n", event.m_externalDevice.m_deviceAddress);
         printf ("\t Enter Option 23 to Accept Connect Request\n");
         printf ("\t Enter Option 24 to Deny Connect Request\n");
+        gDeviceHandle = event.m_externalDevice.m_deviceHandle;
+        break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST:
+        printf ("\tReceiver External Playback Request\n");
+        printf ("\t DevHandle =  %lld\n", event.m_externalDevice.m_deviceHandle);
+        printf ("\t DevName   = %s\n", event.m_externalDevice.m_name);
+        printf ("\t DevAddr   = %s\n", event.m_externalDevice.m_deviceAddress);
+        printf ("\t Enter Option 25 to Accept Playback Request\n");
+        printf ("\t Enter Option 26 to Deny Playback Request\n");
         gDeviceHandle = event.m_externalDevice.m_deviceHandle;
         break;
      default:
@@ -547,7 +558,37 @@ int main()
                    gDeviceHandle = 0;
                }
                break;
-            case 25: 
+            case 25:
+               {
+                   BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+                   memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+
+                   lstBtrMgrEvtRsp.m_deviceHandle = gDeviceHandle;
+                   lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST;
+                   lstBtrMgrEvtRsp.m_eventResp = 1;
+
+                   if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                       printf ("Failed to send event response");
+                   }
+                   gDeviceHandle = 0;
+               }
+               break;
+            case 26:
+               {
+                   BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+                   memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+
+                   lstBtrMgrEvtRsp.m_deviceHandle = gDeviceHandle;
+                   lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST;
+                   lstBtrMgrEvtRsp.m_eventResp = 0;
+
+                   if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                       printf ("Failed to send event response");
+                   }
+                   gDeviceHandle = 0;
+               }
+               break;
+            case 27: 
                 {
                     BTRMGR_DeviceConnect_Type_t stream_pref;
 
@@ -566,7 +607,7 @@ int main()
                         printf ("\nSuccess.... \n");
                 }
                 break;
-            case 26: 
+            case 28: 
                 {
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device that you want to stop play from\t: ");

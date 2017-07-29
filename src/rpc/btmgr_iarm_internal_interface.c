@@ -1118,7 +1118,7 @@ btrMgr_EventCallback (
         IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&eventData, sizeof(eventData));
     }
     else if (eventData.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST) {
-        BTRMGRLOG_WARN ("Post External Device Connect Request event\n");
+        BTRMGRLOG_WARN ("Post External Device Playback Request event\n");
         IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST, (void *)&eventData, sizeof(eventData));
     }
     else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_FOUND) {
