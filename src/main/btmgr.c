@@ -2525,8 +2525,8 @@ btrMgr_DeviceStatusCallback (
             break;
         case enBTRCoreDevStConnecting:
             break;
-        case enBTRCoreDevStConnected:
-            if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState) { /*  notify user device back   */
+        case enBTRCoreDevStConnected:               /*  notify user device back   */
+            if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState || enBTRCoreDevStPaired == p_StatusCB->eDevicePrevState) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_FOUND);  
                 m_eventCallbackFunction(newEvent);  /* Post a callback */
             }
