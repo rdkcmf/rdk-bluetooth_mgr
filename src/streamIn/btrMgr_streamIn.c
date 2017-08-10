@@ -85,9 +85,9 @@ BTRMgr_SI_Init (
     }
 
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState = eBTRMgrStateInitialized;
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFreq = eBTRMgrSFreq48K;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFreq = eBTRMgrSFreq44_1K;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFmt  = eBTRMgrSFmt16bit;
-    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrAChan = eBTRMgrAChanJStereo;
+    pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrAChan = eBTRMgrAChanStereo;
 
     *phBTRMgrSiHdl = (tBTRMgrSiHdl)pstBtrMgrSiHdl;
 
@@ -195,7 +195,8 @@ BTRMgr_SI_Start (
     tBTRMgrSiHdl    hBTRMgrSiHdl,
     int             aiInBufMaxSize,
     int             aiBTDevFd,
-    int             aiBTDevMTU
+    int             aiBTDevMTU,
+    unsigned int    aiBTDevSFreq
 ) {
     eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
@@ -209,7 +210,7 @@ BTRMgr_SI_Start (
     }
 
 #ifdef USE_GST1
-    if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStart(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, aiInBufMaxSize, aiBTDevFd, aiBTDevMTU)) != eBTRMgrSIGstSuccess) {
+    if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStart(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, aiInBufMaxSize, aiBTDevFd, aiBTDevMTU, aiBTDevSFreq)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrFailure;
     }

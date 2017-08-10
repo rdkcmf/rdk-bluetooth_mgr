@@ -36,7 +36,7 @@ typedef enum _eBTRMgrSIGstRet {
 /* Interfaces */
 eBTRMgrSIGstRet BTRMgr_SI_GstInit (tBTRMgrSiGstHdl* phBTRMgrSoGstHdl);
 eBTRMgrSIGstRet BTRMgr_SI_GstDeInit (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);
-eBTRMgrSIGstRet BTRMgr_SI_GstStart (tBTRMgrSiGstHdl hBTRMgrSoGstHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU);
+eBTRMgrSIGstRet BTRMgr_SI_GstStart (tBTRMgrSiGstHdl hBTRMgrSoGstHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU, unsigned int aiBTDevSFreq);
 eBTRMgrSIGstRet BTRMgr_SI_GstStop (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSIGstRet BTRMgr_SI_GstPause (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSIGstRet BTRMgr_SI_GstResume (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);

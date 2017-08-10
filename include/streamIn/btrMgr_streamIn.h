@@ -34,7 +34,7 @@ eBTRMgrRet BTRMgr_SI_DeInit (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_GetDefaultSettings (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_GetCurrentSettings (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_GetStatus (tBTRMgrSiHdl hBTRMgrSiHdl, stBTRMgrMediaStatus* apstBtrMgrSiStatus);
-eBTRMgrRet BTRMgr_SI_Start (tBTRMgrSiHdl hBTRMgrSiHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU);
+eBTRMgrRet BTRMgr_SI_Start (tBTRMgrSiHdl hBTRMgrSiHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU, unsigned int aiBTDevSFreq);
 eBTRMgrRet BTRMgr_SI_Stop (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_Pause (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_Resume (tBTRMgrSiHdl hBTRMgrSiHdl);

@@ -280,7 +280,8 @@ BTRMgr_SI_GstStart (
     tBTRMgrSiGstHdl hBTRMgrSiGstHdl,
     int             aiInBufMaxSize,
     int             aiBTDevFd,
-    int             aiBTDevMTU
+    int             aiBTDevMTU,
+    unsigned int    aiBTDevSFreq
 ) {
     stBTRMgrSIGst* pstBtrMgrSiGst = (stBTRMgrSIGst*)hBTRMgrSiGstHdl;
 
@@ -315,12 +316,13 @@ BTRMgr_SI_GstStart (
    fdsrcSrcCaps = gst_caps_new_simple ("application/x-rtp",
                                          "media", G_TYPE_STRING, "audio",
                                          "encoding-name", G_TYPE_STRING, "SBC",
-                                         "clock-rate", G_TYPE_INT, 48000,
+                                         "clock-rate", G_TYPE_INT, aiBTDevSFreq,
                                          "payload", G_TYPE_INT, 96,
                                           NULL);
 
     g_object_set (fdsrc, "fd",          aiBTDevFd,  NULL);
     g_object_set (fdsrc, "blocksize",   aiBTDevMTU, NULL);
+    g_object_set (fdsrc, "do-timestamp",TRUE, NULL);
     g_object_set (rtpcapsfilter, "caps",fdsrcSrcCaps, NULL);
 
 

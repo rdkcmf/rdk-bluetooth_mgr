@@ -64,7 +64,7 @@ void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 static int streamOutTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStart (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStop (appDataStruct *pstAppData);
-static int streamInLiveTestMainAlternateStart (int fd_number, int MTU_size, appDataStruct *pstAppData);
+static int streamInLiveTestMainAlternateStart (int fd_number, int MTU_size, unsigned int aui32InSFreq, appDataStruct *pstAppData);
 static int streamInLiveTestMainAlternateStop (appDataStruct *pstAppData);
 
 
@@ -721,9 +721,9 @@ main (
             }
             break;
         case 26:
-             printf("Start Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
-             streamInLiveTestMainAlternateStart(stAppData.iDataPath, stAppData.iDataReadMTU, &stAppData);
-             break;
+            printf("Start Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
+            streamInLiveTestMainAlternateStart(stAppData.iDataPath, stAppData.iDataReadMTU, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq, &stAppData);
+            break;
         case 27:
             printf("Stop Sending Live to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
             streamOutLiveTestMainAlternateStop(&stAppData);
@@ -1654,6 +1654,7 @@ static int
 streamInLiveTestMainAlternateStart (
     int             fd_number,
     int             MTU_size,
+    unsigned int    aui32InSFreq,
     appDataStruct*  pstAppData
 ) {
 
@@ -1672,7 +1673,7 @@ streamInLiveTestMainAlternateStart (
     pstAppData->channels = 2;
 #endif
 
-    BTRMgr_SI_Start(pstAppData->hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize);
+    BTRMgr_SI_Start(pstAppData->hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize, aui32InSFreq);
 
     printf("BT AUDIO IN - STARTED \n");
 

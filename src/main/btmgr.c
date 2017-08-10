@@ -87,7 +87,7 @@ static BTRMGR_DeviceType_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
 static eBTRMgrRet btrMgr_MapDevstatusInfoToEventInfo (void* p_StatusCB, BTRMGR_EventMessage_t*  newEvent, BTRMGR_Events_t type);
 static BTRMGR_Result_t btrMgr_StartCastingAudio (int outFileFd, int outMTUSize);
 static BTRMGR_Result_t btrMgr_StopCastingAudio (void); 
-static BTRMGR_Result_t btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize);
+static BTRMGR_Result_t btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize, unsigned int ui32InSampFreq);
 static BTRMGR_Result_t btrMgr_StopReceivingAudio (void); 
 
 
@@ -526,8 +526,9 @@ btrMgr_StopCastingAudio (
 
 static BTRMGR_Result_t
 btrMgr_StartReceivingAudio (
-    int inFileFd,
-    int inMTUSize
+    int             inFileFd,
+    int             inMTUSize, 
+    unsigned int    ui32InSampFreq
 ) {
     BTRMGR_Result_t eBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     int             inBytesToEncode = 3072;
@@ -540,7 +541,7 @@ btrMgr_StartReceivingAudio (
             return BTRMGR_RESULT_GENERIC_FAILURE;
         }
 
-        if (eBTRMgrSuccess != BTRMgr_SI_Start(gstBTRMgrStreamingInfo.hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize)) {
+        if (eBTRMgrSuccess != BTRMgr_SI_Start(gstBTRMgrStreamingInfo.hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize, ui32InSampFreq)) {
             BTRMGRLOG_ERROR ("BTRMgr_SI_Start FAILED\n");
             eBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
         }
@@ -2189,7 +2190,7 @@ BTRMGR_StartAudioStreamingIn (
             /* Aquire Device Data Path to start audio reception */
             lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreMobileAudioIn, &i32DeviceFD, &i32DeviceReadMTU, &i32DeviceWriteMTU);
             if (lenBtrCoreRet == enBTRCoreSuccess) {
-                if (BTRMGR_RESULT_SUCCESS == btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU)) {
+                if (BTRMGR_RESULT_SUCCESS == btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU, ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq)) {
                     gCurStreamingDevHandle = listOfPDevices.devices[i].deviceId;
                     BTRMGRLOG_INFO("Audio Reception Started.. Enjoy the show..! :)\n");
                 }
