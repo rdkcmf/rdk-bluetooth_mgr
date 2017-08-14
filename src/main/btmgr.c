@@ -301,7 +301,7 @@ btrMgr_MapDevstatusInfoToEventInfo (
     }
     else {
        newEvent->m_pairedDevice.m_deviceHandle            = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
-       newEvent->m_pairedDevice.m_deviceType              = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass;
+       newEvent->m_pairedDevice.m_deviceType              = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
        newEvent->m_pairedDevice.m_isLastConnectedDevice   = (gLastConnectedDevHandle == newEvent->m_pairedDevice.m_deviceHandle)?1:0;
        strncpy(newEvent->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTRMGR_NAME_LEN_MAX-1));
     }
@@ -2541,10 +2541,18 @@ btrMgr_DeviceStatusCallback (
             m_eventCallbackFunction (newEvent);    /* Post a callback */
 
             if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
-                /* update the flags as the device is NOT Connected                                  */
+                /* update the flags as the device is NOT Connected */
                 gIsDeviceConnected = 0;
-                /* Stop the playback which already stopped internally but to free up the memory     */
-                BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+
+                BTRMGRLOG_INFO ("newEvent.m_pairedDevice.m_deviceType = %d\n", newEvent.m_pairedDevice.m_deviceType);
+                if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+                    /* Stop the playback which already stopped internally but to free up the memory */
+                    BTRMGR_StopAudioStreamingIn(0, gCurStreamingDevHandle);
+                }
+                else {
+                    /* Stop the playback which already stopped internally but to free up the memory */
+                    BTRMGR_StopAudioStreamingOut(0, gCurStreamingDevHandle);
+                }
             }
             break;
 
@@ -2554,10 +2562,18 @@ btrMgr_DeviceStatusCallback (
                 m_eventCallbackFunction (newEvent);    /* Post a callback */
 
                 if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
-                    /* update the flags as the device is NOT Connected                              */
+                    /* update the flags as the device is NOT Connected */
                     gIsDeviceConnected = 0;
-                    /* Stop the playback which already stopped internally but to free up the memory */
-                    BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+
+                    BTRMGRLOG_INFO ("newEvent.m_pairedDevice.m_deviceType = %d\n", newEvent.m_pairedDevice.m_deviceType);
+                    if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+                        /* Stop the playback which already stopped internally but to free up the memory */
+                        BTRMGR_StopAudioStreamingIn(0, gCurStreamingDevHandle);
+                    }
+                    else {
+                        /* Stop the playback which already stopped internally but to free up the memory */
+                        BTRMGR_StopAudioStreamingOut (0, gCurStreamingDevHandle);
+                    }
                 }
             }
             gIsUserInitiated = 0;
