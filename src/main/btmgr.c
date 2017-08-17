@@ -1520,8 +1520,6 @@ BTRMGR_ConnectToDevice (
         else {
             BTRMGRLOG_INFO ("Connected Successfully\n");
             rc = BTRMGR_RESULT_SUCCESS;
-            gIsDeviceConnected = 1;
-            gLastConnectedDevHandle = handle;
 
             char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
             char lui8profileId[BD_NAME_LEN] = {'\0'};
@@ -1566,6 +1564,7 @@ BTRMGR_ConnectToDevice (
             }
             else {
                 BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
+                gIsDeviceConnected = 1;
                 gLastConnectedDevHandle = handle;
             }
         }
