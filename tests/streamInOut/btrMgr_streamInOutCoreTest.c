@@ -309,6 +309,7 @@ printMenu (
     printf("37. Increase Device Volume of External BT Device\n");
     printf("38. Skip to Next track on External BT Device\n");
     printf("39. Play wav file forever\n");
+    printf("40. Check if Device Is Connectable\n");
 
     printf("88. debug test\n");
     printf("99. Exit\n");
@@ -793,6 +794,11 @@ main (
                 } while (1);
             }
             break; 
+        case 40:
+            printf("Pick a Device to Check if Connectable...\n");
+            devnum = getChoice();
+            BTRCore_IsDeviceConnectable(lhBTRCore, devnum);
+            break;
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
