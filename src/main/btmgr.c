@@ -1600,7 +1600,7 @@ BTRMGR_ConnectToDevice (
     BTRMgrDeviceHandle          handle,
     BTRMGR_DeviceConnect_Type_t connectAs
 ) {
-    return  btrMgr_ConnectToDevice(index_of_adapter, handle, connectAs, 0, 0);
+    return  btrMgr_ConnectToDevice(index_of_adapter, handle, connectAs, 0, 1);
 }
 
 
@@ -1972,7 +1972,7 @@ btrMgr_StartAudioStreamingOut (
             rc = btrMgr_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref, BTRMGR_CONNECT_RETRY_ATTEMPTS, BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS);
         }
         else {
-            rc = btrMgr_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref, 0, 0);
+            rc = btrMgr_ConnectToDevice(index_of_adapter, listOfPDevices.devices[i].deviceId, streamOutPref, 0, 1);
         }
 
         if (BTRMGR_RESULT_SUCCESS == rc) {
