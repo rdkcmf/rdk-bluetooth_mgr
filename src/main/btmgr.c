@@ -2577,11 +2577,12 @@ btrMgr_DeviceStatusCallback (
         case enBTRCoreDevStConnecting:
             break;
         case enBTRCoreDevStConnected:               /*  notify user device back   */
-            if( enBTRCoreDevStLost == p_StatusCB->eDevicePrevState || enBTRCoreDevStPaired == p_StatusCB->eDevicePrevState) {
+            if (enBTRCoreDevStLost == p_StatusCB->eDevicePrevState || enBTRCoreDevStPaired == p_StatusCB->eDevicePrevState) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_FOUND);  
                 m_eventCallbackFunction(newEvent);  /* Post a callback */
             }
-            else {
+            else 
+            if (enBTRCoreDevStInitialized != p_StatusCB->eDevicePrevState) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);  
                 m_eventCallbackFunction(newEvent);  /* Post a callback */
             }

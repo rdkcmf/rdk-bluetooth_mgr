@@ -119,7 +119,7 @@ const char* getEventAsString (BTRMGR_Events_t etype)
 
 void eventCallback (BTRMGR_EventMessage_t event)
 {
-    printf ("\n\t@@@@@@@@ eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_eventType);
+    printf ("\n\t@@@@@@@@ %s eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_pairedDevice.m_name, event.m_eventType);
 
     switch(event.m_eventType) {
     case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE: 
