@@ -938,13 +938,17 @@ BTRMGR_Result_t
 BTRMGR_Init (
     void
 ) {
-    BTRMGR_Result_t 	rc = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet 	halrc = enBTRCoreSuccess;
+    BTRMGR_Result_t rc          = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet 	halrc       = enBTRCoreSuccess;
+    eBTRMgrRet      piInitRet   = eBTRMgrFailure;
+    char            lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
+
 
     if (NULL != gBTRCoreHandle) {
         BTRMGRLOG_WARN("Already Inited; Return Success\n");
         return rc;
     }
+
 #ifdef RDK_LOGGER_ENABLED
     const char* pDebugConfig = NULL;
     const char* BTRMGR_DEBUG_ACTUAL_PATH    = "/etc/debug.ini";
@@ -978,100 +982,98 @@ BTRMGR_Init (
     halrc = BTRCore_Init(&gBTRCoreHandle);
     if ((NULL == gBTRCoreHandle) || (enBTRCoreSuccess != halrc)) {
         BTRMGRLOG_ERROR ("Could not initialize BTRCore/HAL module\n");
-        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+
+
+    if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion)) {
+        BTRMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
+    }
+    BTRMGRLOG_INFO("BTR Bluetooth Version: %s\n", lpcBtVersion);
+
+    if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters)) {
+        BTRMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
+    }
+    BTRMGRLOG_INFO ("Number of Adapters found are = %u\n", gListOfAdapters.number_of_adapters);
+
+    if (0 == gListOfAdapters.number_of_adapters) {
+        BTRMGRLOG_WARN("Bluetooth adapter NOT Found! Expected to be connected to make use of this module; Not considered as failure\n");
     }
     else {
-        char lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
-
-        if (enBTRCoreSuccess != BTRCore_GetVersionInfo(gBTRCoreHandle, lpcBtVersion)) {
-            BTRMGRLOG_ERROR ("BTR Bluetooth Version: FAILED\n");
-        }
-        BTRMGRLOG_INFO("BTR Bluetooth Version: %s\n", lpcBtVersion);
-
-        if (enBTRCoreSuccess != BTRCore_GetListOfAdapters (gBTRCoreHandle, &gListOfAdapters)) {
-            BTRMGRLOG_ERROR ("Failed to get the total number of Adapters present\n"); /* Not a Error case anyway */
-        }
-        BTRMGRLOG_INFO ("Number of Adapters found are = %u\n", gListOfAdapters.number_of_adapters);
-
-        if (0 == gListOfAdapters.number_of_adapters) {
-            BTRMGRLOG_WARN("Bluetooth adapter NOT Found! Expected to be connected to make use of this module; Not considered as failure\n");
-        }
-        else {
-            /* you have atlesat one Bluetooth adapter. Now get the Default Adapter path for future usages; */
-            gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
-            if (enBTRCoreSuccess == BTRCore_GetAdapter(gBTRCoreHandle, &gDefaultAdapterContext)) {
-                BTRMGRLOG_DEBUG ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
-            }
-
-            /* TODO: Handling multiple Adapters */
-            if (gListOfAdapters.number_of_adapters > 1) {
-                BTRMGRLOG_WARN("Number of Bluetooth Adapters Found : %u !! Lets handle it properly\n", gListOfAdapters.number_of_adapters);
-            }
+        /* you have atlesat one Bluetooth adapter. Now get the Default Adapter path for future usages; */
+        gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
+        if (enBTRCoreSuccess == BTRCore_GetAdapter(gBTRCoreHandle, &gDefaultAdapterContext)) {
+            BTRMGRLOG_DEBUG ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
         }
 
-        /* Register for callback to get the status of connected Devices */
-        BTRCore_RegisterStatusCallback(gBTRCoreHandle, btrMgr_DeviceStatusCallback, NULL);
+        /* TODO: Handling multiple Adapters */
+        if (gListOfAdapters.number_of_adapters > 1) {
+            BTRMGRLOG_WARN("Number of Bluetooth Adapters Found : %u !! Lets handle it properly\n", gListOfAdapters.number_of_adapters);
+        }
+    }
 
-        /* Register for callback to get the Discovered Devices */
-        BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btrMgr_DeviceDiscoveryCallback, NULL);
+    /* Register for callback to get the status of connected Devices */
+    BTRCore_RegisterStatusCallback(gBTRCoreHandle, btrMgr_DeviceStatusCallback, NULL);
 
-        /* Register for callback to process incoming pairing requests */
-        BTRCore_RegisterConnectionIntimationCallback(gBTRCoreHandle, btrMgr_ConnectionInIntimationCallback, NULL);
+    /* Register for callback to get the Discovered Devices */
+    BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btrMgr_DeviceDiscoveryCallback, NULL);
 
-        /* Register for callback to process incoming connection requests */
-        BTRCore_RegisterConnectionAuthenticationCallback(gBTRCoreHandle, btrMgr_ConnectionInAuthenticationCallback, NULL);
+    /* Register for callback to process incoming pairing requests */
+    BTRCore_RegisterConnectionIntimationCallback(gBTRCoreHandle, btrMgr_ConnectionInIntimationCallback, NULL);
 
-        // Init Persistent handles
-        eBTRMgrRet piInitRet = eBTRMgrFailure;
-        piInitRet = BTRMgr_PI_Init(&piHandle);
-        if(piInitRet == eBTRMgrSuccess)
-        {
-            char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
-            int  pindex = 0;
-            int  dindex = 0;
-            int profileRetStatus;
-            int numOfProfiles = 0;
-            int deviceCount = 0;
-            int isConnected = 0;
+    /* Register for callback to process incoming connection requests */
+    BTRCore_RegisterConnectionAuthenticationCallback(gBTRCoreHandle, btrMgr_ConnectionInAuthenticationCallback, NULL);
 
-            BTRMGR_PersistentData_t persistentData;
-            BTRMgrDeviceHandle lDeviceHandle;
+    /* Deactivate Agent on Init */
+    btrMgr_SetAgentActivated(0);
 
-            profileRetStatus = BTRMgr_PI_GetAllProfiles(piHandle,&persistentData);
-            BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
-            if (profileRetStatus != eBTRMgrFailure)
-            {
-                BTRMGRLOG_INFO ("Successfully get all profiles\n");
-                if(strcmp(persistentData.adapterId,lui8adapterAddr) == 0)
-                {
-                    BTRMGRLOG_DEBUG ("Adapter matches = %s\n",lui8adapterAddr);
-                    numOfProfiles = persistentData.numOfProfiles;
-                    BTRMGRLOG_DEBUG ("Number of Profiles = %d\n",numOfProfiles);
-                    for(pindex = 0; pindex < numOfProfiles; pindex++)
-                    {
-                        deviceCount = persistentData.profileList[pindex].numOfDevices;
-                        for(dindex = 0; dindex < deviceCount ; dindex++)
-                        {
-                            lDeviceHandle = persistentData.profileList[pindex].deviceList[dindex].deviceId;
-                            isConnected = persistentData.profileList[pindex].deviceList[dindex].isConnected;
-                            if(isConnected)
-                            {
-                                if(strcmp(persistentData.profileList[pindex].profileId,BTRMGR_A2DP_SINK_PROFILE_ID) == 0)
-                                {
-                                    BTRMGRLOG_INFO ("Streaming to Device  = %lld\n",lDeviceHandle);
-                                    btrMgr_StartAudioStreamingOut(0, lDeviceHandle, BTRMGR_DEVICE_TYPE_AUDIOSINK, 1, 1, 1);
-                                }
+
+    // Init Persistent handles
+    piInitRet = BTRMgr_PI_Init(&piHandle);
+    if(piInitRet == eBTRMgrSuccess) {
+        char lui8adapterAddr[BD_NAME_LEN] = {'\0'};
+        int  pindex = 0;
+        int  dindex = 0;
+        int profileRetStatus;
+        int numOfProfiles = 0;
+        int deviceCount = 0;
+        int isConnected = 0;
+
+        BTRMGR_PersistentData_t persistentData;
+        BTRMgrDeviceHandle lDeviceHandle;
+
+        profileRetStatus = BTRMgr_PI_GetAllProfiles(piHandle,&persistentData);
+        BTRCore_GetAdapterAddr(gBTRCoreHandle, 0, lui8adapterAddr);
+
+        if (profileRetStatus != eBTRMgrFailure) {
+            BTRMGRLOG_INFO ("Successfully get all profiles\n");
+
+            if(strcmp(persistentData.adapterId,lui8adapterAddr) == 0) {
+                BTRMGRLOG_DEBUG ("Adapter matches = %s\n",lui8adapterAddr);
+                numOfProfiles = persistentData.numOfProfiles;
+                BTRMGRLOG_DEBUG ("Number of Profiles = %d\n",numOfProfiles);
+
+                for(pindex = 0; pindex < numOfProfiles; pindex++) {
+                    deviceCount = persistentData.profileList[pindex].numOfDevices;
+
+                    for(dindex = 0; dindex < deviceCount ; dindex++) {
+                        lDeviceHandle = persistentData.profileList[pindex].deviceList[dindex].deviceId;
+                        isConnected = persistentData.profileList[pindex].deviceList[dindex].isConnected;
+
+                        if(isConnected) {
+                            if(strcmp(persistentData.profileList[pindex].profileId,BTRMGR_A2DP_SINK_PROFILE_ID) == 0) {
+                                BTRMGRLOG_INFO ("Streaming to Device  = %lld\n",lDeviceHandle);
+                                btrMgr_StartAudioStreamingOut(0, lDeviceHandle, BTRMGR_DEVICE_TYPE_AUDIOSINK, 1, 1, 1);
                             }
                         }
                     }
                 }
             }
         }
-        else
-        {
-            BTRMGRLOG_ERROR ("Could not initialize PI module\n");
-        }
-
+    }
+    else {
+        BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
     
     return rc;
@@ -1290,7 +1292,7 @@ BTRMGR_SetAdapterDiscoverable (
     unsigned char   discoverable,
     unsigned short  timeout
 ) {
-    BTRMGR_Result_t  rc          = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc          = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet    halrc       = enBTRCoreSuccess;
     const char*     pAdapterPath= NULL;
 
@@ -1330,13 +1332,15 @@ BTRMGR_SetAdapterDiscoverable (
     else {
         BTRMGRLOG_INFO ("Set discoverable status Successfully\n");
         if (discoverable) {
-            BTRMGRLOG_INFO ("Activate agent\n");
-            if ((halrc = BTRCore_RegisterAgent(gBTRCoreHandle, 1)) != enBTRCoreSuccess) {
-                BTRMGRLOG_ERROR ("Failed to Activate Agent\n");
-                rc = BTRMGR_RESULT_GENERIC_FAILURE;
-            }
-            else {
-                btrMgr_SetAgentActivated(1);
+            if (!btrMgr_GetAgentActivated()) {
+                BTRMGRLOG_INFO ("Activate agent\n");
+                if ((halrc = BTRCore_RegisterAgent(gBTRCoreHandle, 1)) != enBTRCoreSuccess) {
+                    BTRMGRLOG_ERROR ("Failed to Activate Agent\n");
+                    rc = BTRMGR_RESULT_GENERIC_FAILURE;
+                }
+                else {
+                    btrMgr_SetAgentActivated(1);
+                }
             }
         }
         else {
