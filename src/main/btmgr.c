@@ -761,7 +761,18 @@ btrMgr_StartAudioStreamingOut (
 
 
     if (aui32ConnectRetryIdx) {
-        if (BTRCore_IsDeviceConnectable(gBTRCoreHandle, listOfPDevices.devices[i].deviceId) != enBTRCoreSuccess) {
+        unsigned int ui32sleepTimeOut = 2;
+        unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
+
+        do {
+            unsigned int ui32sleepIdx = aui32SleepIdx + 1;
+            do {
+                sleep(ui32sleepTimeOut);
+                halrc = BTRCore_IsDeviceConnectable(gBTRCoreHandle, listOfPDevices.devices[i].deviceId);
+            } while ((halrc != enBTRCoreSuccess) && (--ui32sleepIdx));
+        } while ((halrc != enBTRCoreSuccess) && (--ui32confirmIdx));
+
+        if (halrc != enBTRCoreSuccess) {
             BTRMGRLOG_ERROR ("Device Not Connectable\n");
             return BTRMGR_RESULT_GENERIC_FAILURE;
         }
