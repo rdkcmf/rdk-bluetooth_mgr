@@ -57,6 +57,9 @@ static void printOptions (void)
     printf ("26. Deny External Playback Request\n");
     printf ("27. Start Streaming-In\n");
     printf ("28. Stop Streaming-In\n");
+    printf ("29. Perform Media Control Options\n");
+    printf ("30. Get Current Media Track Information\n");
+    printf ("31. Get Media Current Play Position\n"); 
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -618,6 +621,65 @@ int main()
                         printf ("failed\n");
                     else
                         printf ("\nSuccess.... \n");
+                }
+                break;
+            case 29:
+                {
+                    int opt=0;  
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf ("Please Enter the Medio Control Options(0-Play/1-Pause/2-Stop/3-Next/4-Previous)\n");
+                    opt = getDeviceSelection();
+
+                    rc = BTRMGR_MediaControl(0, handle, opt);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess.... \n");
+                }
+                break;
+            case 30:
+                {
+                    BTRMGR_MediaTrackInfo_t mediaTrackInfo;
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+
+                    rc = BTRMGR_GetMediaTrackInfo(0, handle, &mediaTrackInfo);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\n---Current Media Track Info--- \n"
+                                "Album           : %s\n"
+                                "Artist          : %s\n"
+                                "Title           : %s\n"
+                                "Genre           : %s\n"
+                                "NumberOfTracks  : %d\n"
+                                "TrackNumber     : %d\n"
+                                "Duration        : %d\n\n"
+                                , mediaTrackInfo.pcAlbum
+                                , mediaTrackInfo.pcArtist
+                                , mediaTrackInfo.pcTitle
+                                , mediaTrackInfo.pcGenre
+                                , mediaTrackInfo.ui32NumberOfTracks
+                                , mediaTrackInfo.ui32TrackNumber
+                                , mediaTrackInfo.ui32Duration);
+
+                }
+                break;
+            case 31:
+                {
+                    unsigned int pos = 0;
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+
+                    rc = BTRMGR_GetMediaCurrentPosition (0, handle, &pos);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\nCurrent Position  : %d\n", pos);
                 }
                 break;
             case 55:

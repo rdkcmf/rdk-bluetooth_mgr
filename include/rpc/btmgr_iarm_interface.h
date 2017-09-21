@@ -50,6 +50,9 @@
 #define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN          "StopAudioStreamingIn"
 #define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN            "IsAudioStreamingIn"
 #define BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE               "SetEventResponse"
+#define BTRMGR_IARM_METHOD_MEDIA_CONTROL                    "MediaControl"
+#define BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO             "GetMediaTrackInfo"
+#define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION       "GetMediaCurrentPosition"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
 
@@ -147,5 +150,15 @@ typedef struct _BTRMGR_IARMEventResp_t {
     BTRMGR_EventResponse_t m_stBTRMgrEvtRsp;
 } BTRMGR_IARMEventResp_t;
 
+typedef struct _BTRMGR_IARMMediaInterface_t {
+    unsigned char           m_adapterIndex;
+    BTRMgrDeviceHandle      m_deviceHandle;
+
+    union {
+       BTRMGR_MediaControlCommand_t  m_mediaControlCmd;
+       BTRMGR_MediaTrackInfo_t       m_mediaTrackInfo;
+       unsigned int                  m_mediaCurrentPosition; /* To have a media property list */
+    };
+} BTRMGR_IARMMediaInterface_t;
 
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

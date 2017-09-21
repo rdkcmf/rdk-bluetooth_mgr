@@ -35,20 +35,32 @@
 
 
 //TODO: Move to a local handle. Mutex protect all
-static tBTRCoreHandle               gBTRCoreHandle = NULL;
-static BTRMgrDeviceHandle           gCurStreamingDevHandle = 0;
-static stBTRCoreAdapter             gDefaultAdapterContext;
-static stBTRCoreListAdapters        gListOfAdapters;
-static stBTRCoreDevMediaInfo        gstBtrCoreDevMediaInfo;
-static tBTRMgrPIHdl  		        piHandle = NULL;
-static BTRMgrDeviceHandle           gLastConnectedDevHandle = 0;
-static BTRMGR_PairedDevicesList_t   gListOfPairedDevices;
-static unsigned char                gIsDiscoveryInProgress = 0;
-static unsigned char                gIsDeviceConnected = 0;
-static unsigned char                gIsAgentActivated = 0;
-static unsigned char                gEventRespReceived = 0;
-static unsigned char                gAcceptConnection = 0;
-static unsigned char                gIsUserInitiated = 0;
+static tBTRCoreHandle             gBTRCoreHandle             = NULL;
+static BTRMgrDeviceHandle         gCurStreamingDevHandle     = 0;
+static stBTRCoreAdapter           gDefaultAdapterContext;
+static stBTRCoreListAdapters      gListOfAdapters;
+static stBTRCoreDevMediaInfo      gstBtrCoreDevMediaInfo;
+static tBTRMgrPIHdl  		  piHandle                   = NULL;
+static BTRMgrDeviceHandle         gLastConnectedDevHandle    = 0;
+static BTRMGR_PairedDevicesList_t gListOfPairedDevices;
+static unsigned char              gIsDiscoveryInProgress     = 0;
+static unsigned char              gIsDeviceConnected         = 0;
+static unsigned char              gIsAgentActivated          = 0;
+static unsigned char              gEventRespReceived         = 0;
+static unsigned char              gAcceptConnection          = 0;
+static unsigned char              gIsUserInitiated           = 0;
+
+static const char             gMediaControls_toString[][30]  = { { "MEDIA_CTRL_PLAY"        }
+                                                               , { "MEDIA_CTRL_PAUSE"       }
+                                                               , { "MEDIA_CTRL_STOP"        }
+                                                               , { "MEDIA_CTRL_NEXT"        }
+                                                               , { "MEDIA_CTRL_PREVIOUS"    }
+                                                               , { "MEDIA_CTRL_FASTFORWARD" }
+                                                               , { "MEDIA_CTRL_REWIND"      }
+                                                               , { "MEDIA_CTRL_VOLUMEUP"    }
+                                                               , { "MEDIA_CTRL_VOLUMEDOWN"  }
+                                                               } ;
+
 
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
@@ -527,7 +539,6 @@ btrMgr_StopCastingAudio (
         gstBTRMgrStreamingInfo.hBTRMgrAcHdl = NULL;
         gstBTRMgrStreamingInfo.hBTRMgrSoHdl = NULL;
     }
-
     return eBtrMgrResult;
 }
 
@@ -1856,7 +1867,6 @@ BTRMGR_DisconnectFromDevice (
     enBTRCoreRet    halrc   = enBTRCoreSuccess;
     unsigned char   ui8reActivateAgent = 0;
 
-
     if (!gBTRCoreHandle) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
         return BTRMGR_RESULT_INIT_FAILED;
@@ -1889,7 +1899,6 @@ BTRMGR_DisconnectFromDevice (
             ui8reActivateAgent = 1;
         }
     }
-
 
     if (gCurStreamingDevHandle) {
         /* The streaming is happening; stop it */
@@ -2146,7 +2155,6 @@ BTRMGR_StopAudioStreamingOut (
         /* We had Reset the gCurStreamingDevHandle to avoid recursion/looping; so no worries */
         rc = BTRMGR_DisconnectFromDevice(index_of_adapter, handle);
     }
-
     return rc;
 }
 
@@ -2631,6 +2639,7 @@ btrMgr_DeviceStatusCallback (
             }
          break;
 
+
         case enBTRCoreDevStDisconnected:
             btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
             m_eventCallbackFunction (newEvent);    /* Post a callback */
@@ -2683,6 +2692,94 @@ btrMgr_DeviceStatusCallback (
         }
     }
     return;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_MediaControl (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    BTRMGR_MediaControlCommand_t  mediaCtrlCmd
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+
+    if (!gBTRCoreHandle) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        rc = BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (index_of_adapter > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if (BTRMGR_RESULT_SUCCESS == rc && enBTRCoreSuccess != BTRCore_MediaControl(gBTRCoreHandle,
+                                                                                handle,
+                                                                                enBTRCoreMobileAudioIn,
+                                                                                mediaCtrlCmd)) {
+        BTRMGRLOG_ERROR ("Command %s for %llu Failed!!!\n", gMediaControls_toString[mediaCtrlCmd], handle);
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetMediaTrackInfo (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    BTRMGR_MediaTrackInfo_t      *mediaTrackInfo
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+
+    if (!gBTRCoreHandle) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        rc = BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (index_of_adapter > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if (BTRMGR_RESULT_SUCCESS == rc && enBTRCoreSuccess != BTRCore_GetMediaTrackInfo(gBTRCoreHandle,
+                                                                                     handle,
+                                                                                     enBTRCoreMobileAudioIn,
+                                                                                     (stBTRCoreMediaTrackInfo*)mediaTrackInfo)) {
+       BTRMGRLOG_ERROR ("Get Media Track Information for %llu Failed!!!\n", handle);
+       rc = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetMediaCurrentPosition (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    unsigned int*                mediaPosition
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+
+    if (!gBTRCoreHandle) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        rc = BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (index_of_adapter > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if (BTRMGR_RESULT_SUCCESS == rc && enBTRCoreSuccess != BTRCore_GetMediaProperty(gBTRCoreHandle,
+                                                                                    handle,
+                                                                                    enBTRCoreMobileAudioIn,
+                                                                                    "Position", /* To implement better logic in future */
+                                                                                    (void*)mediaPosition)) {
+       BTRMGRLOG_ERROR ("Get Media Current Position for %llu Failed!!!\n", handle);
+       rc = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    return rc;
 }
 
 /* End of File */

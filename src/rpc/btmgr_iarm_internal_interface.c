@@ -51,6 +51,9 @@ static IARM_Result_t btrMgr_StopAudioStreamingIn (void* arg);
 static IARM_Result_t btrMgr_IsAudioStreamingIn (void* arg);
 static IARM_Result_t btrMgr_SetEventResponse (void* arg);
 static IARM_Result_t btrMgr_ResetAdapter (void* arg);
+static IARM_Result_t btrMgr_MediaControl (void* arg);
+static IARM_Result_t btrMgr_GetMediaTrackInfo (void* arg);
+static IARM_Result_t btrMgr_GetMediaCurrentPosition (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
 
 /* Callbacks Prototypes */
@@ -933,6 +936,91 @@ btrMgr_SetEventResponse (
     return retCode;
 }
 
+static IARM_Result_t
+btrMgr_MediaControl (
+    void*   arg 
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMMediaInterface_t *pMediaInterface = (BTRMGR_IARMMediaInterface_t*) arg;
+ 
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    rc = BTRMGR_MediaControl(pMediaInterface->m_adapterIndex, pMediaInterface->m_deviceHandle, pMediaInterface->m_mediaControlCmd);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+   
+
+static IARM_Result_t
+btrMgr_GetMediaCurrentPosition (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMMediaInterface_t *pMediaInterface = (BTRMGR_IARMMediaInterface_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    rc = BTRMGR_GetMediaCurrentPosition(pMediaInterface->m_adapterIndex, pMediaInterface->m_deviceHandle, &pMediaInterface->m_mediaCurrentPosition);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t
+btrMgr_GetMediaTrackInfo (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMMediaInterface_t *pMediaInterface = (BTRMGR_IARMMediaInterface_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    rc = BTRMGR_GetMediaTrackInfo(pMediaInterface->m_adapterIndex, pMediaInterface->m_deviceHandle, &pMediaInterface->m_mediaTrackInfo);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
 
 static IARM_Result_t
 btrMgr_ResetAdapter (
@@ -1021,6 +1109,9 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN, btrMgr_IsAudioStreamingIn);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE, btrMgr_SetEventResponse);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_RESET_ADAPTER, btrMgr_ResetAdapter);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_MEDIA_CONTROL, btrMgr_MediaControl);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, btrMgr_GetMediaTrackInfo);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, btrMgr_GetMediaCurrentPosition);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
 
         IARM_Bus_RegisterEvent(BTRMGR_IARM_EVENT_MAX);

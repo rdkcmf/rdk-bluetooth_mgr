@@ -24,6 +24,7 @@ extern "C"
 {
 #endif
 
+#define BTRMGR_MAX_STR_LEN             256
 #define BTRMGR_NAME_LEN_MAX            64
 #define BTRMGR_DEVICE_COUNT_MAX        32
 #define BTRMGR_ADAPTER_COUNT_MAX       16
@@ -104,6 +105,28 @@ typedef enum _BTRMGR_RSSIValue_type_t {
     BTRMGR_RSSI_GOOD,          //!< Good (3 bars)
     BTRMGR_RSSI_EXCELLENT      //!< Excellent (4 bars)
 } BTRMGR_RSSIValue_t;
+
+typedef enum _BTRMGR_MediaControlCommand_t {
+    BTRMGR_MEDIA_CTRL_PLAY,
+    BTRMGR_MEDIA_CTRL_PAUSE,
+    BTRMGR_MEDIA_CTRL_STOP,
+    BTRMGR_MEDIA_CTRL_NEXT,
+    BTRMGR_MEDIA_CTRL_PREVIOUS,
+    BTRMGR_MEDIA_CTRL_FASTFORWARD,
+    BTRMGR_MEDIA_CTRL_REWIND,
+    BTRMGR_MEDIA_CTRL_VOLUMEUP,
+    BTRMGR_MEDIA_CTRL_VOLUMEDOWN
+} BTRMGR_MediaControlCommand_t;
+
+typedef struct _BTRMGR_MediaTrackInfo_t {
+    char            pcAlbum[BTRMGR_MAX_STR_LEN];
+    char            pcGenre[BTRMGR_MAX_STR_LEN];
+    char            pcTitle[BTRMGR_MAX_STR_LEN];
+    char            pcArtist[BTRMGR_MAX_STR_LEN];
+    unsigned int    ui32TrackNumber;
+    unsigned int    ui32Duration;
+    unsigned int    ui32NumberOfTracks;
+} BTRMGR_MediaTrackInfo_t;
 
 typedef struct _BTRMGR_DeviceService_t {
     unsigned short  m_uuid;
@@ -258,6 +281,11 @@ BTRMGR_Result_t BTRMGR_DeInit(void);
 
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback eventCallback);
 
+BTRMGR_Result_t BTRMGR_MediaControl (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaControlCommand_t mediaCtrlCmd);
+
+BTRMGR_Result_t BTRMGR_GetMediaTrackInfo (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
+
+BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, unsigned int* mediaPosition);
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 

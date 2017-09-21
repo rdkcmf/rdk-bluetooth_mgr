@@ -307,9 +307,11 @@ printMenu (
     printf("35. Accept a connection request\n");
     printf("36. Deny a connection request\n");
     printf("37. Increase Device Volume of External BT Device\n");
-    printf("38. Skip to Next track on External BT Device\n");
-    printf("39. Play wav file forever\n");
-    printf("40. Check if Device Is Connectable\n");
+    printf("38. Perform Media Control Options on External BT Device\n");
+    printf("39. Get Track Information for Current Media item\n");
+    printf("40. Get Media Properties\n");
+    printf("41. Play wav file forever\n");
+    printf("42. Check if Device Is Connectable\n");
 
     printf("88. debug test\n");
     printf("99. Exit\n");
@@ -767,19 +769,82 @@ main (
                 printf("Pick a Device to increase volume...\n");
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                BTRCore_MediaPlayControl(lhBTRCore, devnum, enBTRCoreSpeakers, enBTRCoreMediaVolumeUp);
+
+                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreSpeakers, enBTRCoreMediaVolumeUp))
+                   printf("Failed  to set Volume!!!\n");
             }
             break; 
         case 38:
             {
+                int ch = 0;
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to Go to Next track...\n");
+                printf("Pick a Device to perform media control...\n");
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                BTRCore_MediaPlayControl(lhBTRCore, devnum, enBTRCoreMobileAudioIn, enBTRCoreMediaNext);
+                printf("Enter Media choice ....(0-Play/1-Pause/2-Stop/3-Next/4-Previous)\n");
+                ch = getChoice();
+
+                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreMobileAudioIn, ch))
+                   printf("Failed  to set the Media Control Option!!!\n");
             }
             break;
          case 39:
+            {
+                stBTRCoreMediaTrackInfo     lstBTRCoreMediaTrackInfo;
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                printf("Pick a Device to get media track information...\n");
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                if (enBTRCoreSuccess != BTRCore_GetMediaTrackInfo(lhBTRCore, devnum, enBTRCoreMobileAudioIn, &lstBTRCoreMediaTrackInfo))
+                   printf("Failed  to get Media Track Info!!!\n");
+                else
+                   printf("\n\n---Current Media Track Info---\n\n"
+                          "Album           : %s\n"
+                          "Artist          : %s\n"
+                          "Title           : %s\n"
+                          "Genre           : %s\n"
+                          "NumberOfTracks  : %d\n"
+                          "TrackNumber     : %d\n"
+                          "Duration        : %d\n"
+                          , lstBTRCoreMediaTrackInfo.pcAlbum
+                          , lstBTRCoreMediaTrackInfo.pcArtist
+                          , lstBTRCoreMediaTrackInfo.pcTitle
+                          , lstBTRCoreMediaTrackInfo.pcGenre
+                          , lstBTRCoreMediaTrackInfo.ui32NumberOfTracks
+                          , lstBTRCoreMediaTrackInfo.ui32TrackNumber
+                          , lstBTRCoreMediaTrackInfo.ui32Duration);
+              }
+              break;
+         case 40:
+              {
+                enBTRCoreRet rc = enBTRCoreSuccess;
+                char prop[64] = "\0";
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                printf("Pick a Device to get Media property...\n");
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                printf("Query for any of the mentioned property....(Name|Type|Subtype|Position|Status|Repeat|Shuffle|Browsable|Searchable)\n");
+                scanf("%s",prop);
+
+                if (!strcmp(prop, "Position") || !strcmp(prop, "Browsable") || !strcmp(prop, "Searchable")) {
+                   unsigned int val = 0;
+                   if ((rc = BTRCore_GetMediaProperty (lhBTRCore, devnum, enBTRCoreMobileAudioIn, prop, (void*)&val)))
+                      printf("\n %s : %d\n", prop, val);
+                }
+                else if (!strcmp(prop, "Name") || !strcmp(prop, "Status") || !strcmp(prop, "Subtype") ||
+                         !strcmp(prop, "Type") || !strcmp(prop, "Repeat") || !strcmp(prop, "Shuffle")) { 
+                   char* val = "\0";
+                   if ((rc = BTRCore_GetMediaProperty (lhBTRCore, devnum, enBTRCoreMobileAudioIn, prop, (void*)&val)))
+                      printf("\n %s : %s\n", prop, val);
+                }
+                else
+                   printf("\n Enter valid property...\n");
+                
+                if (enBTRCoreSuccess != rc)
+                   printf("Failed  to get Media Property!!!\n");
+              }  
+              break;  
+         case 41:
             printf("play wav file forever\n");
             printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
             {
@@ -794,7 +859,7 @@ main (
                 } while (1);
             }
             break; 
-        case 40:
+        case 42:
             printf("Pick a Device to Check if Connectable...\n");
             devnum = getChoice();
             BTRCore_IsDeviceConnectable(lhBTRCore, devnum);

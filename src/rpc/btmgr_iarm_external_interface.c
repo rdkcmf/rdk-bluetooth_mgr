@@ -912,6 +912,106 @@ BTRMGR_ResetAdapter (
     return rc;
 }
 
+BTRMGR_Result_t
+BTRMGR_MediaControl (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    BTRMGR_MediaControlCommand_t mediaCtrlCmd
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMMediaInterface_t  mediaInterface;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    mediaInterface.m_adapterIndex    = index_of_adapter;
+    mediaInterface.m_deviceHandle    = handle;
+    mediaInterface.m_mediaControlCmd = mediaCtrlCmd;
+
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_MEDIA_CONTROL, (void*)&mediaInterface, sizeof(BTRMGR_IARMMediaInterface_t));
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetMediaTrackInfo (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    BTRMGR_MediaTrackInfo_t*     mediaTrackInfo
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMMediaInterface_t  mediaInterface;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    mediaInterface.m_adapterIndex    = index_of_adapter;
+    mediaInterface.m_deviceHandle    = handle;
+
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, (void*)&mediaInterface, sizeof(BTRMGR_IARMMediaInterface_t));
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        memcpy (mediaTrackInfo, &mediaInterface.m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetMediaCurrentPosition (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    unsigned int*                mediaPosition
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMMediaInterface_t  mediaInterface;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    mediaInterface.m_adapterIndex         = index_of_adapter;
+    mediaInterface.m_deviceHandle         = handle;
+    mediaInterface.m_mediaCurrentPosition = 0;
+
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, (void*)&mediaInterface, sizeof(BTRMGR_IARMMediaInterface_t));
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        *mediaPosition = mediaInterface.m_mediaCurrentPosition;
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
 
 BTRMGR_Result_t
 BTRMGR_DeInit (
