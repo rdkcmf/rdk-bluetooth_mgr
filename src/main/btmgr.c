@@ -2645,6 +2645,8 @@ btrMgr_DeviceStatusCallback (
             m_eventCallbackFunction (newEvent);    /* Post a callback */
 
             if ((gCurStreamingDevHandle != 0) && (gCurStreamingDevHandle == p_StatusCB->deviceId)) {
+                /* update the flags as the device is NOT Connected */
+                gIsDeviceConnected = 0;
 
                 BTRMGRLOG_INFO ("newEvent.m_pairedDevice.m_deviceType = %d\n", newEvent.m_pairedDevice.m_deviceType);
                 if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
