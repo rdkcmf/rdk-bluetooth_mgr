@@ -1047,8 +1047,17 @@ BTRMGR_Init (
     /* Register for callback to process incoming connection requests */
     BTRCore_RegisterConnectionAuthenticationCallback(gBTRCoreHandle, btrMgr_ConnectionInAuthenticationCallback, NULL);
 
-    /* Deactivate Agent on Init */
-    btrMgr_SetAgentActivated(0);
+    /* Activate Agent on Init */
+    if (!btrMgr_GetAgentActivated()) {
+        BTRMGRLOG_INFO ("Activate agent\n");
+        if ((halrc = BTRCore_RegisterAgent(gBTRCoreHandle, 1)) != enBTRCoreSuccess) {
+            BTRMGRLOG_ERROR ("Failed to Activate Agent\n");
+            rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        }
+        else {
+            btrMgr_SetAgentActivated(1);
+        }
+    }
 
 
     // Init Persistent handles
@@ -1365,16 +1374,6 @@ BTRMGR_SetAdapterDiscoverable (
                 }
             }
         }
-        else {
-            BTRMGRLOG_INFO ("De-Activate agent\n");
-            if ((halrc = BTRCore_UnregisterAgent(gBTRCoreHandle)) != enBTRCoreSuccess) {
-                BTRMGRLOG_ERROR ("Failed to Deactivate Agent\n");
-                rc = BTRMGR_RESULT_GENERIC_FAILURE;
-            }
-            else {
-                btrMgr_SetAgentActivated(0);
-            }
-        }
     }
 
     return rc;
@@ -1427,18 +1426,6 @@ BTRMGR_IsAdapterDiscoverable (
                 }
             }
         }
-        else {
-            if (btrMgr_GetAgentActivated()) {
-                BTRMGRLOG_INFO ("De-Activate agent\n");
-                if ((halrc = BTRCore_UnregisterAgent(gBTRCoreHandle)) != enBTRCoreSuccess) {
-                    BTRMGRLOG_ERROR ("Failed to Deactivate Agent\n");
-                    rc = BTRMGR_RESULT_GENERIC_FAILURE;
-                }
-                else {
-                    btrMgr_SetAgentActivated(0);
-                }
-            }
-        }
     }
 
     return rc;
@@ -1469,7 +1456,7 @@ BTRMGR_StartDeviceDiscovery (
 
         const char* pAdapterPath = btrMgr_GetAdapterPath (index_of_adapter);
         if (pAdapterPath) {
-            halrc = BTRCore_StartDeviceDiscovery(gBTRCoreHandle, pAdapterPath);
+            halrc = BTRCore_StartDiscovery(gBTRCoreHandle, pAdapterPath, enBTRCoreUnknown, 0);
             if (enBTRCoreSuccess != halrc) {
                 BTRMGRLOG_ERROR ("Failed to start discovery\n");
                 rc = BTRMGR_RESULT_GENERIC_FAILURE;
@@ -1509,7 +1496,7 @@ BTRMGR_StopDeviceDiscovery (
     else {
         const char* pAdapterPath = btrMgr_GetAdapterPath (index_of_adapter);
         if (pAdapterPath) {
-            halrc = BTRCore_StopDeviceDiscovery(gBTRCoreHandle, pAdapterPath);
+            halrc = BTRCore_StopDiscovery(gBTRCoreHandle, pAdapterPath, enBTRCoreUnknown);
             if (enBTRCoreSuccess != halrc) {
                 BTRMGRLOG_ERROR ("Failed to stop discovery\n");
                 rc = BTRMGR_RESULT_GENERIC_FAILURE;

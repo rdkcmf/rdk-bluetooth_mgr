@@ -312,6 +312,7 @@ printMenu (
     printf("40. Get Media Properties\n");
     printf("41. Play wav file forever\n");
     printf("42. Check if Device Is Connectable\n");
+    printf("43. Scan for LE Devices\n");
 
     printf("88. debug test\n");
     printf("99. Exit\n");
@@ -329,7 +330,6 @@ main (
     int default_adapter = NO_ADAPTER;
 	stBTRCoreGetAdapters    GetAdapters;
     stBTRCoreAdapter        lstBTRCoreAdapter;
-	stBTRCoreStartDiscovery StartDiscovery;
 
     char  default_path[128];
     char* agent_path = NULL;
@@ -384,18 +384,9 @@ main (
             break;
         case 2: 
             if (default_adapter != NO_ADAPTER) {
-                StartDiscovery.adapter_number = default_adapter;
-                printf("Looking for devices on BT adapter %d\n",StartDiscovery.adapter_number);
-                StartDiscovery.duration = 13;
-                printf("duration %d\n",StartDiscovery.duration);
-                StartDiscovery.max_devices = 10;
-                printf("max_devices %d\n",StartDiscovery.max_devices);
-                StartDiscovery.lookup_names = TRUE;
-                printf("lookup_names %d\n",StartDiscovery.lookup_names);
-                StartDiscovery.flags = 0;
-                printf("flags %d\n",StartDiscovery.flags);
-                printf("Performing device scan. Please wait...\n");
-                BTRCore_StartDiscovery(lhBTRCore, &StartDiscovery);
+                printf("Looking for devices on BT adapter %s\n", lstBTRCoreAdapter.pcAdapterPath);
+                printf("Performing device scan for 15 seconds . Please wait...\n");
+                BTRCore_StartDiscovery(lhBTRCore, lstBTRCoreAdapter.pcAdapterPath, enBTRCoreUnknown, 15);
                 printf("scan complete\n");
             }
             else {
@@ -864,6 +855,18 @@ main (
             devnum = getChoice();
             BTRCore_IsDeviceConnectable(lhBTRCore, devnum);
             break;
+        case 43:
+            if (default_adapter != NO_ADAPTER) {
+                printf("%d\t: %s - Looking for LE devices on BT adapter %s\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.pcAdapterPath);
+                printf("%d\t: %s - Performing LE scan for 30 seconds . Please wait...\n", __LINE__, __FUNCTION__);
+                BTRCore_StartDiscovery(lhBTRCore, lstBTRCoreAdapter.pcAdapterPath, enBTRCoreLE, 30);
+                printf("%d\t: %s - scan complete\n", __LINE__, __FUNCTION__);
+            }
+            else {
+                printf("%d\t: %s - Error, no default_adapter set\n", __LINE__, __FUNCTION__);
+            }
+            break;
+
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
