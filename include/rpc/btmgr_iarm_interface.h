@@ -73,6 +73,12 @@ typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
     BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST,
     BTRMGR_IARM_EVENT_DEVICE_FOUND,
+    BTRMGR_IARM_EVENT_MEDIA_STARTED,
+    BTRMGR_IARM_EVENT_MEDIA_PAUSED,
+    BTRMGR_IARM_EVENT_MEDIA_STOPPED,
+    BTRMGR_IARM_EVENT_MEDIA_ENDED,
+    BTRMGR_IARM_EVENT_MEDIA_POSITION_UPDATE,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_IARM_EVENT_MAX
 } BTRMGR_IARM_Events_t;
 
@@ -157,7 +163,7 @@ typedef struct _BTRMGR_IARMMediaInterface_t {
     union {
        BTRMGR_MediaControlCommand_t  m_mediaControlCmd;
        BTRMGR_MediaTrackInfo_t       m_mediaTrackInfo;
-       unsigned int                  m_mediaCurrentPosition; /* To have a media property list */
+       BTRMGR_MediaPositionInfo_t    m_mediaPositionInfo; /* To have a media property list */
     };
 } BTRMGR_IARMMediaInterface_t;
 

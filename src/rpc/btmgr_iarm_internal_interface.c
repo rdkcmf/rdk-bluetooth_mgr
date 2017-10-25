@@ -952,6 +952,12 @@ btrMgr_MediaControl (
         return retCode;
     }
 
+    if (!pMediaInterface) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
     rc = BTRMGR_MediaControl(pMediaInterface->m_adapterIndex, pMediaInterface->m_deviceHandle, pMediaInterface->m_mediaControlCmd);
     if (BTRMGR_RESULT_SUCCESS == rc) {
         BTRMGRLOG_INFO ("Success\n");
@@ -981,7 +987,13 @@ btrMgr_GetMediaCurrentPosition (
         return retCode;
     }
 
-    rc = BTRMGR_GetMediaCurrentPosition(pMediaInterface->m_adapterIndex, pMediaInterface->m_deviceHandle, &pMediaInterface->m_mediaCurrentPosition);
+    if (!pMediaInterface) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_GetMediaCurrentPosition(pMediaInterface->m_adapterIndex, pMediaInterface->m_deviceHandle, &pMediaInterface->m_mediaPositionInfo);
     if (BTRMGR_RESULT_SUCCESS == rc) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -1006,6 +1018,12 @@ btrMgr_GetMediaTrackInfo (
     if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
         BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pMediaInterface) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
@@ -1216,8 +1234,33 @@ btrMgr_EventCallback (
         BTRMGRLOG_WARN ("Post External Device Found Back event\n");
         IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_FOUND, (void *)&eventData, sizeof(eventData));
     }
+    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_STARTED) {
+        BTRMGRLOG_WARN ("Post Media Position Update event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_STARTED, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_PAUSED) {
+        BTRMGRLOG_WARN ("Post Media Position Update event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PAUSED, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_STOPPED) {
+        BTRMGRLOG_WARN ("Post Media Position Update event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_STOPPED, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_ENDED) {
+        BTRMGRLOG_WARN ("Post Media Position Update event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_ENDED, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_POSITION_UPDATE) {
+        BTRMGRLOG_WARN ("Post Media Position Update event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_POSITION_UPDATE, (void *)&eventData, sizeof(eventData));
+    }
+    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_CHANGED) {
+        BTRMGRLOG_WARN ("Post Media Position Update event\n");
+        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, (void *)&eventData, sizeof(eventData));
+    }
     
 
     return;
 }
+
 

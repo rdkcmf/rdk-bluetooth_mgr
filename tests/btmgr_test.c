@@ -47,7 +47,7 @@ static void printOptions (void)
     printf ("16. Get Device Properties\n");
     printf ("17. Start Streaming\n");
     printf ("18. Stop Streaming\n");
-    printf ("19. Get Streaming Status\n");
+    printf ("19. Get StreamingOut Status\n");
     printf ("20. Check auto connection of external Device\n");
     printf ("21. Accept External Pair Request\n");
     printf ("22. Deny External Pair Request\n");
@@ -60,6 +60,7 @@ static void printOptions (void)
     printf ("29. Perform Media Control Options\n");
     printf ("30. Get Current Media Track Information\n");
     printf ("31. Get Media Current Play Position\n"); 
+    printf ("32. Get StreamingIn Status\n"); 
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -114,6 +115,12 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";    break;
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST"; break;
     case BTRMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                      break;
+    case BTRMGR_EVENT_MEDIA_STARTED                     : event = "MEDIA_STARTED";                     break;
+    case BTRMGR_EVENT_MEDIA_PAUSED                      : event = "MEDIA_PAUSED";                      break;
+    case BTRMGR_EVENT_MEDIA_STOPPED                     : event = "MEDIA_STOPPED";                     break;
+    case BTRMGR_EVENT_MEDIA_ENDED                       : event = "MEDIA_ENDED";                       break;
+    case BTRMGR_EVENT_MEDIA_POSITION_UPDATE             : event = "MEDIA_POSITION_UPDATE";             break;
+    case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";               break;
     default                                            : event = "##INVALID##";
   }
   return event;
@@ -180,6 +187,60 @@ void eventCallback (BTRMGR_EventMessage_t event)
         printf ("\t Enter Option 25 to Accept Playback Request\n");
         printf ("\t Enter Option 26 to Deny Playback Request\n");
         gDeviceHandle = event.m_externalDevice.m_deviceHandle;
+        break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE:
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE:
+    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE:
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE:
+    case BTRMGR_EVENT_DEVICE_PAIRING_FAILED:
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED:
+    case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED:
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED:
+        printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
+        break;
+    case BTRMGR_EVENT_MEDIA_STARTED:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s started streaming successfully\n", event.m_mediaInfo.m_name);
+        break;
+    case BTRMGR_EVENT_MEDIA_PAUSED:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s paused streaming successfully\n", event.m_mediaInfo.m_name);
+        break;
+    case BTRMGR_EVENT_MEDIA_STOPPED:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s stopped streaming successfully\n", event.m_mediaInfo.m_name);
+        break;
+    case BTRMGR_EVENT_MEDIA_ENDED:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s ended streaming successfully\n", event.m_mediaInfo.m_name);
+        break;
+    case BTRMGR_EVENT_MEDIA_POSITION_UPDATE:
+        printf("\t[%s] %s  at position   %d.%d   of   %d.%d\n", getEventAsString(event.m_eventType)
+                                                              , event.m_mediaInfo.m_mediaPositionInfo.m_mediaStatus
+                                                              , event.m_mediaInfo.m_mediaPositionInfo.m_mediaPosition/60000
+                                                              , (event.m_mediaInfo.m_mediaPositionInfo.m_mediaPosition/1000)%60
+                                                              , event.m_mediaInfo.m_mediaPositionInfo.m_mediaDuration/60000
+                                                              , (event.m_mediaInfo.m_mediaPositionInfo.m_mediaDuration/1000)%60);
+        break;
+    case BTRMGR_EVENT_MEDIA_TRACK_CHANGED:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s changed track successfully\n", event.m_mediaInfo.m_name);
+        printf ("\t---Current Media Track Info--- \n"
+                "\tAlbum           : %s\n"
+                "\tArtist          : %s\n"
+                "\tTitle           : %s\n"
+                "\tGenre           : %s\n"
+                "\tNumberOfTracks  : %d\n"
+                "\tTrackNumber     : %d\n"
+                "\tDuration        : %d\n\n"
+                , event.m_mediaInfo.m_mediaTrackInfo.pcAlbum
+                , event.m_mediaInfo.m_mediaTrackInfo.pcArtist
+                , event.m_mediaInfo.m_mediaTrackInfo.pcTitle
+                , event.m_mediaInfo.m_mediaTrackInfo.pcGenre
+                , event.m_mediaInfo.m_mediaTrackInfo.ui32NumberOfTracks
+                , event.m_mediaInfo.m_mediaTrackInfo.ui32TrackNumber
+                , event.m_mediaInfo.m_mediaTrackInfo.ui32Duration);
+
         break;
      default:
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
@@ -670,16 +731,28 @@ int main()
                 break;
             case 31:
                 {
-                    unsigned int pos = 0;
+                    BTRMGR_MediaPositionInfo_t  m_mediaPositionInfo;
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
 
-                    rc = BTRMGR_GetMediaCurrentPosition (0, handle, &pos);
+                    rc = BTRMGR_GetMediaCurrentPosition (0, handle, &m_mediaPositionInfo);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
-                        printf ("\nCurrent Position  : %d\n", pos);
+                        printf ("\nMediaState : %s | Position : %d | Duration : %d\n", m_mediaPositionInfo.m_mediaStatus
+                                                                                     , m_mediaPositionInfo.m_mediaPosition
+                                                                                     , m_mediaPositionInfo.m_mediaDuration);
+                }
+                break;
+            case 32:
+                {
+                    unsigned char index = 0;
+                    rc = BTRMGR_IsAudioStreamingIn(0, &index);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess....; Streaming status = %u\n", index);
                 }
                 break;
             case 55:

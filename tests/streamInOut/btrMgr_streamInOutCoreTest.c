@@ -308,10 +308,10 @@ printMenu (
     printf("36. Deny a connection request\n");
     printf("37. Increase Device Volume of External BT Device\n");
     printf("38. Perform Media Control Options on External BT Device\n");
-    printf("39. Get Track Information for Current Media item\n");
-    printf("40. Get Media Properties\n");
-    printf("41. Play wav file forever\n");
-    printf("42. Check if Device Is Connectable\n");
+    printf("39. Play wav file forever\n");
+    printf("40. Check if Device Is Connectable\n");
+    printf("41. Get Track Information for Current Media item\n");
+    printf("42. Get Media Properties\n");
     printf("43. Scan for LE Devices\n");
 
     printf("88. debug test\n");
@@ -779,7 +779,27 @@ main (
                    printf("Failed  to set the Media Control Option!!!\n");
             }
             break;
-         case 39:
+        case 39:
+            printf("play wav file forever\n");
+            printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
+            {
+                char cliDataPath[4] = {'\0'};
+                char cliDataWriteMTU[8] = {'\0'};
+                snprintf(cliDataPath, 4, "%d", stAppData.iDataPath);
+                snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
+                char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
+                do
+                {
+                    streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs, &stAppData);
+                } while (1);
+            }
+            break;
+        case 40:
+            printf("Pick a Device to Check if Connectable...\n");
+            devnum = getChoice();
+            BTRCore_IsDeviceConnectable(lhBTRCore, devnum);
+            break;
+        case 41:
             {
                 stBTRCoreMediaTrackInfo     lstBTRCoreMediaTrackInfo;
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
@@ -806,7 +826,7 @@ main (
                           , lstBTRCoreMediaTrackInfo.ui32Duration);
               }
               break;
-         case 40:
+        case 42:
               {
                 enBTRCoreRet rc = enBTRCoreSuccess;
                 char prop[64] = "\0";
@@ -835,26 +855,6 @@ main (
                    printf("Failed  to get Media Property!!!\n");
               }  
               break;  
-         case 41:
-            printf("play wav file forever\n");
-            printf("Sending /opt/usb/streamOutTest.wav to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
-            {
-                char cliDataPath[4] = {'\0'};
-                char cliDataWriteMTU[8] = {'\0'};
-                snprintf(cliDataPath, 4, "%d", stAppData.iDataPath);
-                snprintf(cliDataWriteMTU, 8, "%d", stAppData.iDataWriteMTU);
-                char *streamOutTestMainAlternateArgs[5] = {"btrMgrStreamOutTest\0", "0\0", "/opt/usb/streamOutTest.wav\0", cliDataPath, cliDataWriteMTU};
-                do
-                {
-                    streamOutTestMainAlternate(5, streamOutTestMainAlternateArgs, &stAppData);
-                } while (1);
-            }
-            break; 
-        case 42:
-            printf("Pick a Device to Check if Connectable...\n");
-            devnum = getChoice();
-            BTRCore_IsDeviceConnectable(lhBTRCore, devnum);
-            break;
         case 43:
             if (default_adapter != NO_ADAPTER) {
                 printf("%d\t: %s - Looking for LE devices on BT adapter %s\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.pcAdapterPath);

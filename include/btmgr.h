@@ -26,6 +26,7 @@ extern "C"
 
 #define BTRMGR_MAX_STR_LEN             256
 #define BTRMGR_NAME_LEN_MAX            64
+#define BTRMGR_STR_LEN                 32
 #define BTRMGR_DEVICE_COUNT_MAX        32
 #define BTRMGR_ADAPTER_COUNT_MAX       16
 #define BTRMGR_MAX_DEVICE_PROFILE      32
@@ -55,6 +56,12 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
     BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST,
     BTRMGR_EVENT_DEVICE_FOUND,
+    BTRMGR_EVENT_MEDIA_STARTED,
+    BTRMGR_EVENT_MEDIA_PAUSED,
+    BTRMGR_EVENT_MEDIA_STOPPED,
+    BTRMGR_EVENT_MEDIA_ENDED,
+    BTRMGR_EVENT_MEDIA_POSITION_UPDATE,
+    BTRMGR_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
@@ -127,6 +134,12 @@ typedef struct _BTRMGR_MediaTrackInfo_t {
     unsigned int    ui32Duration;
     unsigned int    ui32NumberOfTracks;
 } BTRMGR_MediaTrackInfo_t;
+
+typedef struct _BTRMGR_MediaPositionInfo_t {
+    char                  m_mediaStatus [BTRMGR_STR_LEN];
+    unsigned int          m_mediaDuration;
+    unsigned int          m_mediaPosition;
+} BTRMGR_MediaPositionInfo_t;
 
 typedef struct _BTRMGR_DeviceService_t {
     unsigned short  m_uuid;
@@ -215,6 +228,16 @@ typedef struct _BTRMGR_ExternalDevice_t {
     unsigned int                m_externalDevicePIN;
 } BTRMGR_ExternalDevice_t;
 
+typedef struct _BTRMGR_MediaInfo_t {
+    BTRMgrDeviceHandle     m_deviceHandle;
+    BTRMGR_DeviceType_t    m_deviceType;
+    char                   m_name [BTRMGR_NAME_LEN_MAX];
+    union {
+       BTRMGR_MediaTrackInfo_t     m_mediaTrackInfo;
+       BTRMGR_MediaPositionInfo_t  m_mediaPositionInfo;
+    };
+} BTRMGR_MediaInfo_t;
+
 typedef struct _BTRMGR_EventMessage_t {
     unsigned char   m_adapterIndex;
     BTRMGR_Events_t m_eventType;
@@ -222,6 +245,7 @@ typedef struct _BTRMGR_EventMessage_t {
         BTRMGR_DiscoveredDevices_t  m_discoveredDevice;
         BTRMGR_ExternalDevice_t     m_externalDevice;
         BTRMGR_PairedDevices_t      m_pairedDevice;
+        BTRMGR_MediaInfo_t          m_mediaInfo;
         unsigned short              m_numOfDevices;
     };
 } BTRMGR_EventMessage_t;
@@ -285,7 +309,7 @@ BTRMGR_Result_t BTRMGR_MediaControl (unsigned char index_of_adapter, BTRMgrDevic
 
 BTRMGR_Result_t BTRMGR_GetMediaTrackInfo (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
 
-BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, unsigned int* mediaPosition);
+BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 

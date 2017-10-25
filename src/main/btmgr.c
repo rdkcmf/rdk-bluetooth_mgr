@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "btrCore.h"
 
@@ -49,17 +50,6 @@ static unsigned char              gIsAgentActivated          = 0;
 static unsigned char              gEventRespReceived         = 0;
 static unsigned char              gAcceptConnection          = 0;
 static unsigned char              gIsUserInitiated           = 0;
-
-static const char             gMediaControls_toString[][30]  = { { "MEDIA_CTRL_PLAY"        }
-                                                               , { "MEDIA_CTRL_PAUSE"       }
-                                                               , { "MEDIA_CTRL_STOP"        }
-                                                               , { "MEDIA_CTRL_NEXT"        }
-                                                               , { "MEDIA_CTRL_PREVIOUS"    }
-                                                               , { "MEDIA_CTRL_FASTFORWARD" }
-                                                               , { "MEDIA_CTRL_REWIND"      }
-                                                               , { "MEDIA_CTRL_VOLUMEUP"    }
-                                                               , { "MEDIA_CTRL_VOLUMEDOWN"  }
-                                                               } ;
 
 
 #ifdef RDK_LOGGER_ENABLED
@@ -116,6 +106,7 @@ static void btrMgr_DeviceDiscoveryCallback (stBTRCoreScannedDevice devicefound);
 static int btrMgr_ConnectionInIntimationCallback (stBTRCoreConnCBInfo* apstConnCbInfo);
 static int btrMgr_ConnectionInAuthenticationCallback (stBTRCoreConnCBInfo* apstConnCbInfo);
 static void btrMgr_DeviceStatusCallback (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
+static void btrMgr_MediaStatusCallback (stBTRCoreMediaStatusCBInfo* mediaStatusCB, void* apvUserData);
 
 
 /* Static Function Definitions */
@@ -1037,6 +1028,9 @@ BTRMGR_Init (
 
     /* Register for callback to get the status of connected Devices */
     BTRCore_RegisterStatusCallback(gBTRCoreHandle, btrMgr_DeviceStatusCallback, NULL);
+
+    /* Register for callback to process incoming media events */
+    BTRCore_RegisterMediaStatusCallback(gBTRCoreHandle, btrMgr_MediaStatusCallback, NULL);
 
     /* Register for callback to get the Discovered Devices */
     BTRCore_RegisterDiscoveryCallback(gBTRCoreHandle, btrMgr_DeviceDiscoveryCallback, NULL);
@@ -2296,7 +2290,11 @@ BTRMGR_StartAudioStreamingIn (
         lenBtrMgrRet = BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
-
+    if (BTRMGR_RESULT_SUCCESS == lenBtrMgrRet && enBTRCoreSuccess != BTRCore_ReportMediaPosition (gBTRCoreHandle, listOfPDevices.devices[i].deviceId, enBTRCoreMobileAudioIn)) {
+        BTRMGRLOG_ERROR ("Failed to set BTRCore report media position info!!!");
+        lenBtrMgrRet = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    
     return lenBtrMgrRet;
 }
 
@@ -2405,7 +2403,7 @@ BTRMGR_SetEventResponse (
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST:
         if (apstBTRMgrEvtRsp->m_eventResp && apstBTRMgrEvtRsp->m_deviceHandle) {
             BTRMGR_DeviceConnect_Type_t stream_pref = BTRMGR_DEVICE_TYPE_AUDIOSRC;
-            rc = BTRMGR_StartAudioStreamingIn(index_of_adapter, apstBTRMgrEvtRsp->m_deviceHandle, stream_pref);
+            rc = BTRMGR_StartAudioStreamingIn(index_of_adapter, apstBTRMgrEvtRsp->m_deviceHandle, stream_pref);   
         }
         break;
     case BTRMGR_EVENT_DEVICE_FOUND:
@@ -2418,6 +2416,8 @@ BTRMGR_SetEventResponse (
 
     return rc;
 }
+
+
 
 BTRMGR_Result_t
 BTRMGR_ResetAdapter (
@@ -2597,7 +2597,6 @@ btrMgr_ConnectionInAuthenticationCallback (
 }
 
 
-
 static void
 btrMgr_DeviceStatusCallback (
     stBTRCoreDevStatusCBInfo*   p_StatusCB,
@@ -2686,10 +2685,60 @@ btrMgr_DeviceStatusCallback (
 }
 
 
+static void
+btrMgr_MediaStatusCallback (
+    stBTRCoreMediaStatusCBInfo*  mediaStatusCB,
+    void*                        apvUserData
+) {
+    BTRMGR_EventMessage_t newEvent;
+    memset (&newEvent, 0, sizeof(newEvent));
+
+    BTRMGRLOG_INFO ("Received media status callback\n");
+
+    if ((mediaStatusCB) && (m_eventCallbackFunction)) {
+       stBTRCoreMediaStreamStatus* mediaStreamStatus = mediaStatusCB->m_mediaStreamStatus;
+
+       newEvent.m_mediaInfo.m_deviceHandle = mediaStatusCB->deviceId;
+       newEvent.m_mediaInfo.m_deviceType   = mediaStatusCB->eDeviceClass;
+       strncpy (newEvent.m_mediaInfo.m_name, mediaStatusCB->deviceName, BTRMGR_NAME_LEN_MAX);
+
+       switch (mediaStreamStatus->eStreamstate) {
+         
+       case eBTRCoreStreamStarted:
+             newEvent.m_eventType = BTRMGR_EVENT_MEDIA_STARTED;
+             //memcpy(&newEvent.m_mediaInfo.m_mediaTrackInfo, &mediaStreamStatus->m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
+             break;
+       case eBTRCoreStreamPaused:
+             newEvent.m_eventType = BTRMGR_EVENT_MEDIA_PAUSED;
+             //memcpy(&newEvent.m_mediaInfo.m_mediaTrackInfo, &mediaStreamStatus->m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
+             break;
+       case eBTRCoreStreamStopped:
+             newEvent.m_eventType = BTRMGR_EVENT_MEDIA_STOPPED;
+             break;
+       case eBTRCoreStreamEnded:
+             newEvent.m_eventType = BTRMGR_EVENT_MEDIA_ENDED;
+             break;
+       case eBTRCoreStreamPosition:
+             newEvent.m_eventType = BTRMGR_EVENT_MEDIA_POSITION_UPDATE;
+             memcpy(&newEvent.m_mediaInfo.m_mediaPositionInfo, &mediaStreamStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
+             break;
+       case eBTRCoreStreamChanged:
+             newEvent.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_CHANGED;
+             memcpy(&newEvent.m_mediaInfo.m_mediaTrackInfo, &mediaStreamStatus->m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
+             break;
+       default:
+             break;
+       }
+
+       m_eventCallbackFunction (newEvent);    /* Post a callback */
+    }
+}
+
+
 BTRMGR_Result_t
 BTRMGR_MediaControl (
-    unsigned char                index_of_adapter,
-    BTRMgrDeviceHandle           handle,
+    unsigned char                 index_of_adapter,
+    BTRMgrDeviceHandle            handle,
     BTRMGR_MediaControlCommand_t  mediaCtrlCmd
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
@@ -2708,7 +2757,7 @@ BTRMGR_MediaControl (
                                                                                 handle,
                                                                                 enBTRCoreMobileAudioIn,
                                                                                 mediaCtrlCmd)) {
-        BTRMGRLOG_ERROR ("Command %s for %llu Failed!!!\n", gMediaControls_toString[mediaCtrlCmd], handle);
+        BTRMGRLOG_ERROR ("Media Control Command for %llu Failed!!!\n", handle);
         rc = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     return rc;
@@ -2736,7 +2785,7 @@ BTRMGR_GetMediaTrackInfo (
     if (BTRMGR_RESULT_SUCCESS == rc && enBTRCoreSuccess != BTRCore_GetMediaTrackInfo(gBTRCoreHandle,
                                                                                      handle,
                                                                                      enBTRCoreMobileAudioIn,
-                                                                                     (stBTRCoreMediaTrackInfo*)mediaTrackInfo)) {
+                                                                                     (void*)mediaTrackInfo)) {
        BTRMGRLOG_ERROR ("Get Media Track Information for %llu Failed!!!\n", handle);
        rc = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2748,7 +2797,7 @@ BTRMGR_Result_t
 BTRMGR_GetMediaCurrentPosition (
     unsigned char                index_of_adapter,
     BTRMgrDeviceHandle           handle,
-    unsigned int*                mediaPosition
+    BTRMGR_MediaPositionInfo_t  *mediaPositionInfo
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
@@ -2762,11 +2811,10 @@ BTRMGR_GetMediaCurrentPosition (
         rc = BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    if (BTRMGR_RESULT_SUCCESS == rc && enBTRCoreSuccess != BTRCore_GetMediaProperty(gBTRCoreHandle,
-                                                                                    handle,
-                                                                                    enBTRCoreMobileAudioIn,
-                                                                                    "Position", /* To implement better logic in future */
-                                                                                    (void*)mediaPosition)) {
+    if (BTRMGR_RESULT_SUCCESS == rc && enBTRCoreSuccess != BTRCore_GetMediaPositionInfo(gBTRCoreHandle,
+                                                                                        handle,
+                                                                                        enBTRCoreMobileAudioIn,
+                                                                                        (void*)mediaPositionInfo)) {
        BTRMGRLOG_ERROR ("Get Media Current Position for %llu Failed!!!\n", handle);
        rc = BTRMGR_RESULT_GENERIC_FAILURE;
     }
