@@ -1046,8 +1046,10 @@ BTRMGR_Init (
 
     /* Register for callback to process incoming connection requests */
     BTRCore_RegisterConnectionAuthenticationCallback(gBTRCoreHandle, btrMgr_ConnectionInAuthenticationCallback, NULL);
-
+    // Enabling Agent at Init() leads DELIA-24185. 
+    // TODO:To have a better logic to keep Agent alive always.
     /* Activate Agent on Init */
+#if 0
     if (!btrMgr_GetAgentActivated()) {
         BTRMGRLOG_INFO ("Activate agent\n");
         if ((halrc = BTRCore_RegisterAgent(gBTRCoreHandle, 1)) != enBTRCoreSuccess) {
@@ -1058,7 +1060,7 @@ BTRMGR_Init (
             btrMgr_SetAgentActivated(1);
         }
     }
-
+#endif
 
     // Init Persistent handles
     piInitRet = BTRMgr_PI_Init(&piHandle);
