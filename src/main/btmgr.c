@@ -2049,9 +2049,9 @@ BTRMGR_GetDeviceProperties (
                             strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].device_profile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                         }
 
-                      if (listOfPDevices.devices[i].device_connected)
+                      if (listOfPDevices.devices[i].device_connected) {
                         pDeviceProperty->m_isConnected = 1;
-
+                      }
                         isFound = 1;
                         break;
                     }
