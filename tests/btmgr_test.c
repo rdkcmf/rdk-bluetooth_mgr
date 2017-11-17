@@ -336,13 +336,14 @@ int main()
             case 6:
                 {
                     unsigned char power_status = 0;
-                    unsigned char timeout = 0;
+                    int timeout = -1;
 
                     printf ("Please enter 1 or 0 to Make it Discoverable ON or OFF \t");
                     power_status = (unsigned char) getUserSelection();
 
                     printf ("Please set the timeout for the discoverable \t");
-                    timeout = (unsigned char) getUserSelection();
+                    timeout = (int) getUserSelection();
+                    printf ("timeout = %d\t\n",timeout);
 
                     rc = BTRMGR_SetAdapterDiscoverable(0, power_status, timeout);
                     if (BTRMGR_RESULT_SUCCESS != rc)

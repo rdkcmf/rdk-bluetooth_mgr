@@ -1317,7 +1317,7 @@ BTRMGR_Result_t
 BTRMGR_SetAdapterDiscoverable (
     unsigned char   index_of_adapter,
     unsigned char   discoverable,
-    unsigned short  timeout
+    int  timeout
 ) {
     BTRMGR_Result_t rc          = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet    halrc       = enBTRCoreSuccess;
@@ -1340,8 +1340,8 @@ BTRMGR_SetAdapterDiscoverable (
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
-
-    if (timeout) {
+    //timeout=0 -> no timeout, -1 -> default timeout (180 secs), x -> x seconds
+    if (timeout >= 0) {
         halrc = BTRCore_SetAdapterDiscoverableTimeout(gBTRCoreHandle, pAdapterPath, timeout);
         if (halrc != enBTRCoreSuccess) {
             BTRMGRLOG_ERROR ("Failed to set Adapter discovery timeout\n");

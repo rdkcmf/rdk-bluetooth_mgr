@@ -271,7 +271,7 @@ BTRMGR_Result_t BTRMGR_GetAdapterName(unsigned char index_of_adapter, char* pNam
 BTRMGR_Result_t BTRMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char power_status);
 BTRMGR_Result_t BTRMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char *pPowerStatus);
 
-BTRMGR_Result_t BTRMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsigned char discoverable, unsigned short timeout);
+BTRMGR_Result_t BTRMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsigned char discoverable, int timeout);
 BTRMGR_Result_t BTRMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsigned char *pDiscoverable);
 
 BTRMGR_Result_t BTRMGR_StartDeviceDiscovery(unsigned char index_of_adapter);

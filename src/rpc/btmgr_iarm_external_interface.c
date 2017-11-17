@@ -257,7 +257,7 @@ BTRMGR_Result_t
 BTRMGR_SetAdapterDiscoverable (
     unsigned char   index_of_adapter,
     unsigned char   discoverable,
-    unsigned short  timeout
+    int  timeout
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;

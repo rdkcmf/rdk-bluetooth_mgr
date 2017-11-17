@@ -106,7 +106,7 @@ typedef struct _BTRMGR_IARMAdapterPower_t {
 typedef struct _BTRMGR_IARMAdapterDiscoverable_t {
     unsigned char m_adapterIndex;
     unsigned char m_isDiscoverable;
-    unsigned short m_timeout;
+    int m_timeout;
 } BTRMGR_IARMAdapterDiscoverable_t;
 
 typedef struct _BTRMGR_IARMAdapterDiscover_t {
