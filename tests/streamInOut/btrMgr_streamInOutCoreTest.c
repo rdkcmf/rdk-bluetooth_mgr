@@ -192,7 +192,8 @@ sendSBCFileOverBT (
 
 int
 cb_connection_intimation (
-    stBTRCoreConnCBInfo* apstConnCbInfo
+    stBTRCoreConnCBInfo* apstConnCbInfo,
+    void*                apvUserData
 ) {
     printf("Choose 35 to verify pin-passcode or 36 to discard pin-passcode\n\n");
 
@@ -220,7 +221,8 @@ cb_connection_intimation (
 
 int
 cb_connection_authentication (
-    stBTRCoreConnCBInfo* apstConnCbInfo
+    stBTRCoreConnCBInfo* apstConnCbInfo,
+    void*                apvUserData
 ) {
     printf("Choose 35 to accept the connection or 36 to deny the connection\n\n");
 
@@ -757,11 +759,12 @@ main (
         case 37:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                enBTRCoreMediaCtrl mediaCtrl = enBTRCoreMediaCtrlVolumeUp;
                 printf("Pick a Device to increase volume...\n");
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
 
-                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreSpeakers, enBTRCoreMediaVolumeUp))
+                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreSpeakers, mediaCtrl))
                    printf("Failed  to set Volume!!!\n");
             }
             break; 

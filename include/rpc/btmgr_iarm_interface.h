@@ -73,12 +73,13 @@ typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST,
     BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST,
     BTRMGR_IARM_EVENT_DEVICE_FOUND,
-    BTRMGR_IARM_EVENT_MEDIA_STARTED,
-    BTRMGR_IARM_EVENT_MEDIA_PAUSED,
-    BTRMGR_IARM_EVENT_MEDIA_STOPPED,
-    BTRMGR_IARM_EVENT_MEDIA_ENDED,
-    BTRMGR_IARM_EVENT_MEDIA_POSITION_UPDATE,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION,
     BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED,
     BTRMGR_IARM_EVENT_MAX
 } BTRMGR_IARM_Events_t;
 
@@ -156,7 +157,7 @@ typedef struct _BTRMGR_IARMEventResp_t {
     BTRMGR_EventResponse_t m_stBTRMgrEvtRsp;
 } BTRMGR_IARMEventResp_t;
 
-typedef struct _BTRMGR_IARMMediaInterface_t {
+typedef struct _BTRMGR_IARMMediaProperty_t {
     unsigned char           m_adapterIndex;
     BTRMgrDeviceHandle      m_deviceHandle;
 
@@ -165,6 +166,6 @@ typedef struct _BTRMGR_IARMMediaInterface_t {
        BTRMGR_MediaTrackInfo_t       m_mediaTrackInfo;
        BTRMGR_MediaPositionInfo_t    m_mediaPositionInfo; /* To have a media property list */
     };
-} BTRMGR_IARMMediaInterface_t;
+} BTRMGR_IARMMediaProperty_t;
 
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

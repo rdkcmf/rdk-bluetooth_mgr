@@ -115,12 +115,13 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";    break;
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST"; break;
     case BTRMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                      break;
-    case BTRMGR_EVENT_MEDIA_STARTED                     : event = "MEDIA_STARTED";                     break;
-    case BTRMGR_EVENT_MEDIA_PAUSED                      : event = "MEDIA_PAUSED";                      break;
-    case BTRMGR_EVENT_MEDIA_STOPPED                     : event = "MEDIA_STOPPED";                     break;
-    case BTRMGR_EVENT_MEDIA_ENDED                       : event = "MEDIA_ENDED";                       break;
-    case BTRMGR_EVENT_MEDIA_POSITION_UPDATE             : event = "MEDIA_POSITION_UPDATE";             break;
+    case BTRMGR_EVENT_MEDIA_TRACK_STARTED               : event = "MEDIA_TRACK_STARTED";               break;
+    case BTRMGR_EVENT_MEDIA_TRACK_PLAYING               : event = "MEDIA_TRACK_PLAYING";               break;
+    case BTRMGR_EVENT_MEDIA_TRACK_PAUSED                : event = "MEDIA_TRACK_PAUSED";                break;
+    case BTRMGR_EVENT_MEDIA_TRACK_STOPPED               : event = "MEDIA_TRACK_STOPPED";               break;
+    case BTRMGR_EVENT_MEDIA_TRACK_POSITION              : event = "MEDIA_TRACK_POSITION";              break;
     case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";               break;
+    case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_TRACK_ENDED";                 break;
     default                                            : event = "##INVALID##";
   }
   return event;
@@ -198,29 +199,16 @@ void eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED:
         printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
         break;
-    case BTRMGR_EVENT_MEDIA_STARTED:
-        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
-        printf("\tDevice %s started streaming successfully\n", event.m_mediaInfo.m_name);
-        break;
-    case BTRMGR_EVENT_MEDIA_PAUSED:
-        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
-        printf("\tDevice %s paused streaming successfully\n", event.m_mediaInfo.m_name);
-        break;
-    case BTRMGR_EVENT_MEDIA_STOPPED:
-        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
-        printf("\tDevice %s stopped streaming successfully\n", event.m_mediaInfo.m_name);
-        break;
-    case BTRMGR_EVENT_MEDIA_ENDED:
-        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
-        printf("\tDevice %s ended streaming successfully\n", event.m_mediaInfo.m_name);
-        break;
-    case BTRMGR_EVENT_MEDIA_POSITION_UPDATE:
-        printf("\t[%s] %s  at position   %d.%d   of   %d.%d\n", getEventAsString(event.m_eventType)
-                                                              , event.m_mediaInfo.m_mediaPositionInfo.m_mediaStatus
-                                                              , event.m_mediaInfo.m_mediaPositionInfo.m_mediaPosition/60000
-                                                              , (event.m_mediaInfo.m_mediaPositionInfo.m_mediaPosition/1000)%60
-                                                              , event.m_mediaInfo.m_mediaPositionInfo.m_mediaDuration/60000
-                                                              , (event.m_mediaInfo.m_mediaPositionInfo.m_mediaDuration/1000)%60);
+    case BTRMGR_EVENT_MEDIA_TRACK_STARTED:
+    case BTRMGR_EVENT_MEDIA_TRACK_PLAYING:
+    case BTRMGR_EVENT_MEDIA_TRACK_PAUSED:
+    case BTRMGR_EVENT_MEDIA_TRACK_STOPPED:
+    case BTRMGR_EVENT_MEDIA_TRACK_POSITION:
+        printf("\t[%s]   at position   %d.%02d   of   %d.%02d\n", getEventAsString(event.m_eventType)
+                                                                , event.m_mediaInfo.m_mediaPositionInfo.m_mediaPosition/60000
+                                                                , (event.m_mediaInfo.m_mediaPositionInfo.m_mediaPosition/1000)%60
+                                                                , event.m_mediaInfo.m_mediaPositionInfo.m_mediaDuration/60000
+                                                                , (event.m_mediaInfo.m_mediaPositionInfo.m_mediaDuration/1000)%60);    
         break;
     case BTRMGR_EVENT_MEDIA_TRACK_CHANGED:
         printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
@@ -241,6 +229,10 @@ void eventCallback (BTRMGR_EventMessage_t event)
                 , event.m_mediaInfo.m_mediaTrackInfo.ui32TrackNumber
                 , event.m_mediaInfo.m_mediaTrackInfo.ui32Duration);
 
+        break;
+    case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s ended streaming successfully\n", event.m_mediaInfo.m_name);
         break;
      default:
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
@@ -741,9 +733,8 @@ int main()
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
-                        printf ("\nMediaState : %s | Position : %d | Duration : %d\n", m_mediaPositionInfo.m_mediaStatus
-                                                                                     , m_mediaPositionInfo.m_mediaPosition
-                                                                                     , m_mediaPositionInfo.m_mediaDuration);
+                        printf ("\nPosition : %d | Duration : %d\n", m_mediaPositionInfo.m_mediaPosition
+                                                                   , m_mediaPositionInfo.m_mediaDuration);
                 }
                 break;
             case 32:

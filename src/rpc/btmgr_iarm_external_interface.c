@@ -34,6 +34,7 @@ int b_rdk_logger_enabled = 0;
 #endif
 
 static void btrMgrdeviceCallback(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+static void btrMgrMediaCallback(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 
 
 /**********************/
@@ -85,12 +86,13 @@ BTRMGR_Init (
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_FOUND, btrMgrdeviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_STARTED, btrMgrdeviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PAUSED, btrMgrdeviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_STOPPED, btrMgrdeviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_ENDED, btrMgrdeviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_POSITION_UPDATE, btrMgrdeviceCallback);
-        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, btrMgrdeviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, btrMgrMediaCallback);
         BTRMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
     else
@@ -926,7 +928,7 @@ BTRMGR_MediaControl (
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTRMGR_IARMMediaInterface_t  mediaInterface;
+    BTRMGR_IARMMediaProperty_t  mediaProperty;
 
     if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
@@ -934,11 +936,11 @@ BTRMGR_MediaControl (
         return rc;
     }
 
-    mediaInterface.m_adapterIndex    = index_of_adapter;
-    mediaInterface.m_deviceHandle    = handle;
-    mediaInterface.m_mediaControlCmd = mediaCtrlCmd;
+    mediaProperty.m_adapterIndex    = index_of_adapter;
+    mediaProperty.m_deviceHandle    = handle;
+    mediaProperty.m_mediaControlCmd = mediaCtrlCmd;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_MEDIA_CONTROL, (void*)&mediaInterface, sizeof(BTRMGR_IARMMediaInterface_t));
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_MEDIA_CONTROL, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t));
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -959,7 +961,7 @@ BTRMGR_GetMediaTrackInfo (
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTRMGR_IARMMediaInterface_t  mediaInterface;
+    BTRMGR_IARMMediaProperty_t  mediaProperty;
 
     if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || NULL == mediaTrackInfo) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
@@ -967,13 +969,13 @@ BTRMGR_GetMediaTrackInfo (
         return rc;
     }
 
-    mediaInterface.m_adapterIndex    = index_of_adapter;
-    mediaInterface.m_deviceHandle    = handle;
+    mediaProperty.m_adapterIndex    = index_of_adapter;
+    mediaProperty.m_deviceHandle    = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, (void*)&mediaInterface, sizeof(BTRMGR_IARMMediaInterface_t));
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t));
 
     if (IARM_RESULT_SUCCESS == retCode) {
-        memcpy (mediaTrackInfo, &mediaInterface.m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
+        memcpy (mediaTrackInfo, &mediaProperty.m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
         BTRMGRLOG_INFO ("Success\n");
     }
     else {
@@ -993,7 +995,7 @@ BTRMGR_GetMediaCurrentPosition (
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTRMGR_IARMMediaInterface_t  mediaInterface;
+    BTRMGR_IARMMediaProperty_t  mediaProperty;
 
     if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || NULL == mediaPositionInfo) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
@@ -1001,13 +1003,13 @@ BTRMGR_GetMediaCurrentPosition (
         return rc;
     }
 
-    mediaInterface.m_adapterIndex         = index_of_adapter;
-    mediaInterface.m_deviceHandle         = handle;
+    mediaProperty.m_adapterIndex         = index_of_adapter;
+    mediaProperty.m_deviceHandle         = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, (void*)&mediaInterface, sizeof(BTRMGR_IARMMediaInterface_t));
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t));
 
     if (IARM_RESULT_SUCCESS == retCode) {
-        memcpy (mediaPositionInfo, &mediaInterface.m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
+        memcpy (mediaPositionInfo, &mediaProperty.m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
         BTRMGRLOG_INFO ("Success\n");
     }
     else {
@@ -1135,13 +1137,7 @@ btrMgrdeviceCallback (
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST       == eventId) ||
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST    == eventId) ||
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST   == eventId) ||
-            (BTRMGR_IARM_EVENT_DEVICE_FOUND                         == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_STARTED                        == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_PAUSED                         == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_STOPPED                        == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_ENDED                          == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_POSITION_UPDATE                == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED                  == eventId) ){
+            (BTRMGR_IARM_EVENT_DEVICE_FOUND                         == eventId) ){
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));
 
@@ -1159,6 +1155,44 @@ btrMgrdeviceCallback (
         }
     }
     
+    return;
+}
+
+
+static void
+btrMgrMediaCallback (
+    const char*     owner,
+    IARM_EventId_t  eventId,
+    void*           pData,
+    size_t          len
+) {
+
+    if (NULL == pData) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+    }
+    else {
+        BTRMGR_EventMessage_t *pReceivedEvent = (BTRMGR_EventMessage_t*)pData;
+        BTRMGR_EventMessage_t newEvent;
+
+        if ((BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED     == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING     == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED      == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED     == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION    == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED     == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED    == eventId) ){
+
+            memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));
+
+            if (m_eventCallbackFunction)
+                m_eventCallbackFunction (newEvent);
+
+            BTRMGRLOG_INFO ("posted media event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
+        }
+        else {
+            BTRMGRLOG_ERROR ("Event is invalid\n");
+        }
+    }
     return;
 }
 
