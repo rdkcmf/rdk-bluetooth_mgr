@@ -1961,7 +1961,10 @@ BTRMGR_GetConnectedDevices (
     BTRMGR_ConnectedDevicesList_t*   pConnectedDevices
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
-    BTRMGR_DevicesProperty_t deviceProperty;
+    enBTRCoreRet halrc = enBTRCoreSuccess;
+    stBTRCorePairedDevicesCount   listOfPDevices;
+    unsigned char i = 0;
+    unsigned char j = 0;
 
     if (NULL == gBTRCoreHandle) {
         rc = BTRMGR_RESULT_INIT_FAILED;
@@ -1972,28 +1975,35 @@ BTRMGR_GetConnectedDevices (
         BTRMGRLOG_ERROR ("Input is invalid\n");
     }
     else {
-        memset (pConnectedDevices, 0 , sizeof(BTRMGR_ConnectedDevicesList_t));
-        memset (&deviceProperty, 0 , sizeof(deviceProperty));
+        memset (pConnectedDevices, 0, sizeof(BTRMGR_ConnectedDevicesList_t));
+        memset (&listOfPDevices, 0, sizeof(listOfPDevices));
+   
+        halrc = BTRCore_GetListOfPairedDevices(gBTRCoreHandle, &listOfPDevices);
+        if (enBTRCoreSuccess == halrc) {
+            if (listOfPDevices.numberOfDevices) {
+                for (i = 0; i < listOfPDevices.numberOfDevices; i++) {
+                    if (listOfPDevices.devices[i].device_connected) {
+                       pConnectedDevices->m_numOfDevices  = 1; /* as we don't support multiple device connection for now */
+                       pConnectedDevices->m_deviceProperty[0].m_deviceHandle = listOfPDevices.devices[i].deviceId;
+                       pConnectedDevices->m_deviceProperty[0].m_deviceType   = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].device_type);
+                       pConnectedDevices->m_deviceProperty[0].m_vendorID     = listOfPDevices.devices[i].vendor_id;
+                       pConnectedDevices->m_deviceProperty[0].m_isConnected  = 1;
+                       strncpy (pConnectedDevices->m_deviceProperty[0].m_name, listOfPDevices.devices[i].device_name, (BTRMGR_NAME_LEN_MAX - 1));
+                       strncpy (pConnectedDevices->m_deviceProperty[0].m_deviceAddress, listOfPDevices.devices[i].device_address, (BTRMGR_NAME_LEN_MAX - 1));
 
-        if (gCurStreamingDevHandle) {
-            if (BTRMGR_RESULT_SUCCESS == BTRMGR_GetDeviceProperties (index_of_adapter, gCurStreamingDevHandle, &deviceProperty)) {
-                pConnectedDevices->m_numOfDevices  = 1;
-                pConnectedDevices->m_deviceProperty[0].m_deviceHandle  = deviceProperty.m_deviceHandle;
-                pConnectedDevices->m_deviceProperty[0].m_deviceType = deviceProperty.m_deviceType;
-                pConnectedDevices->m_deviceProperty[0].m_vendorID      = deviceProperty.m_vendorID;
-                pConnectedDevices->m_deviceProperty[0].m_isConnected   = 1;
-                memcpy (&pConnectedDevices->m_deviceProperty[0].m_serviceInfo, &deviceProperty.m_serviceInfo, sizeof (BTRMGR_DeviceServiceList_t));
-                strncpy (pConnectedDevices->m_deviceProperty[0].m_name, deviceProperty.m_name, (BTRMGR_NAME_LEN_MAX - 1));
-                strncpy (pConnectedDevices->m_deviceProperty[0].m_deviceAddress, deviceProperty.m_deviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
-                BTRMGRLOG_INFO ("Successfully posted the connected device inforation\n");
-            }
-            else {
-                BTRMGRLOG_ERROR ("Failed to get connected device inforation\n");
-                rc = BTRMGR_RESULT_GENERIC_FAILURE;
+                       pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_numOfService = listOfPDevices.devices[i].device_profile.numberOfService;
+                       for (j = 0; j < listOfPDevices.devices[i].device_profile.numberOfService; j++) {
+                           pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].device_profile.profile[j].uuid_value;
+                           strncpy (pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].device_profile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                       }
+                       BTRMGRLOG_INFO ("Successfully posted the connected device information\n");
+                    }
+                }
             }
         }
-        else if (gIsDeviceConnected != 0) {
-            BTRMGRLOG_ERROR ("Seems like Device is connected but not streaming. Lost the connect info\n");
+        else {
+            BTRMGRLOG_ERROR ("Failed to get connected device information\n");
+            rc = BTRMGR_RESULT_GENERIC_FAILURE;
         }
     }
 
