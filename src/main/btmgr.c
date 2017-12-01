@@ -101,7 +101,7 @@ static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char index_of_adapter, B
 
 /* Callbacks Prototypes */
 static eBTRMgrRet btrMgr_ACDataReadyCallback (void* apvAcDataBuf, unsigned int aui32AcDataLen, void* apvUserData);
-static void btrMgr_DeviceDiscoveryCallback (stBTRCoreScannedDevice devicefound, void* apvUserData);
+static void btrMgr_DeviceDiscoveryCallback (stBTRCoreBTDevice devicefound, void* apvUserData);
 static int btrMgr_ConnectionInIntimationCallback (stBTRCoreConnCBInfo* apstConnCbInfo, void* apvUserData);
 static int btrMgr_ConnectionInAuthenticationCallback (stBTRCoreConnCBInfo* apstConnCbInfo, void* apvUserData);
 static void btrMgr_DeviceStatusCallback (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
@@ -275,13 +275,13 @@ btrMgr_MapDevstatusInfoToEventInfo (
 
     
     if (type == BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
-        newEvent->m_discoveredDevice.m_deviceHandle        = ((stBTRCoreScannedDevice*)p_StatusCB)->deviceId;
-        newEvent->m_discoveredDevice.m_signalLevel         = ((stBTRCoreScannedDevice*)p_StatusCB)->RSSI;
-        newEvent->m_discoveredDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreScannedDevice*)p_StatusCB)->device_type);
-        newEvent->m_discoveredDevice.m_rssi                = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreScannedDevice*)p_StatusCB)->RSSI);
+        newEvent->m_discoveredDevice.m_deviceHandle        = ((stBTRCoreBTDevice*)p_StatusCB)->deviceId;
+        newEvent->m_discoveredDevice.m_signalLevel         = ((stBTRCoreBTDevice*)p_StatusCB)->RSSI;
+        newEvent->m_discoveredDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreBTDevice*)p_StatusCB)->device_type);
+        newEvent->m_discoveredDevice.m_rssi                = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreBTDevice*)p_StatusCB)->RSSI);
         newEvent->m_discoveredDevice.m_isPairedDevice      = btrMgr_GetDevPaired(newEvent->m_discoveredDevice.m_deviceHandle);
-        strncpy(newEvent->m_discoveredDevice.m_name, ((stBTRCoreScannedDevice*)p_StatusCB)->device_name, (BTRMGR_NAME_LEN_MAX-1));
-        strncpy(newEvent->m_discoveredDevice.m_deviceAddress, ((stBTRCoreScannedDevice*)p_StatusCB)->device_address, (BTRMGR_NAME_LEN_MAX-1));
+        strncpy(newEvent->m_discoveredDevice.m_name, ((stBTRCoreBTDevice*)p_StatusCB)->device_name, (BTRMGR_NAME_LEN_MAX-1));
+        strncpy(newEvent->m_discoveredDevice.m_deviceAddress, ((stBTRCoreBTDevice*)p_StatusCB)->device_address, (BTRMGR_NAME_LEN_MAX-1));
     }
     else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
         newEvent->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.deviceId;
@@ -2604,7 +2604,7 @@ btrMgr_ACDataReadyCallback (
 
 static void
 btrMgr_DeviceDiscoveryCallback (
-    stBTRCoreScannedDevice  devicefound,
+    stBTRCoreBTDevice  devicefound,
     void*                   apvUserData
 ) {
     if (btrMgr_GetDiscoveryInProgress() && (m_eventCallbackFunction)) {
