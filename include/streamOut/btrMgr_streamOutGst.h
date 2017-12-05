@@ -45,8 +45,25 @@ typedef enum _eBTRMgrSOGstRet {
    eBTRMgrSOGstSuccess
 } eBTRMgrSOGstRet;
 
+typedef enum _eBTRMgrSOGstStatus {
+    eBTRMgrSOGstStInitialized,
+    eBTRMgrSOGstStDeInitialized,
+    eBTRMgrSOGstStPaused,
+    eBTRMgrSOGstStPlaying,
+    eBTRMgrSOGstStUnderflow,
+    eBTRMgrSOGstStOverflow,
+    eBTRMgrSOGstStCompleted,
+    eBTRMgrSOGstStStopped,
+    eBTRMgrSOGstStWarning,
+    eBTRMgrSOGstStError,
+    eBTRMgrSOGstStUnknown
+} eBTRMgrSOGstStatus;
+
+typedef eBTRMgrSOGstRet (*fPtr_BTRMgr_SO_GstStatusCb) (eBTRMgrSOGstStatus aeBtrMgrSoGstStatus, void *apvUserData);
+
+
 /* Interfaces */
-eBTRMgrSOGstRet BTRMgr_SO_GstInit (tBTRMgrSoGstHdl* phBTRMgrSoGstHdl);
+eBTRMgrSOGstRet BTRMgr_SO_GstInit (tBTRMgrSoGstHdl* phBTRMgrSoGstHdl, fPtr_BTRMgr_SO_GstStatusCb afpcBSoGstStatus, void* apvUserData);
 eBTRMgrSOGstRet BTRMgr_SO_GstDeInit (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, 
                                     int ai32InBufMaxSize,

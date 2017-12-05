@@ -492,13 +492,9 @@ BTRMgr_AC_GetDefaultSettings (
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
-    BTRMGRLOG_DEBUG ("\n"
-                    "Default CBBufferReady = %p\n"
-                    "Default Fifosize      = %d\n"
-                    "Default Threshold     = %d\n",
-                    pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady,
-                    pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize,
-                    pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
+    BTRMGRLOG_TRACE ("Default CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady);
+    BTRMGRLOG_TRACE ("Default Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize);
+    BTRMGRLOG_TRACE ("Default Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -586,13 +582,9 @@ BTRMgr_AC_GetDefaultSettings (
     if (leBtrMgrAcRet == eBTRMgrSuccess) {
         memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmDefSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-        BTRMGRLOG_DEBUG ("\n"
-                        "Default Fifosize = %d\n"
-                        "Default Threshold= %d\n"
-                        "Default DelayComp= %d\n",
-                        pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size,
-                        pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold,
-                        pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
+        BTRMGRLOG_TRACE ("Default Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size);
+        BTRMGRLOG_TRACE ("Default Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold);
+        BTRMGRLOG_TRACE ("Default DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
 
         //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -696,13 +688,9 @@ BTRMgr_AC_GetCurrentSettings (
         leBtrMgrAcRet = eBTRMgrFailure;
     }
 
-    BTRMGRLOG_DEBUG ("\n"
-                    "Current CBBufferReady = %p\n"
-                    "Current Fifosize      = %d\n"
-                    "Current Threshold     = %d\n",
-                    pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady,
-                    pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize,
-                    pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
+    BTRMGRLOG_DEBUG ("Current CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady);
+    BTRMGRLOG_DEBUG ("Current Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize);
+    BTRMGRLOG_DEBUG ("Current Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
 
     //TODO: Get the format capture format from RMF_AudioCapture Settings
     apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -791,14 +779,10 @@ BTRMgr_AC_GetCurrentSettings (
     if (leBtrMgrAcRet == eBTRMgrSuccess) {
         memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmCurSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-        BTRMGRLOG_DEBUG ("\n"
-                        "Current Fifosize = %d\n"
-                        "Current Threshold= %d\n"
-                        "Current DelayComp= %d\n",
-                        pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size,
-                        pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold,
-                        pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
-
+        BTRMGRLOG_DEBUG ("Current Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size);
+        BTRMGRLOG_DEBUG ("Current Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold);
+        BTRMGRLOG_DEBUG ("Current DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
+                        
         //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
 

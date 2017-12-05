@@ -263,7 +263,10 @@ typedef void (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t);
 
 
 BTRMGR_Result_t BTRMGR_Init(void);
+BTRMGR_Result_t BTRMGR_DeInit(void);
+
 BTRMGR_Result_t BTRMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters);
+BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char index_of_adapter);
 
 BTRMGR_Result_t BTRMGR_SetAdapterName(unsigned char index_of_adapter, const char* pNameOfAdapter);
 BTRMGR_Result_t BTRMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameOfAdapter);
@@ -299,19 +302,14 @@ BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char ui8AdapterIdx, unsigned 
 
 BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char index_of_adapter, BTRMGR_EventResponse_t* apstBTRMgrEvtRsp);
 
-BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char index_of_adapter);
-
-BTRMGR_Result_t BTRMGR_DeInit(void);
-
-BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback eventCallback);
-
 BTRMGR_Result_t BTRMGR_MediaControl (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaControlCommand_t mediaCtrlCmd);
 
 BTRMGR_Result_t BTRMGR_GetMediaTrackInfo (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
-
 BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
+
+BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback eventCallback);
 
 #ifdef __cplusplus
 }

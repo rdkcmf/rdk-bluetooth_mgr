@@ -103,6 +103,31 @@ BTRMGR_Init (
 
 
 BTRMGR_Result_t
+BTRMGR_DeInit (
+    void
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+
+    if (isBTRMGR_Inited) {
+        /* This is leading to Crash the BTRMgrBus which is listening; So lets not call this. */
+        //retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DEINIT, 0, 0);
+        if (IARM_RESULT_SUCCESS == retCode) {
+            BTRMGRLOG_INFO ("Success\n");
+        }
+        else {
+            rc = BTRMGR_RESULT_GENERIC_FAILURE;
+            BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        }
+    }
+    else
+        BTRMGRLOG_INFO ("IARM Interface for BTRMgr is Not Inited Yet..\n");
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
 BTRMGR_GetNumberOfAdapters (
     unsigned char*  pNumOfAdapters
 ) {
@@ -129,6 +154,34 @@ BTRMGR_GetNumberOfAdapters (
 
     return rc;
 }
+
+
+BTRMGR_Result_t
+BTRMGR_ResetAdapter (
+    unsigned char index_of_adapter
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+
+    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_RESET_ADAPTER, (void *)&index_of_adapter, sizeof(index_of_adapter));
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
 
 BTRMGR_Result_t
 BTRMGR_SetAdapterName (
@@ -895,32 +948,6 @@ BTRMGR_SetEventResponse (
 
 
 BTRMGR_Result_t
-BTRMGR_ResetAdapter (
-    unsigned char index_of_adapter
-) {
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
-    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-
-    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
-        rc = BTRMGR_RESULT_INVALID_INPUT;
-        BTRMGRLOG_ERROR ("Input is invalid\n");
-        return rc;
-    }
-
-
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_RESET_ADAPTER, (void *)&index_of_adapter, sizeof(index_of_adapter));
-    if (IARM_RESULT_SUCCESS == retCode) {
-        BTRMGRLOG_INFO ("Success\n");
-    }
-    else {
-        rc = BTRMGR_RESULT_GENERIC_FAILURE;
-        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
-    }
-
-    return rc;
-}
-
-BTRMGR_Result_t
 BTRMGR_MediaControl (
     unsigned char                index_of_adapter,
     BTRMgrDeviceHandle           handle,
@@ -1020,50 +1047,6 @@ BTRMGR_GetMediaCurrentPosition (
     return rc;
 }
 
-BTRMGR_Result_t
-BTRMGR_DeInit (
-    void
-) {
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
-    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-
-    if (isBTRMGR_Inited) {
-        /* This is leading to Crash the BTRMgrBus which is listening; So lets not call this. */
-        //retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DEINIT, 0, 0);
-        if (IARM_RESULT_SUCCESS == retCode) {
-            BTRMGRLOG_INFO ("Success\n");
-        }
-        else {
-            rc = BTRMGR_RESULT_GENERIC_FAILURE;
-            BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
-        }
-    }
-    else
-        BTRMGRLOG_INFO ("IARM Interface for BTRMgr is Not Inited Yet..\n");
-
-    return rc;
-}
-
-
-BTRMGR_Result_t
-BTRMGR_RegisterEventCallback (
-    BTRMGR_EventCallback eventCallback
-) {
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
-
-    if (!eventCallback) {
-        rc = BTRMGR_RESULT_INVALID_INPUT;
-        BTRMGRLOG_ERROR ("Input is invalid\n");
-    }
-    else {
-        m_eventCallbackFunction = eventCallback;
-        BTRMGRLOG_INFO ("Success\n");
-    }
-
-    return rc;
-}
-
-
 
 const char*
 BTRMGR_GetDeviceTypeAsString (
@@ -1104,6 +1087,26 @@ BTRMGR_GetDeviceTypeAsString (
     else
         return "UNKNOWN DEVICE";
 }
+
+
+BTRMGR_Result_t
+BTRMGR_RegisterEventCallback (
+    BTRMGR_EventCallback eventCallback
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+
+    if (!eventCallback) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+    }
+    else {
+        m_eventCallbackFunction = eventCallback;
+        BTRMGRLOG_INFO ("Success\n");
+    }
+
+    return rc;
+}
+
 
 /**********************/
 /* Incoming Callbacks */

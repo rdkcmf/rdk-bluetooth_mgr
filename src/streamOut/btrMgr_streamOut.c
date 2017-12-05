@@ -40,6 +40,7 @@
 #include "btrMgr_Types.h"
 #include "btrMgr_mediaTypes.h"
 #include "btrMgr_streamOut.h"
+
 #ifdef USE_GST1
 #include "btrMgr_streamOutGst.h"
 #endif
@@ -51,6 +52,12 @@ typedef struct _stBTRMgrSOHdl {
     tBTRMgrSoGstHdl     hBTRMgrSoGstHdl;
 #endif
 } stBTRMgrSOHdl;
+
+
+#ifdef USE_GST1
+/* Callbacks */
+static eBTRMgrSOGstRet btrMgr_SO_GstStatusCb (eBTRMgrSOGstStatus aeBtrMgrSoGstStatus, void* apvUserData);
+#endif
 
 
 
@@ -71,7 +78,7 @@ BTRMgr_SO_Init (
     }
 
 #ifdef USE_GST1
-    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstInit(&(pstBtrMgrSoHdl->hBTRMgrSoGstHdl))) != eBTRMgrSOGstSuccess) {
+    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstInit(&(pstBtrMgrSoHdl->hBTRMgrSoGstHdl), btrMgr_SO_GstStatusCb, pstBtrMgrSoHdl)) != eBTRMgrSOGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSoGstRet);
         leBtrMgrSoRet = eBTRMgrInitFailure;
     }
@@ -131,7 +138,7 @@ BTRMgr_SO_DeInit (
 
 eBTRMgrRet
 BTRMgr_SO_GetDefaultSettings (
-    tBTRMgrSoHdl hBTRMgrSoHdl
+    tBTRMgrSoHdl    hBTRMgrSoHdl
 ) {
     eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
@@ -151,7 +158,7 @@ BTRMgr_SO_GetDefaultSettings (
 
 eBTRMgrRet
 BTRMgr_SO_GetCurrentSettings (
-    tBTRMgrSoHdl hBTRMgrSoHdl
+    tBTRMgrSoHdl    hBTRMgrSoHdl
 ) {
     eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
@@ -300,6 +307,11 @@ BTRMgr_SO_GetEstimatedInABufSize (
         lui16OutMtu         = apstBtrMgrSoOutASettings->i32BtrMgrDevMtu;
     }
 
+    
+    if ((!lui16OutFrameLen) || (!lui16OutBitrateKbps) || (!lui16OutMtu)) {
+        return eBTRMgrFailInArg;
+    }
+
 
     lui16OutMtu = (lui16OutMtu/lui16OutFrameLen) * lui16OutFrameLen;
     lui32OutByteRate = (lui16OutBitrateKbps * 1024) / 8;
@@ -311,18 +323,14 @@ BTRMgr_SO_GetEstimatedInABufSize (
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize >> 8) + 1;
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize << 8;
 
-    BTRMGRLOG_DEBUG("\n"
-                   "Effective MTU = %d\n"
-                   "OutByteRate = %d\n"
-                   "OutMtuTimemSec = %f\n"
-                   "InByteRate = %d\n"
-                   "InBufMaxSize = %d\n",
-                   lui16OutMtu,
-                   lui32OutByteRate,
-                   lfOutMtuTimemSec,
-                   lui32InByteRate,
-                   apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize);
 
+    BTRMGRLOG_DEBUG ("Effective MTU   = %d\n", lui16OutMtu);
+    BTRMGRLOG_DEBUG ("OutByteRate     = %d\n", lui32OutByteRate);
+    BTRMGRLOG_DEBUG ("OutMtuTimemSec  = %f\n", lfOutMtuTimemSec);
+    BTRMGRLOG_DEBUG ("InByteRate      = %d\n", lui32InByteRate);
+    BTRMGRLOG_DEBUG ("InBufMaxSize    = %d\n", apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize);
+                   
+                   
     return leBtrMgrSoRet;
 }
 
@@ -330,26 +338,26 @@ BTRMgr_SO_GetEstimatedInABufSize (
 eBTRMgrRet
 BTRMgr_SO_Start (
     tBTRMgrSoHdl            hBTRMgrSoHdl,
-    stBTRMgrInASettings*  apstBtrMgrSoInASettings,
-    stBTRMgrOutASettings* apstBtrMgrSoOutASettings
+    stBTRMgrInASettings*    apstBtrMgrSoInASettings,
+    stBTRMgrOutASettings*   apstBtrMgrSoOutASettings
 ) {
-    eBTRMgrRet    leBtrMgrSoRet  = eBTRMgrSuccess;
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
 
-    eBTRMgrSFmt   leBtrMgrSoInSFmt  = eBTRMgrSFmtUnknown;
-    eBTRMgrAChan  leBtrMgrSoInAChan = eBTRMgrAChanUnknown;
-    eBTRMgrSFreq  leBtrMgrSoInSFreq = eBTRMgrSFreqUnknown;
+    eBTRMgrSFmt     leBtrMgrSoInSFmt  = eBTRMgrSFmtUnknown;
+    eBTRMgrAChan    leBtrMgrSoInAChan = eBTRMgrAChanUnknown;
+    eBTRMgrSFreq    leBtrMgrSoInSFreq = eBTRMgrSFreqUnknown;
 
-    eBTRMgrAChan  leBtrMgrSoOutAChan = eBTRMgrAChanUnknown;
-    eBTRMgrSFreq  leBtrMgrSoOutSFreq = eBTRMgrSFreqUnknown;
+    eBTRMgrAChan    leBtrMgrSoOutAChan = eBTRMgrAChanUnknown;
+    eBTRMgrSFreq    leBtrMgrSoOutSFreq = eBTRMgrSFreqUnknown;
 
-    const char*  lpcBtrMgrInSoSFmt = NULL;
-    unsigned int lui32BtrMgrInSoAChan;
-    unsigned int lui32BtrMgrInSoSFreq;
+    const char*     lpcBtrMgrInSoSFmt = NULL;
+    unsigned int    lui32BtrMgrInSoAChan;
+    unsigned int    lui32BtrMgrInSoSFreq;
 
-    const char*  lpcBtrMgrOutSoAChanMode = NULL;
-    unsigned int lui32BtrMgrOutSoAChan;
-    unsigned int lui32BtrMgrOutSoSFreq;
+    const char*     lpcBtrMgrOutSoAChanMode = NULL;
+    unsigned int    lui32BtrMgrOutSoAChan;
+    unsigned int    lui32BtrMgrOutSoSFreq;
 
     unsigned char   lui8SbcAllocMethod  = 0;
     unsigned char   lui8SbcSubbands     = 0;   
@@ -690,3 +698,39 @@ BTRMgr_SO_SendEOS (
 
     return leBtrMgrSoRet;
 }
+
+
+#ifdef USE_GST1
+static eBTRMgrSOGstRet
+btrMgr_SO_GstStatusCb (
+    eBTRMgrSOGstStatus  aeBtrMgrSoGstStatus,
+    void*               apvUserData
+) {
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)apvUserData;
+
+    switch (aeBtrMgrSoGstStatus) {
+    case eBTRMgrSOGstStInitialized:
+    case eBTRMgrSOGstStDeInitialized:
+    case eBTRMgrSOGstStPaused:
+    case eBTRMgrSOGstStPlaying:
+        break;
+    case eBTRMgrSOGstStUnderflow:
+        pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32UnderFlowCnt++;
+        break;
+    case eBTRMgrSOGstStOverflow:
+        pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32OverFlowCnt++;
+        break;
+    case eBTRMgrSOGstStCompleted:
+    case eBTRMgrSOGstStStopped:
+        break;
+    case eBTRMgrSOGstStError:
+        break;
+    case eBTRMgrSOGstStUnknown:
+    default:
+        break;
+    }
+
+    return eBTRMgrSOGstSuccess;
+}
+#endif
+
