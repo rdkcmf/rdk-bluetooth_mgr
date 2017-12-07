@@ -18,8 +18,8 @@
 ##########################################################################
 [Unit]
 Description=Bluetooth Manager Daemon over IARM IPC
-After=lighttpd.service iarmbusd.service bluetooth.service
-Requires=iarmbusd.service bluetooth.service
+After=lighttpd.service iarmbusd.service bluetooth.service audiocapturemgr.service
+Requires=iarmbusd.service bluetooth.service audiocapturemgr.service
 
 [Service]
 Type=forking
