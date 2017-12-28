@@ -84,8 +84,15 @@ static gpointer
 btrMgr_SI_g_main_loop_run_context (
     gpointer user_data
 ) {
-  g_main_loop_run (user_data);
-  return NULL;
+    GMainLoop*  loop = (GMainLoop*)user_data;
+
+    if (loop) {
+        BTRMGRLOG_INFO ("GMainLoop Running\n");
+        g_main_loop_run (loop);
+    }
+
+    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
+    return NULL;
 }
 
 
@@ -95,9 +102,14 @@ btrMgr_SI_gstBusCall (
     GstMessage* msg,
     gpointer    data
 ) {
+    GMainLoop*  loop = (GMainLoop*)data;
+
     switch (GST_MESSAGE_TYPE (msg)) {
         case GST_MESSAGE_EOS: {
             BTRMGRLOG_INFO ("End-of-stream\n");
+            if (loop) {
+                g_main_loop_quit(loop);
+            }
             break;
         }   
         case GST_MESSAGE_ERROR: {
@@ -110,8 +122,24 @@ btrMgr_SI_gstBusCall (
 
             BTRMGRLOG_ERROR ("Error: %s\n", err->message);
             g_error_free (err);
+
+            if (loop) {
+                g_main_loop_quit(loop);
+            }
             break;
         }   
+        case GST_MESSAGE_WARNING:{
+            gchar*    debug;
+            GError*   warn;
+
+            gst_message_parse_warning (msg, &warn, &debug);
+            BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
+            g_free (debug);
+
+            BTRMGRLOG_WARN ("Warning: %s\n", warn->message);
+            g_error_free (warn);
+            break;
+        }
         default:
             break;
     }
@@ -260,12 +288,32 @@ BTRMgr_SI_GstDeInit (
     (void)busWatchId;
 
     /* cleanup */
-    g_object_unref (GST_OBJECT(pipeline));
-    g_source_remove (busWatchId);
+    if (pipeline) {
+        gst_object_unref (GST_OBJECT(pipeline));
+        pipeline = NULL;
+    }
 
-    g_main_loop_quit (loop);
-    g_thread_join (mainLoopThread);
-    g_main_loop_unref (loop);
+    if (busWatchId) {
+        GSource *busSource = g_main_context_find_source_by_id(g_main_context_get_thread_default(), busWatchId);
+        if (busSource)
+            g_source_destroy(busSource);
+
+        busWatchId = 0;
+    }
+
+    if (loop) {
+        g_main_loop_quit (loop);
+    }
+
+    if (mainLoopThread) {
+        g_thread_join (mainLoopThread);
+        mainLoopThread = NULL;
+    }
+
+    if (loop) {
+        g_main_loop_unref (loop);
+        loop = NULL;
+    }
 
     memset((void*)pstBtrMgrSiGst, 0, sizeof(stBTRMgrSIGst));
     free((void*)pstBtrMgrSiGst);
