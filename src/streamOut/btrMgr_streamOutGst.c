@@ -122,13 +122,12 @@ btrMgr_SO_gstBusCall (
             BTRMGRLOG_INFO ("End-of-stream\n");
             if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
                 g_main_loop_quit(pstBtrMgrSoGst->pLoop);
-                pstBtrMgrSoGst->pLoop = NULL;
             }
             break;
         }
 
         case GST_MESSAGE_STATE_CHANGED: {
-            if ((pstBtrMgrSoGst->pPipeline) && (GST_MESSAGE_SRC (msg) == GST_OBJECT (pstBtrMgrSoGst->pPipeline))) {
+            if (pstBtrMgrSoGst && (pstBtrMgrSoGst->pPipeline) && (GST_MESSAGE_SRC (msg) == GST_OBJECT (pstBtrMgrSoGst->pPipeline))) {
                 GstState prevState, currentState;
 
                 gst_message_parse_state_changed (msg, &prevState, &currentState, NULL);
@@ -165,7 +164,6 @@ btrMgr_SO_gstBusCall (
 
                 if (pstBtrMgrSoGst->pLoop) {
                     g_main_loop_quit(pstBtrMgrSoGst->pLoop);
-                    pstBtrMgrSoGst->pLoop = NULL;
 			    }
             }
             break;
@@ -345,18 +343,20 @@ BTRMgr_SO_GstDeInit (
 
     /* cleanup */
     if (pipeline) {
-        g_object_unref(GST_OBJECT(pipeline));
+        gst_object_unref(GST_OBJECT(pipeline));
         pipeline = NULL;
     }
 
     if (busWatchId) {
-        g_source_remove(busWatchId);
+        GSource *busSource = g_main_context_find_source_by_id(g_main_context_get_thread_default(), busWatchId);
+        if (busSource)
+            g_source_destroy(busSource);
+
         busWatchId = 0;
     }
 
     if (loop) {
         g_main_loop_quit(loop);
-        loop = NULL;
     }
 
     if (mainLoopThread) {

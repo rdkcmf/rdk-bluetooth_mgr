@@ -132,6 +132,7 @@ BTRMgr_SO_DeInit (
     g_free((void*)pstBtrMgrSoHdl);
     pstBtrMgrSoHdl = NULL;
 
+    BTRMGRLOG_DEBUG ("Return Status = %d\n", leBtrMgrSoRet);
     return leBtrMgrSoRet;
 }
 
