@@ -130,8 +130,9 @@ const char* getEventAsString (BTRMGR_Events_t etype)
 
 void eventCallback (BTRMGR_EventMessage_t event)
 {
-    printf ("\n\t@@@@@@@@ %s eventCallback ::::  Event ID %d @@@@@@@@\n", event.m_pairedDevice.m_name, event.m_eventType);
-
+    printf ("\n\t@@@@@@@@ %s : %s eventCallback ::::  Event ID %d @@@@@@@@\n", BTRMGR_GetDeviceTypeAsString(event.m_pairedDevice.m_deviceType)
+                                                                             , event.m_pairedDevice.m_name
+                                                                             , event.m_eventType);
     switch(event.m_eventType) {
     case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE: 
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
@@ -385,12 +386,14 @@ int main()
                     {
                         int j = 0;
                         printf ("\nSuccess....   Discovered Devices (%d) are, \n", discoveredDevices.m_numOfDevices);
+                        printf ("\n\tSN %-17s %-30s %-17s   %s\n\n", "Device Id", "Device Name", "Device Address", "Device Type");
                         for (; j< discoveredDevices.m_numOfDevices; j++)
                         {
-                            printf ("%d \t %llu \t %s \t %s\n", j,
+                            printf ("\t%02d %-17llu %-30s %17s   %s\n", j,
                                                               discoveredDevices.m_deviceProperty[j].m_deviceHandle,
                                                               discoveredDevices.m_deviceProperty[j].m_name,
-                                                              discoveredDevices.m_deviceProperty[j].m_deviceAddress);
+                                                              discoveredDevices.m_deviceProperty[j].m_deviceAddress,
+                                                              BTRMGR_GetDeviceTypeAsString(discoveredDevices.m_deviceProperty[j].m_deviceType));
                         }
                         printf ("\n\n");
                     }
@@ -434,12 +437,14 @@ int main()
                     {
                         int j = 0;
                         printf ("\nSuccess....   Paired Devices (%d) are, \n", pairedDevices.m_numOfDevices);
+                        printf ("\n\tSN %-17s %-30s %-17s   %s\n\n", "Device Id", "Device Name", "Device Address", "Device Type");
                         for (; j< pairedDevices.m_numOfDevices; j++)
                         {
-                            printf ("%d \t %llu \t %s \t %s\n", j,
+                            printf ("\t%02d %-17llu %-30s %17s   %s\n", j,
                                                               pairedDevices.m_deviceProperty[j].m_deviceHandle,
                                                               pairedDevices.m_deviceProperty[j].m_name,
-                                                              pairedDevices.m_deviceProperty[j].m_deviceAddress);
+                                                              pairedDevices.m_deviceProperty[j].m_deviceAddress,
+                                                              BTRMGR_GetDeviceTypeAsString(pairedDevices.m_deviceProperty[j].m_deviceType));
                         }
                         printf ("\n\n");
                     }

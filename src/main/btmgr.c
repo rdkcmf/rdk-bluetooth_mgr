@@ -2963,7 +2963,7 @@ btrMgr_MediaStatusCallback (
         stBTRCoreMediaStatusUpdate* mediaStatus = &mediaStatusCB->m_mediaStatusUpdate;
 
         newEvent.m_mediaInfo.m_deviceHandle = mediaStatusCB->deviceId;
-        newEvent.m_mediaInfo.m_deviceType   = mediaStatusCB->eDeviceClass;
+        newEvent.m_mediaInfo.m_deviceType   = btrMgr_MapDeviceTypeFromCore(mediaStatusCB->eDeviceClass);
         strncpy (newEvent.m_mediaInfo.m_name, mediaStatusCB->deviceName, BTRMGR_NAME_LEN_MAX);
 
         switch (mediaStatus->eBTMediaStUpdate) {
