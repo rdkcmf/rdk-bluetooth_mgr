@@ -1084,6 +1084,8 @@ BTRMGR_GetDeviceTypeAsString (
         return "VIDEO CONFERENCING";
     else if (type == BTRMGR_DEVICE_TYPE_SMARTPHONE)
         return "SMARTPHONE";
+    else if (type == BTRMGR_DEVICE_TYPE_TABLET)
+        return "TABLET";
     else
         return "UNKNOWN DEVICE";
 }

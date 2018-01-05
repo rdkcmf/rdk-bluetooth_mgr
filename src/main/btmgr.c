@@ -185,8 +185,10 @@ btrMgr_MapDeviceTypeFromCore (
     enBTRCoreDeviceClass    device_type
 ) {
     BTRMGR_DeviceType_t type = BTRMGR_DEVICE_TYPE_UNKNOWN;
-
     switch (device_type) {
+    case enBTRCore_DC_Tablet: 
+        type = BTRMGR_DEVICE_TYPE_TABLET;
+        break; 
     case enBTRCore_DC_SmartPhone:
         type = BTRMGR_DEVICE_TYPE_SMARTPHONE;
         break;
@@ -2021,6 +2023,7 @@ BTRMGR_GetConnectedDevices (
                        strncpy (pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                    }
                    BTRMGRLOG_INFO ("Successfully posted the connected device information\n");
+                   break;
                 }
             }
         }
@@ -2218,8 +2221,10 @@ BTRMGR_StartAudioStreamingIn (
     BTRMgrDeviceHandle          handle,
     BTRMGR_DeviceConnect_Type_t connectAs
 ) {
-    BTRMGR_Result_t lenBtrMgrRet    = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
+    BTRMGR_Result_t     lenBtrMgrRet      = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_DeviceType_t lenBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
+    enBTRCoreRet        lenBtrCoreRet     = enBTRCoreSuccess;
+    enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
     stBTRCorePairedDevicesCount listOfPDevices;
     int i = 0;
     int i32IsFound = 0;
@@ -2279,6 +2284,14 @@ BTRMGR_StartAudioStreamingIn (
     }
 
 
+    lenBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
+    if (lenBtrMgrDevType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+       lenBtrCoreDevType = enBTRCoreMobileAudioIn;
+    }
+    else if (lenBtrMgrDevType == BTRMGR_DEVICE_TYPE_TABLET) {
+       lenBtrCoreDevType = enBTRCorePCAudioIn; 
+    }
+
     if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
         free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
         gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
@@ -2286,7 +2299,7 @@ BTRMGR_StartAudioStreamingIn (
 
     gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
 
-    lenBtrCoreRet = BTRCore_GetDeviceMediaInfo(gBTRCoreHandle, listOfPDevices.devices[i].tDeviceId, enBTRCoreMobileAudioIn, &gstBtrCoreDevMediaInfo);
+    lenBtrCoreRet = BTRCore_GetDeviceMediaInfo(gBTRCoreHandle, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType, &gstBtrCoreDevMediaInfo);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
         if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
             BTRMGRLOG_INFO ("DevMedInfo SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
@@ -2302,7 +2315,7 @@ BTRMGR_StartAudioStreamingIn (
     }
 
     /* Aquire Device Data Path to start audio reception */
-    lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].tDeviceId, enBTRCoreMobileAudioIn, &i32DeviceFD, &i32DeviceReadMTU, &i32DeviceWriteMTU);
+    lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (gBTRCoreHandle, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType, &i32DeviceFD, &i32DeviceReadMTU, &i32DeviceWriteMTU);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
         if (BTRMGR_RESULT_SUCCESS == btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU, ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq)) {
             gCurStreamingDevHandle = listOfPDevices.devices[i].tDeviceId;
@@ -2318,7 +2331,7 @@ BTRMGR_StartAudioStreamingIn (
         lenBtrMgrRet = BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
-    if (BTRMGR_RESULT_SUCCESS == lenBtrMgrRet && enBTRCoreSuccess != BTRCore_ReportMediaPosition (gBTRCoreHandle, listOfPDevices.devices[i].tDeviceId, enBTRCoreMobileAudioIn)) {
+    if (BTRMGR_RESULT_SUCCESS == lenBtrMgrRet && enBTRCoreSuccess != BTRCore_ReportMediaPosition (gBTRCoreHandle, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType)) {
         BTRMGRLOG_ERROR ("Failed to set BTRCore report media position info!!!");
         lenBtrMgrRet = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2339,7 +2352,7 @@ BTRMGR_StopAudioStreamingIn (
 
 
     btrMgr_StopReceivingAudio();
-
+    // TODO : determine enBTRCoreDeviceType from get Paired dev list
     BTRCore_ReleaseDeviceDataPath (gBTRCoreHandle, gCurStreamingDevHandle, enBTRCoreMobileAudioIn);
 
     gCurStreamingDevHandle = 0;
@@ -2455,7 +2468,10 @@ BTRMGR_MediaControl (
     BTRMGR_MediaControlCommand_t  mediaCtrlCmd
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_ConnectedDevicesList_t listOfCDevices;
     enBTRCoreMediaCtrl aenBTRCoreMediaCtrl = 0;
+    enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
+
 
     if (!gBTRCoreHandle) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2467,6 +2483,20 @@ BTRMGR_MediaControl (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
+    /* Check whether the device is in the Connected list */
+    BTRMGR_GetConnectedDevices (index_of_adapter, &listOfCDevices);
+    /* As the stack allows only single dev conn for now  */
+    if (listOfCDevices.m_deviceProperty[0].m_deviceHandle != handle) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", handle);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+    /* Can implement a reverse mapping when our dev class usecases grow later point of time */
+    if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+       lenBtrCoreDevType = enBTRCoreMobileAudioIn;
+    }
+    else if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+       lenBtrCoreDevType = enBTRCorePCAudioIn;
+    }
 
     switch (mediaCtrlCmd) {
     case BTRMGR_MEDIA_CTRL_PLAY:
@@ -2498,7 +2528,7 @@ BTRMGR_MediaControl (
         break;
     }
 
-    if (enBTRCoreSuccess != BTRCore_MediaControl(gBTRCoreHandle, handle, enBTRCoreMobileAudioIn, aenBTRCoreMediaCtrl)) {
+    if (enBTRCoreSuccess != BTRCore_MediaControl(gBTRCoreHandle, handle, lenBtrCoreDevType, aenBTRCoreMediaCtrl)) {
         BTRMGRLOG_ERROR ("Media Control Command for %llu Failed!!!\n", handle);
         rc = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2514,6 +2544,8 @@ BTRMGR_GetMediaTrackInfo (
     BTRMGR_MediaTrackInfo_t      *mediaTrackInfo
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_ConnectedDevicesList_t listOfCDevices;
+    enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
 
     if (!gBTRCoreHandle) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2525,8 +2557,23 @@ BTRMGR_GetMediaTrackInfo (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
+    /* Check whether the device is in the Connected list */
+    BTRMGR_GetConnectedDevices (index_of_adapter, &listOfCDevices);
+    /* As the stack allows only single dev conn for now  */
+    if (listOfCDevices.m_deviceProperty[0].m_deviceHandle != handle) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", handle);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+    /* Can implement a reverse mapping when our dev class usecases grow later point of time */
+    if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+       lenBtrCoreDevType = enBTRCoreMobileAudioIn;
+    }
+    else if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+       lenBtrCoreDevType = enBTRCorePCAudioIn;
+    }
 
-    if (enBTRCoreSuccess != BTRCore_GetMediaTrackInfo(gBTRCoreHandle, handle, enBTRCoreMobileAudioIn, (stBTRCoreMediaTrackInfo*)mediaTrackInfo)) {
+
+    if (enBTRCoreSuccess != BTRCore_GetMediaTrackInfo(gBTRCoreHandle, handle, lenBtrCoreDevType, (stBTRCoreMediaTrackInfo*)mediaTrackInfo)) {
        BTRMGRLOG_ERROR ("Get Media Track Information for %llu Failed!!!\n", handle);
        rc = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2542,6 +2589,8 @@ BTRMGR_GetMediaCurrentPosition (
     BTRMGR_MediaPositionInfo_t  *mediaPositionInfo
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_ConnectedDevicesList_t listOfCDevices;
+    enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
 
     if (!gBTRCoreHandle) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2553,8 +2602,23 @@ BTRMGR_GetMediaCurrentPosition (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
+    /* Check whether the device is in the Connected list */ 
+    BTRMGR_GetConnectedDevices (index_of_adapter, &listOfCDevices);
+    /* As the stack allows only single dev conn for now  */
+    if (listOfCDevices.m_deviceProperty[0].m_deviceHandle != handle) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", handle);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+    /* Can implement a reverse mapping when our dev class usecases grow later point of time */
+    if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+       lenBtrCoreDevType = enBTRCoreMobileAudioIn;
+    }
+    else if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+       lenBtrCoreDevType = enBTRCorePCAudioIn;
+    }
 
-    if (enBTRCoreSuccess != BTRCore_GetMediaPositionInfo(gBTRCoreHandle, handle, enBTRCoreMobileAudioIn, (stBTRCoreMediaPositionInfo*)mediaPositionInfo)) {
+
+    if (enBTRCoreSuccess != BTRCore_GetMediaPositionInfo(gBTRCoreHandle, handle, lenBtrCoreDevType, (stBTRCoreMediaPositionInfo*)mediaPositionInfo)) {
        BTRMGRLOG_ERROR ("Get Media Current Position for %llu Failed!!!\n", handle);
        rc = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2599,6 +2663,8 @@ BTRMGR_GetDeviceTypeAsString (
         return "VIDEO CONFERENCING";
     else if (type == BTRMGR_DEVICE_TYPE_SMARTPHONE)
         return "SMARTPHONE";
+    else if (type == BTRMGR_DEVICE_TYPE_TABLET)
+        return "TABLET";
     else
         return "UNKNOWN DEVICE";
 }
@@ -2717,7 +2783,8 @@ btrMgr_ConnectionInAuthenticationCallback (
 
     
 
-    if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone) {
+    if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
+        apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
         if (m_eventCallbackFunction) {
             BTRMGR_EventMessage_t newEvent;
             memset (&newEvent, 0, sizeof(newEvent));
@@ -2832,7 +2899,8 @@ btrMgr_DeviceStatusCallback (
                 gIsDeviceConnected = 0;
 
                 BTRMGRLOG_INFO ("newEvent.m_pairedDevice.m_deviceType = %d\n", newEvent.m_pairedDevice.m_deviceType);
-                if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+                if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
+                    newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
                     /* Stop the playback which already stopped internally but to free up the memory */
                     BTRMGR_StopAudioStreamingIn(0, gCurStreamingDevHandle);
                 }
@@ -2852,7 +2920,8 @@ btrMgr_DeviceStatusCallback (
                     gIsDeviceConnected = 0;
 
                     BTRMGRLOG_INFO ("newEvent.m_pairedDevice.m_deviceType = %d\n", newEvent.m_pairedDevice.m_deviceType);
-                    if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+                    if (newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
+                        newEvent.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
                         /* Stop the playback which already stopped internally but to free up the memory */
                         BTRMGR_StopAudioStreamingIn(0, gCurStreamingDevHandle);
                     }
@@ -2865,7 +2934,8 @@ btrMgr_DeviceStatusCallback (
             gIsUserInitiated = 0;
             break;
         case enBTRCoreDevStPlaying:
-            if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+            if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
+                btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TABLET) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &newEvent, BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST);
                 m_eventCallbackFunction (newEvent);    /* Post a callback */
             }
