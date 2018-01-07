@@ -1146,6 +1146,13 @@ btrMgrdeviceCallback (
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));
 
+
+            if (BTRMGR_IARM_EVENT_DEVICE_FOUND == eventId) {
+                //TODO: Delay posting device found event to XRE by 3 secs
+                //TODO: Should be part of btrMgr not the ext-interface
+                sleep(3); 
+            }
+
             if (m_eventCallbackFunction)
                 m_eventCallbackFunction (newEvent);
               

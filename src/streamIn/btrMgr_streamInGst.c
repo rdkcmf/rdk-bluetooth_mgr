@@ -70,13 +70,20 @@ typedef struct _stBTRMgrSIGst {
     guint        busWId;
     GstClockTime gstClkTStamp;
     guint64      inBufOffset;
+
+    fPtr_BTRMgr_SI_GstStatusCb  fpcBSiGstStatus;
+    void*                       pvcBUserData;
+
 } stBTRMgrSIGst;
 
 
 /* Local function declarations */
 static gpointer btrMgr_SI_g_main_loop_run_context (gpointer user_data);
-static gboolean btrMgr_SI_gstBusCall (GstBus* bus, GstMessage* msg, gpointer data);
 static GstState btrMgr_SI_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
+
+ /* Incoming Callbacks */
+static gboolean btrMgr_SI_gstBusCall (GstBus* bus, GstMessage* msg, gpointer data);
+
 
 
 /* Local function definitions */
@@ -179,7 +186,9 @@ btrMgr_SI_validateStateWithTimeout (
 /* Interfaces */
 eBTRMgrSIGstRet
 BTRMgr_SI_GstInit (
-    tBTRMgrSiGstHdl* phBTRMgrSiGstHdl
+    tBTRMgrSiGstHdl*            phBTRMgrSiGstHdl,
+    fPtr_BTRMgr_SI_GstStatusCb  afpcBSiGstStatus,
+    void*                       apvUserData
 ) {
     GstElement*     fdsrc;
     GstElement*     rtpcapsfilter;
@@ -227,6 +236,13 @@ BTRMgr_SI_GstInit (
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamIn\n");
         return eBTRMgrSIGstFailure;
     }
+
+
+    if (afpcBSiGstStatus) {
+        pstBtrMgrSiGst->fpcBSiGstStatus = afpcBSiGstStatus;
+        pstBtrMgrSiGst->pvcBUserData    = apvUserData;
+    }
+
 
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
     busWatchId = gst_bus_add_watch (bus, btrMgr_SI_gstBusCall, loop);
@@ -314,6 +330,11 @@ BTRMgr_SI_GstDeInit (
         g_main_loop_unref (loop);
         loop = NULL;
     }
+
+
+    if (pstBtrMgrSiGst->fpcBSiGstStatus)
+        pstBtrMgrSiGst->fpcBSiGstStatus = NULL;
+
 
     memset((void*)pstBtrMgrSiGst, 0, sizeof(stBTRMgrSIGst));
     free((void*)pstBtrMgrSiGst);

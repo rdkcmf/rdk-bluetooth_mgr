@@ -29,6 +29,7 @@
 
 /* System Headers */
 #include <stdlib.h>
+#include <string.h>
 
 /* Ext lib Headers */
 #include <glib.h>
@@ -47,23 +48,29 @@
 
 /* Local types */
 typedef struct _stBTRMgrSOHdl {
-    stBTRMgrMediaStatus lstBtrMgrSoStatus;
+    stBTRMgrMediaStatus     lstBtrMgrSoStatus;
+    fPtr_BTRMgr_SO_StatusCb fpcBSoStatus;
+    void*                   pvcBUserData;
 #ifdef USE_GST1
-    tBTRMgrSoGstHdl     hBTRMgrSoGstHdl;
+    tBTRMgrSoGstHdl         hBTRMgrSoGstHdl;
 #endif
 } stBTRMgrSOHdl;
 
 
 #ifdef USE_GST1
-/* Callbacks */
+/* Incoming Callbacks */
 static eBTRMgrSOGstRet btrMgr_SO_GstStatusCb (eBTRMgrSOGstStatus aeBtrMgrSoGstStatus, void* apvUserData);
 #endif
 
+/* Static Function Prototypes */
 
 
+/*  Interfaces  */
 eBTRMgrRet
 BTRMgr_SO_Init (
-    tBTRMgrSoHdl*   phBTRMgrSoHdl
+    tBTRMgrSoHdl*           phBTRMgrSoHdl,
+    fPtr_BTRMgr_SO_StatusCb afpcBSoStatus,
+    void*                   apvUserData
 ) {
     eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
     stBTRMgrSOHdl*  pstBtrMgrSoHdl = NULL;
@@ -91,10 +98,13 @@ BTRMgr_SO_Init (
         return leBtrMgrSoRet;
     }
 
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState = eBTRMgrStateInitialized;
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFreq = eBTRMgrSFreq48K;
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFmt  = eBTRMgrSFmt16bit;
-    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrAChan = eBTRMgrAChanJStereo;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStateInitialized;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFreq  = eBTRMgrSFreq48K;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFmt   = eBTRMgrSFmt16bit;
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrAChan  = eBTRMgrAChanJStereo;
+    pstBtrMgrSoHdl->fpcBSoStatus                    = afpcBSoStatus;
+    pstBtrMgrSoHdl->pvcBUserData                    = apvUserData;
+
 
     *phBTRMgrSoHdl = (tBTRMgrSoHdl)pstBtrMgrSoHdl;
 
@@ -701,34 +711,58 @@ BTRMgr_SO_SendEOS (
 }
 
 
+/* Incoming Callbacks Definitions */
 #ifdef USE_GST1
 static eBTRMgrSOGstRet
 btrMgr_SO_GstStatusCb (
     eBTRMgrSOGstStatus  aeBtrMgrSoGstStatus,
     void*               apvUserData
 ) {
-    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)apvUserData;
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl  = (stBTRMgrSOHdl*)apvUserData;
+    eBTRMgrRet      leBtrMgrSoRet   = eBTRMgrSuccess;
+    gboolean        bTriggerCb      = FALSE; 
 
-    switch (aeBtrMgrSoGstStatus) {
-    case eBTRMgrSOGstStInitialized:
-    case eBTRMgrSOGstStDeInitialized:
-    case eBTRMgrSOGstStPaused:
-    case eBTRMgrSOGstStPlaying:
-        break;
-    case eBTRMgrSOGstStUnderflow:
-        pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32UnderFlowCnt++;
-        break;
-    case eBTRMgrSOGstStOverflow:
-        pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32OverFlowCnt++;
-        break;
-    case eBTRMgrSOGstStCompleted:
-    case eBTRMgrSOGstStStopped:
-        break;
-    case eBTRMgrSOGstStError:
-        break;
-    case eBTRMgrSOGstStUnknown:
-    default:
-        break;
+    if (pstBtrMgrSoHdl) {
+
+        switch (aeBtrMgrSoGstStatus) {
+        case eBTRMgrSOGstStInitialized:
+        case eBTRMgrSOGstStDeInitialized:
+        case eBTRMgrSOGstStPaused:
+        case eBTRMgrSOGstStPlaying:
+            break;
+        case eBTRMgrSOGstStUnderflow:
+            pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32UnderFlowCnt++;
+            break;
+        case eBTRMgrSOGstStOverflow:
+            pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui32OverFlowCnt++;
+            break;
+        case eBTRMgrSOGstStCompleted:
+        case eBTRMgrSOGstStStopped:
+            break;
+        case eBTRMgrSOGstStWarning:
+            pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState = eBTRMgrStateWarning;
+            bTriggerCb = TRUE;
+            break;
+        case eBTRMgrSOGstStError:
+            pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState = eBTRMgrStateError;
+            bTriggerCb = TRUE;
+            break;
+        case eBTRMgrSOGstStUnknown:
+        default:
+            pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState = eBTRMgrStateUnknown;
+            break;
+        }
+
+        //TODO: Move to a local static function, which, if possible, can trigger the callback in the context
+        //      of a task thread.
+        if ((pstBtrMgrSoHdl->fpcBSoStatus) && (bTriggerCb == TRUE)) {
+            stBTRMgrMediaStatus lstBtrMgrSoMediaStatus;
+
+            memcpy (&lstBtrMgrSoMediaStatus, &(pstBtrMgrSoHdl->lstBtrMgrSoStatus), sizeof(stBTRMgrMediaStatus));
+
+            leBtrMgrSoRet = pstBtrMgrSoHdl->fpcBSoStatus(&lstBtrMgrSoMediaStatus, pstBtrMgrSoHdl->pvcBUserData);
+            BTRMGRLOG_TRACE("Return Status = %d\n", leBtrMgrSoRet);
+        }
     }
 
     return eBTRMgrSOGstSuccess;

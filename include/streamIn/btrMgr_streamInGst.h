@@ -33,8 +33,27 @@ typedef enum _eBTRMgrSIGstRet {
    eBTRMgrSIGstSuccess
 } eBTRMgrSIGstRet;
 
+typedef enum _eBTRMgrSIGstStatus {
+    eBTRMgrSIGstStInitialized,
+    eBTRMgrSIGstStDeInitialized,
+    eBTRMgrSIGstStPaused,
+    eBTRMgrSIGstStPlaying,
+    eBTRMgrSIGstStUnderflow,
+    eBTRMgrSIGstStOverflow,
+    eBTRMgrSIGstStCompleted,
+    eBTRMgrSIGstStStopped,
+    eBTRMgrSIGstStWarning,
+    eBTRMgrSIGstStError,
+    eBTRMgrSIGstStUnknown
+} eBTRMgrSIGstStatus;
+
+
+/* Fptr Callbacks types */
+typedef eBTRMgrSIGstRet (*fPtr_BTRMgr_SI_GstStatusCb) (eBTRMgrSIGstStatus aeBtrMgrSiGstStatus, void *apvUserData);
+
+
 /* Interfaces */
-eBTRMgrSIGstRet BTRMgr_SI_GstInit (tBTRMgrSiGstHdl* phBTRMgrSoGstHdl);
+eBTRMgrSIGstRet BTRMgr_SI_GstInit (tBTRMgrSiGstHdl* phBTRMgrSoGstHdl, fPtr_BTRMgr_SI_GstStatusCb afpcBSiGstStatus, void* apvUserData);
 eBTRMgrSIGstRet BTRMgr_SI_GstDeInit (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSIGstRet BTRMgr_SI_GstStart (tBTRMgrSiGstHdl hBTRMgrSoGstHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU, unsigned int aiBTDevSFreq);
 eBTRMgrSIGstRet BTRMgr_SI_GstStop (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);

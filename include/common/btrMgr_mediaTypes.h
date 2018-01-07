@@ -33,6 +33,7 @@ typedef enum _eBTRMgrState {
     eBTRMgrStatePlaying,
     eBTRMgrStateCompleted,
     eBTRMgrStateStopped,
+    eBTRMgrStateWarning,
     eBTRMgrStateError,
     eBTRMgrStateUnknown
 } eBTRMgrState;

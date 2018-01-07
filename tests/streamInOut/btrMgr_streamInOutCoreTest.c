@@ -1288,7 +1288,7 @@ streamOutTestMainAlternate (
     }
 
 
-    if (eBTRMgrSuccess != BTRMgr_SO_Init(&hBTRMgrSoHdl)) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Init(&hBTRMgrSoHdl, NULL, NULL)) {
         fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
         return -1;
     }
@@ -1553,7 +1553,7 @@ streamOutLiveTestMainAlternateStart (
         goto err_open;
     }
 
-    if (eBTRMgrSuccess != BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl))) {
+    if (eBTRMgrSuccess != BTRMgr_SO_Init(&(pstAppData->hBTRMgrSoHdl), NULL, NULL)) {
         fprintf(stderr, "BTRMgr_SO_Init - FAILED\n");
         goto err_open;
     }
@@ -1741,7 +1741,7 @@ streamInLiveTestMainAlternateStart (
 
 
 
-    BTRMgr_SI_Init(&pstAppData->hBTRMgrSiHdl);
+    BTRMgr_SI_Init(&pstAppData->hBTRMgrSiHdl, NULL, NULL);
 
 #if 0
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/

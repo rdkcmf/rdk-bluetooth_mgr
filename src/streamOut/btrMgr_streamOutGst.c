@@ -83,10 +83,10 @@ typedef struct _stBTRMgrSOGst {
 
 /* Local function declarations */
 static gpointer btrMgr_SO_g_main_loop_run_context (gpointer user_data);
-static gboolean btrMgr_SO_gstBusCall (GstBus* bus, GstMessage* msg, gpointer user_data);
 static GstState btrMgr_SO_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
 
-/* Callbacks */
+/* Incoming Callbacks */
+static gboolean btrMgr_SO_gstBusCall (GstBus* bus, GstMessage* msg, gpointer user_data);
 static void btrMgr_SO_NeedData_cB (GstElement* appsrc, guint size, gpointer user_data);
 static void btrMgr_SO_EnoughData_cB (GstElement* appsrc, gpointer user_data);
 
@@ -120,8 +120,16 @@ btrMgr_SO_gstBusCall (
 
         case GST_MESSAGE_EOS: {
             BTRMGRLOG_INFO ("End-of-stream\n");
-            if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
-                g_main_loop_quit(pstBtrMgrSoGst->pLoop);
+            if (pstBtrMgrSoGst) {
+                if (pstBtrMgrSoGst->pLoop) {
+                    g_main_loop_quit(pstBtrMgrSoGst->pLoop);
+			    }
+
+                if (pstBtrMgrSoGst->fpcBSoGstStatus) {
+                    BTRMGRLOG_INFO ("EOS: Trigger Final Status cB\n");
+		            pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
+                                                    pstBtrMgrSoGst->pvcBUserData);
+		        }
             }
             break;
         }
@@ -154,17 +162,16 @@ btrMgr_SO_gstBusCall (
             BTRMGRLOG_ERROR ("Error: %s\n", err->message);
             g_error_free (err);
 
-            if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
-
-		        if (pstBtrMgrSoGst->fpcBSoGstStatus) {
-                    BTRMGRLOG_INFO ("GMainLoop Trigger Final Status cB\n");
-		            pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
-                                                    pstBtrMgrSoGst->pvcBUserData);
-		        }
-
+            if (pstBtrMgrSoGst) {
                 if (pstBtrMgrSoGst->pLoop) {
                     g_main_loop_quit(pstBtrMgrSoGst->pLoop);
 			    }
+
+                if (pstBtrMgrSoGst->fpcBSoGstStatus) {
+                    BTRMGRLOG_INFO ("ERROR: Trigger Final Status cB\n");
+		            pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
+                                                    pstBtrMgrSoGst->pvcBUserData);
+		        }
             }
             break;
         }
@@ -179,6 +186,11 @@ btrMgr_SO_gstBusCall (
 
             BTRMGRLOG_WARN ("Warning: %s\n", warn->message);
             g_error_free (warn);
+
+            if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
+                pstBtrMgrSoGst->fpcBSoGstStatus(eBTRMgrSOGstStWarning, pstBtrMgrSoGst->pvcBUserData);
+            }
+
           break;
         }
 
@@ -686,9 +698,9 @@ BTRMgr_SO_GstSendBuffer (
         return eBTRMgrSOGstSuccess;
 #else
         //TODO: This is the correct code. But we dont have 
-        // an upper layer, which can call DeInit to free the 
-        // the memory effectively without causing a deadlock 
-        // at this moment.
+        //      an upper layer, which can call DeInit to free the 
+        //      the memory effectively without causing a deadlock 
+        //      at this moment.
         return eBTRMgrSOGstFailure;
 #endif
     }
@@ -808,7 +820,9 @@ btrMgr_SO_NeedData_cB (
     stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
     
     //BTRMGRLOG_INFO ("NEED DATA = %d\n", size);
-    (void)pstBtrMgrSoGst;
+    if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
+        pstBtrMgrSoGst->fpcBSoGstStatus(eBTRMgrSOGstStUnderflow, pstBtrMgrSoGst->pvcBUserData);
+    }
 }
 
 
@@ -820,6 +834,8 @@ btrMgr_SO_EnoughData_cB (
     stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
     
     //BTRMGRLOG_INFO ("ENOUGH DATA\n");
-    (void)pstBtrMgrSoGst;
+    if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
+        pstBtrMgrSoGst->fpcBSoGstStatus(eBTRMgrSOGstStOverflow, pstBtrMgrSoGst->pvcBUserData);
+    }
 }
 

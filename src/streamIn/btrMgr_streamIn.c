@@ -29,6 +29,7 @@
 
 /* System Headers */
 #include <stdlib.h>
+#include <string.h>
 
 /* Ext lib Headers */
 #include <glib.h>
@@ -46,17 +47,29 @@
 
 /* Local types */
 typedef struct _stBTRMgrSIHdl {
-    stBTRMgrMediaStatus lstBtrMgrSiStatus;
+    stBTRMgrMediaStatus     lstBtrMgrSiStatus;
+    fPtr_BTRMgr_SI_StatusCb fpcBSiStatus;
+    void*                   pvcBUserData;
 #ifdef USE_GST1
-    tBTRMgrSiGstHdl     hBTRMgrSiGstHdl;
+    tBTRMgrSiGstHdl         hBTRMgrSiGstHdl;
 #endif
 } stBTRMgrSIHdl;
 
 
+#ifdef USE_GST1
+/* Incoming Callbacks */
+static eBTRMgrSIGstRet btrMgr_SI_GstStatusCb (eBTRMgrSIGstStatus aeBtrMgrSiGstStatus, void* apvUserData);
+#endif
 
+/* Static Function Prototypes */
+
+
+/*  Interfaces  */
 eBTRMgrRet
 BTRMgr_SI_Init (
-    tBTRMgrSiHdl*   phBTRMgrSiHdl
+    tBTRMgrSiHdl*           phBTRMgrSiHdl,
+    fPtr_BTRMgr_SI_StatusCb afpcBSiStatus,
+    void*                   apvUserData
 ) {
     eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
     stBTRMgrSIHdl*  pstBtrMgrSiHdl = NULL;
@@ -71,7 +84,7 @@ BTRMgr_SI_Init (
     }
 
 #ifdef USE_GST1
-    if ((leBtrMgrSiGstRet = BTRMgr_SI_GstInit(&(pstBtrMgrSiHdl->hBTRMgrSiGstHdl))) != eBTRMgrSIGstSuccess) {
+    if ((leBtrMgrSiGstRet = BTRMgr_SI_GstInit(&(pstBtrMgrSiHdl->hBTRMgrSiGstHdl), btrMgr_SI_GstStatusCb, pstBtrMgrSiHdl)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrInitFailure;
     }
@@ -88,6 +101,9 @@ BTRMgr_SI_Init (
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFreq = eBTRMgrSFreq44_1K;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrSFmt  = eBTRMgrSFmt16bit;
     pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrAChan = eBTRMgrAChanStereo;
+    pstBtrMgrSiHdl->fpcBSiStatus                   = afpcBSiStatus;
+    pstBtrMgrSiHdl->pvcBUserData                   = apvUserData;
+
 
     *phBTRMgrSiHdl = (tBTRMgrSiHdl)pstBtrMgrSiHdl;
 
@@ -377,3 +393,62 @@ BTRMgr_SI_SendEOS (
 
     return leBtrMgrSiRet;
 }
+
+
+/* Incoming Callbacks Definitions */
+#ifdef USE_GST1
+static eBTRMgrSIGstRet
+btrMgr_SI_GstStatusCb (
+    eBTRMgrSIGstStatus  aeBtrMgrSiGstStatus,
+    void*               apvUserData
+) {
+    stBTRMgrSIHdl*  pstBtrMgrSiHdl  = (stBTRMgrSIHdl*)apvUserData;
+    eBTRMgrRet      leBtrMgrSiRet   = eBTRMgrSuccess;
+    gboolean        bTriggerCb      = FALSE;
+
+    if (pstBtrMgrSiHdl) {
+
+        switch (aeBtrMgrSiGstStatus) {
+        case eBTRMgrSIGstStInitialized:
+        case eBTRMgrSIGstStDeInitialized:
+        case eBTRMgrSIGstStPaused:
+        case eBTRMgrSIGstStPlaying:
+            break;
+        case eBTRMgrSIGstStUnderflow:
+            pstBtrMgrSiHdl->lstBtrMgrSiStatus.ui32UnderFlowCnt++;
+            break;
+        case eBTRMgrSIGstStOverflow:
+            pstBtrMgrSiHdl->lstBtrMgrSiStatus.ui32OverFlowCnt++;
+            break;
+        case eBTRMgrSIGstStCompleted:
+        case eBTRMgrSIGstStStopped:
+            break;
+        case eBTRMgrSIGstStWarning:
+            pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState = eBTRMgrStateWarning;
+            bTriggerCb = TRUE;
+            break;
+        case eBTRMgrSIGstStError:
+            pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState = eBTRMgrStateError;
+            bTriggerCb = TRUE;
+            break;
+        case eBTRMgrSIGstStUnknown:
+        default:
+            pstBtrMgrSiHdl->lstBtrMgrSiStatus.eBtrMgrState = eBTRMgrStateUnknown;
+            break;
+        }
+
+        //TODO: Move to a local static function, which, if possible, can trigger the callback in the context
+        //      of a task thread.
+        if ((pstBtrMgrSiHdl->fpcBSiStatus) && (bTriggerCb == TRUE)) {
+            stBTRMgrMediaStatus lstBtrMgrSiMediaStatus;
+
+            memcpy (&lstBtrMgrSiMediaStatus, &(pstBtrMgrSiHdl->lstBtrMgrSiStatus), sizeof(stBTRMgrMediaStatus));
+
+            leBtrMgrSiRet = pstBtrMgrSiHdl->fpcBSiStatus(&lstBtrMgrSiMediaStatus, pstBtrMgrSiHdl->pvcBUserData);
+            BTRMGRLOG_TRACE("Return Status = %d\n", leBtrMgrSiRet);
+        }
+    }
+
+    return eBTRMgrSIGstSuccess;
+}
+#endif

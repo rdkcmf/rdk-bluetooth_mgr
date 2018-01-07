@@ -28,8 +28,12 @@
 
 typedef void* tBTRMgrSiHdl;
 
+/* Fptr Callbacks types */
+typedef eBTRMgrRet (*fPtr_BTRMgr_SI_StatusCb) (stBTRMgrMediaStatus* apstBtrMgrSiStatus, void *apvUserData);
+
+
 /* Interfaces */
-eBTRMgrRet BTRMgr_SI_Init (tBTRMgrSiHdl* phBTRMgrSiHdl);
+eBTRMgrRet BTRMgr_SI_Init (tBTRMgrSiHdl* phBTRMgrSiHdl, fPtr_BTRMgr_SI_StatusCb afpcBSiStatus, void* apvUserData);
 eBTRMgrRet BTRMgr_SI_DeInit (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_GetDefaultSettings (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_GetCurrentSettings (tBTRMgrSiHdl hBTRMgrSiHdl);

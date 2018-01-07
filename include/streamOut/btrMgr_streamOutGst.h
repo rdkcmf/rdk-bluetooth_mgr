@@ -59,6 +59,8 @@ typedef enum _eBTRMgrSOGstStatus {
     eBTRMgrSOGstStUnknown
 } eBTRMgrSOGstStatus;
 
+
+/* Fptr Callbacks types */
 typedef eBTRMgrSOGstRet (*fPtr_BTRMgr_SO_GstStatusCb) (eBTRMgrSOGstStatus aeBtrMgrSoGstStatus, void *apvUserData);
 
 
