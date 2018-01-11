@@ -60,6 +60,7 @@ typedef struct _stBTRMgrSOGst {
     void*        pPipeline;
     void*        pSrc;
     void*        pSink;
+    void*        pAudioResample;
     void*        pAudioEnc;
     void*        pAECapsFilter;
     void*        pRtpAudioPay;
@@ -238,6 +239,7 @@ BTRMgr_SO_GstInit (
     void*                       apvUserData
 ) {
     GstElement*     appsrc;
+    GstElement*     audresample;
     GstElement*     audenc;
     GstElement*     aecapsfilter;
     GstElement*     rtpaudpay;
@@ -263,11 +265,13 @@ BTRMgr_SO_GstInit (
     /* Create elements */
     appsrc   = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
 #if defined(DISABLE_AUDIO_ENCODING)
+    audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
     aecapsfilter= gst_element_factory_make ("queue", "btmgr-so-aecapsfilter");
     rtpaudpay   = gst_element_factory_make ("queue", "btmgr-so-rtpsbcpay");
 #else
 	/*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
+    audresample = gst_element_factory_make ("audioresample", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("sbcenc", "btmgr-so-sbcenc");
     aecapsfilter= gst_element_factory_make ("capsfilter", "btmgr-so-aecapsfilter");
     rtpaudpay   = gst_element_factory_make ("rtpsbcpay", "btmgr-so-rtpsbcpay");
@@ -290,6 +294,7 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
+    pstBtrMgrSoGst->pAudioResample  = (void*)audresample;
     pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
     pstBtrMgrSoGst->pAECapsFilter   = (void*)aecapsfilter;
     pstBtrMgrSoGst->pRtpAudioPay    = (void*)rtpaudpay;
@@ -428,6 +433,7 @@ BTRMgr_SO_GstStart (
     GstElement* pipeline    = (GstElement*)pstBtrMgrSoGst->pPipeline;
     GstElement* appsrc      = (GstElement*)pstBtrMgrSoGst->pSrc;
     GstElement* fdsink      = (GstElement*)pstBtrMgrSoGst->pSink;
+    GstElement* audresample = (GstElement*)pstBtrMgrSoGst->pAudioResample;
     GstElement* audenc      = (GstElement*)pstBtrMgrSoGst->pAudioEnc;
     GstElement* aecapsfilter= (GstElement*)pstBtrMgrSoGst->pAECapsFilter;
     GstElement* rtpaudpay   = (GstElement*)pstBtrMgrSoGst->pRtpAudioPay;
@@ -447,6 +453,14 @@ BTRMgr_SO_GstStart (
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
         BTRMGRLOG_ERROR ("Incorrect State to perform Operation\n");
         return eBTRMgrSOGstFailure;
+    }
+
+    if ((ai32InRate != ai32OutRate) || (ai32InChannels != ai32OutChannels)) {
+        //TODO: Audio resampling from 48KHz to 44.1KHz results in some timestamp issues
+        //      and discontinuties which we need to fix
+        gst_bin_add(GST_BIN(pipeline), audresample);
+        gst_element_unlink(appsrc, audenc);
+        gst_element_link_many (appsrc, audresample, audenc, NULL);
     }
 
     pstBtrMgrSoGst->gstClkTStamp = 0;
