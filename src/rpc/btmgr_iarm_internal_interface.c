@@ -57,7 +57,7 @@ static IARM_Result_t btrMgr_GetMediaCurrentPosition (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
 
 /* Callbacks Prototypes */
-static void btrMgr_EventCallback (BTRMGR_EventMessage_t events); 
+static BTRMGR_Result_t btrMgr_EventCallback (BTRMGR_EventMessage_t astEventMessage); 
 
 static unsigned char gIsBTRMGR_Internal_Inited = 0;
 
@@ -1164,106 +1164,112 @@ BTRMgr_TermIARMMode (
 
 
 /*  Incoming Callbacks */
-static void
+static BTRMGR_Result_t
 btrMgr_EventCallback (
-    BTRMGR_EventMessage_t events
+    BTRMGR_EventMessage_t   astEventMessage
 ) {
-    BTRMGR_EventMessage_t eventData;
+    BTRMGR_EventMessage_t   lstEventMessage;
+    IARM_Result_t           lenIarmResult   = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
 
     BTRMGRLOG_INFO ("Entering\n");
 
-    memcpy (&eventData, &events, sizeof(BTRMGR_EventMessage_t));
+    memcpy (&lstEventMessage, &astEventMessage, sizeof(BTRMGR_EventMessage_t));
 
-    if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_OUT_OF_RANGE) {
+    if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_OUT_OF_RANGE) {
         BTRMGRLOG_WARN ("Post Device Out of Range event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
         BTRMGRLOG_WARN ("Post Discovery Status update\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE) {
         BTRMGRLOG_WARN ("Post Discovery Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE) {
         BTRMGRLOG_WARN ("Post Device Pairing Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE) {
         BTRMGRLOG_WARN ("Post Device Pairing Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE) {
         BTRMGRLOG_WARN ("Post Device Connection Complete event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE) {
         BTRMGRLOG_WARN ("Post Device Disconnected event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_PAIRING_FAILED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_PAIRING_FAILED) {
         BTRMGRLOG_WARN ("Post Device Pairing Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED) {
         BTRMGRLOG_WARN ("Post Device UnPairing Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_FAILED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_FAILED) {
         BTRMGRLOG_WARN ("Post Device Connection Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED) {
         BTRMGRLOG_WARN ("Post Device Disconnect Failed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
         BTRMGRLOG_WARN ("Post External Device Pair Request event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST) {
         BTRMGRLOG_WARN ("Post External Device Connect Request event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST) {
         BTRMGRLOG_WARN ("Post External Device Playback Request event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_DEVICE_FOUND) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_FOUND) {
         BTRMGRLOG_WARN ("Post External Device Found Back event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_FOUND, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_FOUND, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_STARTED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_STARTED) {
         BTRMGRLOG_WARN ("Post Media Track Started event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_PLAYING) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_PLAYING) {
         BTRMGRLOG_WARN ("Post Media Track Playing event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_PAUSED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_PAUSED) {
         BTRMGRLOG_WARN ("Post Media Track Paused event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_STOPPED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_STOPPED) {
         BTRMGRLOG_WARN ("Post Media Track Stopped event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_POSITION) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_POSITION) {
         BTRMGRLOG_WARN ("Post Media Track Position event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_CHANGED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_CHANGED) {
         BTRMGRLOG_WARN ("Post Media Track Changed event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-    else if (eventData.m_eventType == BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED) {
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED) {
         BTRMGRLOG_WARN ("Post Media Playback Ended event\n");
-        IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, (void *)&eventData, sizeof(eventData));
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }    
 
-    return;
-}
 
+    if (lenIarmResult != IARM_RESULT_SUCCESS) {
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    
+    return lenBtrMgrResult;
+}
 

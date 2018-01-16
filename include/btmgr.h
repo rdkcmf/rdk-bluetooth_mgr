@@ -260,57 +260,57 @@ typedef struct _BTRMGR_EventResponse_t {
 } BTRMGR_EventResponse_t;
 
 
-typedef void (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t);
+typedef BTRMGR_Result_t (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t astEventMessage);
 
 
 BTRMGR_Result_t BTRMGR_Init(void);
 BTRMGR_Result_t BTRMGR_DeInit(void);
 
 BTRMGR_Result_t BTRMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters);
-BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char index_of_adapter);
+BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char aui8AdapterIdx);
 
-BTRMGR_Result_t BTRMGR_SetAdapterName(unsigned char index_of_adapter, const char* pNameOfAdapter);
-BTRMGR_Result_t BTRMGR_GetAdapterName(unsigned char index_of_adapter, char* pNameOfAdapter);
+BTRMGR_Result_t BTRMGR_SetAdapterName(unsigned char aui8AdapterIdx, const char* pNameOfAdapter);
+BTRMGR_Result_t BTRMGR_GetAdapterName(unsigned char aui8AdapterIdx, char* pNameOfAdapter);
 
-BTRMGR_Result_t BTRMGR_SetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char power_status);
-BTRMGR_Result_t BTRMGR_GetAdapterPowerStatus(unsigned char index_of_adapter, unsigned char *pPowerStatus);
+BTRMGR_Result_t BTRMGR_SetAdapterPowerStatus(unsigned char aui8AdapterIdx, unsigned char power_status);
+BTRMGR_Result_t BTRMGR_GetAdapterPowerStatus(unsigned char aui8AdapterIdx, unsigned char *pPowerStatus);
 
-BTRMGR_Result_t BTRMGR_SetAdapterDiscoverable(unsigned char index_of_adapter, unsigned char discoverable, int timeout);
-BTRMGR_Result_t BTRMGR_IsAdapterDiscoverable(unsigned char index_of_adapter, unsigned char *pDiscoverable);
+BTRMGR_Result_t BTRMGR_SetAdapterDiscoverable(unsigned char aui8AdapterIdx, unsigned char discoverable, int timeout);
+BTRMGR_Result_t BTRMGR_IsAdapterDiscoverable(unsigned char aui8AdapterIdx, unsigned char *pDiscoverable);
 
-BTRMGR_Result_t BTRMGR_StartDeviceDiscovery(unsigned char index_of_adapter);
-BTRMGR_Result_t BTRMGR_StopDeviceDiscovery(unsigned char index_of_adapter);
-BTRMGR_Result_t BTRMGR_GetDiscoveredDevices(unsigned char index_of_adapter, BTRMGR_DiscoveredDevicesList_t *pDiscoveredDevices);
+BTRMGR_Result_t BTRMGR_StartDeviceDiscovery(unsigned char aui8AdapterIdx);
+BTRMGR_Result_t BTRMGR_StopDeviceDiscovery(unsigned char aui8AdapterIdx);
+BTRMGR_Result_t BTRMGR_GetDiscoveredDevices(unsigned char aui8AdapterIdx, BTRMGR_DiscoveredDevicesList_t *pDiscoveredDevices);
 
-BTRMGR_Result_t BTRMGR_PairDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
-BTRMGR_Result_t BTRMGR_UnpairDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
-BTRMGR_Result_t BTRMGR_GetPairedDevices(unsigned char index_of_adapter, BTRMGR_PairedDevicesList_t *pPairedDevices);
+BTRMGR_Result_t BTRMGR_PairDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+BTRMGR_Result_t BTRMGR_UnpairDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+BTRMGR_Result_t BTRMGR_GetPairedDevices(unsigned char aui8AdapterIdx, BTRMGR_PairedDevicesList_t *pPairedDevices);
 
-BTRMGR_Result_t BTRMGR_ConnectToDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
-BTRMGR_Result_t BTRMGR_DisconnectFromDevice(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
-BTRMGR_Result_t BTRMGR_GetConnectedDevices(unsigned char index_of_adapter, BTRMGR_ConnectedDevicesList_t *pConnectedDevices);
+BTRMGR_Result_t BTRMGR_ConnectToDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_DisconnectFromDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+BTRMGR_Result_t BTRMGR_GetConnectedDevices(unsigned char aui8AdapterIdx, BTRMGR_ConnectedDevicesList_t *pConnectedDevices);
 
-BTRMGR_Result_t BTRMGR_GetDeviceProperties(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DevicesProperty_t *pDeviceProperty);
+BTRMGR_Result_t BTRMGR_GetDeviceProperties(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DevicesProperty_t *pDeviceProperty);
 
-BTRMGR_Result_t BTRMGR_StartAudioStreamingOut(unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
-BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char index_of_adapter, BTRMgrDeviceHandle handle);
-BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char index_of_adapter, unsigned char *pStreamingStatus);
-BTRMGR_Result_t BTRMGR_SetAudioStreamingOutType(unsigned char index_of_adapter, BTRMGR_StreamOut_Type_t type);
+BTRMGR_Result_t BTRMGR_StartAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
+BTRMGR_Result_t BTRMGR_SetAudioStreamingOutType(unsigned char aui8AdapterIdx, BTRMGR_StreamOut_Type_t type);
 
-BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char ui8AdapterIdx, BTRMgrDeviceHandle handle, BTRMGR_DeviceConnect_Type_t connectAs);
-BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char ui8AdapterIdx, BTRMgrDeviceHandle handle);
-BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char ui8AdapterIdx, unsigned char *pStreamingStatus);
+BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceConnect_Type_t connectAs);
+BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
 
-BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char index_of_adapter, BTRMGR_EventResponse_t* apstBTRMgrEvtRsp);
+BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char aui8AdapterIdx, BTRMGR_EventResponse_t* apstBTRMgrEvtRsp);
 
-BTRMGR_Result_t BTRMGR_MediaControl (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaControlCommand_t mediaCtrlCmd);
+BTRMGR_Result_t BTRMGR_MediaControl(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaControlCommand_t mediaCtrlCmd);
 
-BTRMGR_Result_t BTRMGR_GetMediaTrackInfo (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
-BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition (unsigned char index_of_adapter, BTRMgrDeviceHandle handle, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
+BTRMGR_Result_t BTRMGR_GetMediaTrackInfo(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
+BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 
-BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback eventCallback);
+BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);
 
 #ifdef __cplusplus
 }

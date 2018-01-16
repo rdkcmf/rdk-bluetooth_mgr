@@ -190,9 +190,10 @@ sendSBCFileOverBT (
 }
 
 
-int
+enBTRCoreRet
 cb_connection_intimation (
     stBTRCoreConnCBInfo* apstConnCbInfo,
+    int*                 api32ConnInIntimResp,
     void*                apvUserData
 ) {
     printf("Choose 35 to verify pin-passcode or 36 to discard pin-passcode\n\n");
@@ -209,19 +210,22 @@ cb_connection_intimation (
     if (acceptConnection == 1) {
         printf("Pin-Passcode accepted\n");
         acceptConnection = 0;//reset variabhle for the next connection
-        return 1;
+        *api32ConnInIntimResp = 1;
     }
     else {
         printf("Pin-Passcode denied\n");
         acceptConnection = 0;//reset variabhle for the next connection
-        return 0;
+        *api32ConnInIntimResp = 0;
     }
+
+    return enBTRCoreSuccess;
 }
 
 
-int
+enBTRCoreRet
 cb_connection_authentication (
     stBTRCoreConnCBInfo* apstConnCbInfo,
+    int*                 api32ConnInAuthResp,
     void*                apvUserData
 ) {
     printf("Choose 35 to accept the connection or 36 to deny the connection\n\n");
@@ -234,17 +238,19 @@ cb_connection_authentication (
     if (acceptConnection == 1) {
         printf("connection accepted\n");
         acceptConnection = 0;//reset variabhle for the next connection
-        return 1;
+        *api32ConnInAuthResp = 1;
     }
     else {
         printf("connection denied\n");
         acceptConnection = 0;//reset variabhle for the next connection
-        return 0;
+        *api32ConnInAuthResp = 0;
     }
+
+    return enBTRCoreSuccess;
 }
 
 
-void
+enBTRCoreRet
 cb_unsolicited_bluetooth_status (
     stBTRCoreDevStatusCBInfo*   p_StatusCB,
     void*                       apvUserData
@@ -265,7 +271,7 @@ cb_unsolicited_bluetooth_status (
         }
     }
 
-    return;
+    return enBTRCoreSuccess;
 }
 
 static void

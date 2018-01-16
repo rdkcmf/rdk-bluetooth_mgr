@@ -128,7 +128,7 @@ const char* getEventAsString (BTRMGR_Events_t etype)
 }
 
 
-void eventCallback (BTRMGR_EventMessage_t event)
+BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
 {
     printf ("\n\t@@@@@@@@ %s : %s eventCallback ::::  Event ID %d @@@@@@@@\n", BTRMGR_GetDeviceTypeAsString(event.m_pairedDevice.m_deviceType)
                                                                              , event.m_pairedDevice.m_name
@@ -240,7 +240,7 @@ void eventCallback (BTRMGR_EventMessage_t event)
         break;
     }
                                       
-    return;
+    return BTRMGR_RESULT_SUCCESS;
 }
 
 
