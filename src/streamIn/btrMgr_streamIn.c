@@ -56,13 +56,19 @@ typedef struct _stBTRMgrSIHdl {
 } stBTRMgrSIHdl;
 
 
+/* Static Function Prototypes */
+
+/* Local Op Threads Prototypes */
+
+/* Incoming Callbacks Prototypes */
 #ifdef USE_GST1
-/* Incoming Callbacks */
 static eBTRMgrSIGstRet btrMgr_SI_GstStatusCb (eBTRMgrSIGstStatus aeBtrMgrSiGstStatus, void* apvUserData);
 #endif
 
-/* Static Function Prototypes */
 
+/* Static Function Definition */
+
+/* Local Op Threads */
 
 /*  Interfaces  */
 eBTRMgrRet
@@ -394,6 +400,8 @@ BTRMgr_SI_SendEOS (
     return leBtrMgrSiRet;
 }
 
+
+// Outgoing callbacks Registration Interfaces
 
 /* Incoming Callbacks Definitions */
 #ifdef USE_GST1

@@ -82,127 +82,19 @@ typedef struct _stBTRMgrSOGst {
 } stBTRMgrSOGst;
 
 
-/* Local function declarations */
-static gpointer btrMgr_SO_g_main_loop_run_context (gpointer user_data);
+/* Static Function Prototypes */
 static GstState btrMgr_SO_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
 
-/* Incoming Callbacks */
-static gboolean btrMgr_SO_gstBusCall (GstBus* bus, GstMessage* msg, gpointer user_data);
-static void btrMgr_SO_NeedData_cB (GstElement* appsrc, guint size, gpointer user_data);
-static void btrMgr_SO_EnoughData_cB (GstElement* appsrc, gpointer user_data);
+/* Local Op Threads Prototypes */
+static gpointer btrMgr_SO_g_main_loop_RunTask (gpointer user_data);
+
+/* Incoming Callbacks Prototypes */
+static void btrMgr_SO_NeedDataCb (GstElement* appsrc, guint size, gpointer user_data);
+static void btrMgr_SO_EnoughDataCb (GstElement* appsrc, gpointer user_data);
+static gboolean btrMgr_SO_gstBusCallCb (GstBus* bus, GstMessage* msg, gpointer user_data);
 
 
-/* Local function definitions */
-static gpointer
-btrMgr_SO_g_main_loop_run_context (
-    gpointer user_data
-) {
-    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
-
-    if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
-        BTRMGRLOG_INFO ("GMainLoop Running\n");
-        g_main_loop_run (pstBtrMgrSoGst->pLoop);
-    }
-
-    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
-    return NULL;
-}
-
-
-static gboolean
-btrMgr_SO_gstBusCall (
-    GstBus*     bus,
-    GstMessage* msg,
-    gpointer    user_data
-) {
-    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
-
-    switch (GST_MESSAGE_TYPE (msg)) {
-
-        case GST_MESSAGE_EOS: {
-            BTRMGRLOG_INFO ("End-of-stream\n");
-            if (pstBtrMgrSoGst) {
-                if (pstBtrMgrSoGst->pLoop) {
-                    g_main_loop_quit(pstBtrMgrSoGst->pLoop);
-			    }
-
-                if (pstBtrMgrSoGst->fpcBSoGstStatus) {
-                    BTRMGRLOG_INFO ("EOS: Trigger Final Status cB\n");
-		            pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
-                                                    pstBtrMgrSoGst->pvcBUserData);
-		        }
-            }
-            break;
-        }
-
-        case GST_MESSAGE_STATE_CHANGED: {
-            if (pstBtrMgrSoGst && (pstBtrMgrSoGst->pPipeline) && (GST_MESSAGE_SRC (msg) == GST_OBJECT (pstBtrMgrSoGst->pPipeline))) {
-                GstState prevState, currentState;
-
-                gst_message_parse_state_changed (msg, &prevState, &currentState, NULL);
-                BTRMGRLOG_INFO ("From: %s -> To: %s\n", 
-                            gst_element_state_get_name (prevState), gst_element_state_get_name (currentState));
-            }
-            break;
-        }
-
-        case GST_MESSAGE_ERROR: {
-            gchar*      debug;
-            GError*     err;
-
-            if (pstBtrMgrSoGst) {
-                g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
-                pstBtrMgrSoGst->bPipelineError  = TRUE;
-                g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
-            }
-
-            gst_message_parse_error (msg, &err, &debug);
-            BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
-            g_free (debug);
-
-            BTRMGRLOG_ERROR ("Error: %s\n", err->message);
-            g_error_free (err);
-
-            if (pstBtrMgrSoGst) {
-                if (pstBtrMgrSoGst->pLoop) {
-                    g_main_loop_quit(pstBtrMgrSoGst->pLoop);
-			    }
-
-                if (pstBtrMgrSoGst->fpcBSoGstStatus) {
-                    BTRMGRLOG_INFO ("ERROR: Trigger Final Status cB\n");
-		            pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
-                                                    pstBtrMgrSoGst->pvcBUserData);
-		        }
-            }
-            break;
-        }
-
-        case GST_MESSAGE_WARNING:{
-            gchar*    debug;
-            GError*   warn;
-
-            gst_message_parse_warning (msg, &warn, &debug);
-            BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
-            g_free (debug);
-
-            BTRMGRLOG_WARN ("Warning: %s\n", warn->message);
-            g_error_free (warn);
-
-            if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
-                pstBtrMgrSoGst->fpcBSoGstStatus(eBTRMgrSOGstStWarning, pstBtrMgrSoGst->pvcBUserData);
-            }
-
-          break;
-        }
-
-        default:
-            break;
-    }
-
-    return TRUE;
-}
-
-
+/* Static Function Definition */
 static GstState 
 btrMgr_SO_validateStateWithTimeout (
     GstElement* element,
@@ -230,6 +122,22 @@ btrMgr_SO_validateStateWithTimeout (
         return gst_current;
 }
 
+
+/* Local Op Threads */
+static gpointer
+btrMgr_SO_g_main_loop_RunTask (
+    gpointer user_data
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+
+    if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
+        BTRMGRLOG_INFO ("GMainLoop Running\n");
+        g_main_loop_run (pstBtrMgrSoGst->pLoop);
+    }
+
+    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
+    return NULL;
+}
 
 /* Interfaces */
 eBTRMgrSOGstRet
@@ -314,7 +222,7 @@ BTRMgr_SO_GstInit (
 
 
     bus                     = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    busWatchId              = gst_bus_add_watch(bus, btrMgr_SO_gstBusCall, pstBtrMgrSoGst);
+    busWatchId              = gst_bus_add_watch(bus, btrMgr_SO_gstBusCallCb, pstBtrMgrSoGst);
     pstBtrMgrSoGst->busWId  = busWatchId;
     g_object_unref(bus);
 
@@ -323,11 +231,11 @@ BTRMgr_SO_GstInit (
     gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
 
 
-    mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_run_context", btrMgr_SO_g_main_loop_run_context, pstBtrMgrSoGst);
+    mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_RunTask", btrMgr_SO_g_main_loop_RunTask, pstBtrMgrSoGst);
     pstBtrMgrSoGst->pLoopThread = (void*)mainLoopThread;
 
-    g_signal_connect (appsrc, "need-data", G_CALLBACK(btrMgr_SO_NeedData_cB), pstBtrMgrSoGst);
-    g_signal_connect (appsrc, "enough-data", G_CALLBACK(btrMgr_SO_EnoughData_cB), pstBtrMgrSoGst);
+    g_signal_connect (appsrc, "need-data", G_CALLBACK(btrMgr_SO_NeedDataCb), pstBtrMgrSoGst);
+    g_signal_connect (appsrc, "enough-data", G_CALLBACK(btrMgr_SO_EnoughDataCb), pstBtrMgrSoGst);
         
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
@@ -825,8 +733,12 @@ BTRMgr_SO_GstSendEOS (
 }
 
 
+// Outgoing callbacks Registration Interfaces
+
+
+/*  Incoming Callbacks */
 static void
-btrMgr_SO_NeedData_cB (
+btrMgr_SO_NeedDataCb (
     GstElement* appsrc,
     guint       size,
     gpointer    user_data
@@ -841,7 +753,7 @@ btrMgr_SO_NeedData_cB (
 
 
 static void
-btrMgr_SO_EnoughData_cB (
+btrMgr_SO_EnoughDataCb (
     GstElement* appsrc,
     gpointer    user_data
 ) {
@@ -851,5 +763,100 @@ btrMgr_SO_EnoughData_cB (
     if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
         pstBtrMgrSoGst->fpcBSoGstStatus(eBTRMgrSOGstStOverflow, pstBtrMgrSoGst->pvcBUserData);
     }
+}
+
+
+static gboolean
+btrMgr_SO_gstBusCallCb (
+    GstBus*     bus,
+    GstMessage* msg,
+    gpointer    user_data
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+
+    switch (GST_MESSAGE_TYPE (msg)) {
+
+    case GST_MESSAGE_EOS: {
+        BTRMGRLOG_INFO ("End-of-stream\n");
+        if (pstBtrMgrSoGst) {
+            if (pstBtrMgrSoGst->pLoop) {
+                g_main_loop_quit(pstBtrMgrSoGst->pLoop);
+            }
+
+            if (pstBtrMgrSoGst->fpcBSoGstStatus) {
+                BTRMGRLOG_INFO ("EOS: Trigger Final Status cB\n");
+                pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
+                                                pstBtrMgrSoGst->pvcBUserData);
+            }
+        }
+        break;
+    }
+
+    case GST_MESSAGE_STATE_CHANGED: {
+        if (pstBtrMgrSoGst && (pstBtrMgrSoGst->pPipeline) && (GST_MESSAGE_SRC (msg) == GST_OBJECT (pstBtrMgrSoGst->pPipeline))) {
+            GstState prevState, currentState;
+
+            gst_message_parse_state_changed (msg, &prevState, &currentState, NULL);
+            BTRMGRLOG_INFO ("From: %s -> To: %s\n", 
+                        gst_element_state_get_name (prevState), gst_element_state_get_name (currentState));
+        }
+        break;
+    }
+
+    case GST_MESSAGE_ERROR: {
+        gchar*      debug;
+        GError*     err;
+
+        if (pstBtrMgrSoGst) {
+            g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
+            pstBtrMgrSoGst->bPipelineError  = TRUE;
+            g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
+        }
+
+        gst_message_parse_error (msg, &err, &debug);
+        BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
+        g_free (debug);
+
+        BTRMGRLOG_ERROR ("Error: %s\n", err->message);
+        g_error_free (err);
+
+        if (pstBtrMgrSoGst) {
+            if (pstBtrMgrSoGst->pLoop) {
+                g_main_loop_quit(pstBtrMgrSoGst->pLoop);
+            }
+
+            if (pstBtrMgrSoGst->fpcBSoGstStatus) {
+                BTRMGRLOG_INFO ("ERROR: Trigger Final Status cB\n");
+                pstBtrMgrSoGst->fpcBSoGstStatus(pstBtrMgrSoGst->bPipelineError == TRUE ? eBTRMgrSOGstStError : eBTRMgrSOGstStCompleted,
+                                                pstBtrMgrSoGst->pvcBUserData);
+            }
+        }
+        break;
+    }
+
+    case GST_MESSAGE_WARNING:{
+        gchar*    debug;
+        GError*   warn;
+
+        gst_message_parse_warning (msg, &warn, &debug);
+        BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
+        g_free (debug);
+
+        BTRMGRLOG_WARN ("Warning: %s\n", warn->message);
+        g_error_free (warn);
+
+        if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
+            pstBtrMgrSoGst->fpcBSoGstStatus(eBTRMgrSOGstStWarning, pstBtrMgrSoGst->pvcBUserData);
+        }
+
+      break;
+    }
+
+    default:
+        break;
+
+    }
+
+    return TRUE;
 }
 

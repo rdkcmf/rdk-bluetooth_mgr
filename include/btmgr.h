@@ -260,9 +260,11 @@ typedef struct _BTRMGR_EventResponse_t {
 } BTRMGR_EventResponse_t;
 
 
+/* Fptr Callbacks types */
 typedef BTRMGR_Result_t (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t astEventMessage);
 
 
+/* Interfaces */
 BTRMGR_Result_t BTRMGR_Init(void);
 BTRMGR_Result_t BTRMGR_DeInit(void);
 
@@ -310,6 +312,7 @@ BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition(unsigned char aui8AdapterIdx, BTR
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 
+// Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);
 
 #ifdef __cplusplus

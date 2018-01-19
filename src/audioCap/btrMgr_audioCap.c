@@ -54,11 +54,12 @@
 #include "audiocapturemgr_iarm.h"
 #endif
 
+#include "btmgr_priv.h"
+
 /* Local Headers */
+#include "btrMgr_Types.h"
 #include "btrMgr_mediaTypes.h"
 #include "btrMgr_audioCap.h"
-#include "btmgr_priv.h"
-#include "btrMgr_Types.h"
 
 /* Local defines */
 #if !defined(USE_AC_RMF)
@@ -95,27 +96,30 @@ typedef struct _stBTRMgrACHdl {
     int                         i32BtrMgrAcmDCSockFd;
     int                         i32BtrMgrAcmExternalIARMMode;
 #endif
-    BTRMgr_AC_DataReadyCb       fptrBtrMgrAcDataReadycB;
+    fPtr_BTRMgr_AC_DataReadyCb  fpcBBtrMgrAcDataReady;
     void*                       vpBtrMgrAcDataReadyUserData;
 } stBTRMgrACHdl;
 
 
-/* Local function declarations */
+/* Static Function Prototypes */
+
+/* Local Op Threads */
 #if !defined(USE_AC_RMF)
-static gpointer btrMgr_AC_acmDataCapture (gpointer user_data);
+static gpointer btrMgr_AC_acmDataCapture_InTask (gpointer user_data);
 #endif
 
-
-/* Callbacks Prototypes */
+/* Incoming Callbacks */
 #if defined(USE_AC_RMF)
-static rmf_Error btrMgr_AC_rmfBufferReady_cB (void* pContext, void* pInDataBuf, unsigned int inBytesToEncode);
+static rmf_Error btrMgr_AC_rmfBufferReadyCb (void* pContext, void* pInDataBuf, unsigned int inBytesToEncode);
 #endif
 
 
-/* Local function definitions */
+/* Static Function Definition */
+
+/* Local Op Threads */
 #if !defined(USE_AC_RMF)
 static gpointer
-btrMgr_AC_acmDataCapture (
+btrMgr_AC_acmDataCapture_InTask (
     gpointer user_data
 ) {
     stBTRMgrACHdl*      pstBtrMgrAcHdl = (stBTRMgrACHdl*)user_data;
@@ -257,10 +261,10 @@ btrMgr_AC_acmDataCapture (
                                                     pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold);
 
 
-                if (pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB && (li32InDataBufBytesRead > 0)) {
-                    if (pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB(lpInDataBuf,
-                                                                li32InDataBufBytesRead,
-                                                                pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData) != eBTRMgrSuccess) {
+                if (pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady && (li32InDataBufBytesRead > 0)) {
+                    if (pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady(lpInDataBuf,
+                                                              li32InDataBufBytesRead,
+                                                              pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData) != eBTRMgrSuccess) {
                         BTRMGRLOG_ERROR("AC Data Ready Callback Failed\n");
                     }
                 }
@@ -357,11 +361,11 @@ BTRMgr_AC_Init (
         pstBtrMgrAcHdl->hBtrMgrIarmAcmHdl = lstBtrMgrIarmAcmArgs.session_id;
 
         if (((pstBtrMgrAcHdl->pBtrMgrAcmDataCapGAOpQueue = g_async_queue_new()) == NULL) ||
-            ((pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread = g_thread_new("btrMgr_AC_acmDataCapture", btrMgr_AC_acmDataCapture, pstBtrMgrAcHdl)) == NULL)) {
+            ((pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread = g_thread_new("btrMgr_AC_acmDataCapture_InTask", btrMgr_AC_acmDataCapture_InTask, pstBtrMgrAcHdl)) == NULL)) {
             leBtrMgrAcRet = eBTRMgrInitFailure;
         }
 
-        BTRMGRLOG_DEBUG ("btrMgr_AC_acmDataCapture : %p\n", pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread);
+        BTRMGRLOG_DEBUG ("btrMgr_AC_acmDataCapture_InTask : %p\n", pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread);
     }
 #endif
 
@@ -869,10 +873,10 @@ BTRMgr_AC_GetStatus (
 
 eBTRMgrRet
 BTRMgr_AC_Start (
-    tBTRMgrAcHdl            hBTRMgrAcHdl,
-    stBTRMgrOutASettings*   apstBtrMgrAcOutASettings,
-    BTRMgr_AC_DataReadyCb   afptrBtrMgrAcDataReadycB,
-    void*                   apvUserData
+    tBTRMgrAcHdl                hBTRMgrAcHdl,
+    stBTRMgrOutASettings*       apstBtrMgrAcOutASettings,
+    fPtr_BTRMgr_AC_DataReadyCb  afpcBBtrMgrAcDataReady,
+    void*                       apvUserData
 ) {
     eBTRMgrRet      leBtrMgrAcRet  = eBTRMgrSuccess;
     stBTRMgrACHdl*  pstBtrMgrAcHdl = (stBTRMgrACHdl*)hBTRMgrAcHdl;
@@ -893,8 +897,8 @@ BTRMgr_AC_Start (
         return eBTRMgrFailInArg;
     }
 
-    pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB    = afptrBtrMgrAcDataReadycB;
-    pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData= apvUserData;
+    pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady       = afpcBBtrMgrAcDataReady;
+    pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData = apvUserData;
 
 #if defined(USE_AC_RMF)
     if (pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize)
@@ -904,7 +908,7 @@ BTRMgr_AC_Start (
 
 
 
-    pstBtrMgrRmfAcSettings->cbBufferReady      = btrMgr_AC_rmfBufferReady_cB;
+    pstBtrMgrRmfAcSettings->cbBufferReady      = btrMgr_AC_rmfBufferReadyCb;
     pstBtrMgrRmfAcSettings->cbBufferReadyParm  = pstBtrMgrAcHdl;
     pstBtrMgrRmfAcSettings->fifoSize           = 8 * apstBtrMgrAcOutASettings->i32BtrMgrOutBufMaxSize;
     pstBtrMgrRmfAcSettings->threshold          = apstBtrMgrAcOutASettings->i32BtrMgrOutBufMaxSize;
@@ -1091,7 +1095,8 @@ BTRMgr_AC_Pause (
 }
 
 
-eBTRMgrRet BTRMgr_AC_Resume (
+eBTRMgrRet
+BTRMgr_AC_Resume (
     tBTRMgrAcHdl hBTRMgrAcHdl
 ) {
     eBTRMgrRet      leBtrMgrAcRet  = eBTRMgrSuccess;
@@ -1099,18 +1104,21 @@ eBTRMgrRet BTRMgr_AC_Resume (
     return leBtrMgrAcRet;
 }
 
+// Outgoing callbacks Registration Interfaces
 
+
+/* Incoming Callbacks */
 #if defined(USE_AC_RMF)
 static rmf_Error
-btrMgr_AC_rmfBufferReady_cB (
+btrMgr_AC_rmfBufferReadyCb (
     void*           pContext,
     void*           pInDataBuf,
     unsigned int    inBytesToEncode
 ) {
     stBTRMgrACHdl*  pstBtrMgrAcHdl = (stBTRMgrACHdl*)pContext;
 
-    if (pstBtrMgrAcHdl && pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB) {
-        if (pstBtrMgrAcHdl->fptrBtrMgrAcDataReadycB(pInDataBuf, inBytesToEncode, pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData) != eBTRMgrSuccess) {
+    if (pstBtrMgrAcHdl && pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady) {
+        if (pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady(pInDataBuf, inBytesToEncode, pstBtrMgrAcHdl->vpBtrMgrAcDataReadyUserData) != eBTRMgrSuccess) {
             BTRMGRLOG_ERROR("AC Data Ready Callback Failed\n");
         }
     }

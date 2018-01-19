@@ -23,26 +23,105 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+/* System Headers */
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+/* Ext lib Headers */
 #include "cJSON.h"
 
+/* Interface lib Headers */
 #include "btmgr_priv.h"
+
+/* Local Headers */
+#include "btrMgr_Types.h"
 #include "btrMgr_persistIface.h"
 
 
 typedef struct _stBTRMgrPIHdl {
     BTRMGR_PersistentData_t piData;
-
 } stBTRMgrPIHdl;
 
-static char* readPersistentFile(char *fileContent);
-static void writeToPersistentFile(char* fileName,cJSON * profileData);
+/* Static Function Prototypes */
+static char* readPersistentFile (char*  fileContent);
+static void writeToPersistentFile (char* fileName,cJSON* profileData);
 
-eBTRMgrRet BTRMgr_PI_Init (tBTRMgrPIHdl* hBTRMgrPiHdl)
-{
+/* Local Op Threads Prototypes*/
+
+/* Incoming Callbacks Prototypes*/
+
+/* Static Function Definition */
+static char*
+readPersistentFile (
+    char*   fileName
+) {
+    FILE *fp = NULL;
+    char *fileContent = NULL;
+    BTRMGRLOG_DEBUG ("Reading file - %s\n", fileName);
+
+    if( 0 == access(fileName, F_OK) )
+    { 
+       fp = fopen(fileName, "r");
+       if (fp == NULL)
+       {
+           BTRMGRLOG_ERROR ("Could not open file - %s\n", fileName);
+       }
+       else
+       {
+           int ch_count = 0;
+           fseek(fp, 0, SEEK_END);
+           ch_count = ftell(fp);
+           fseek(fp, 0, SEEK_SET);
+           fileContent = (char *) malloc(sizeof(char) * (ch_count + 1));
+           fread(fileContent, 1, ch_count,fp);
+           fileContent[ch_count] ='\0';
+           BTRMGRLOG_DEBUG ("Reading %s success, Content = %s \n", fileName,fileContent);
+           fclose(fp);
+       }
+    }
+    else
+    { 
+       BTRMGRLOG_WARN ("File %s does not exist!!!", fileName);
+    }
+    return fileContent;
+}
+
+static void
+writeToPersistentFile (
+    char*   fileName,
+    cJSON*  profileData
+) {
+    FILE *fp = NULL;
+    BTRMGRLOG_DEBUG ("Writing data to file %s\n" ,fileName);
+    fp = fopen(fileName, "w");
+    if (fp == NULL)
+    {
+        BTRMGRLOG_ERROR ("Could not open file to write, -  %s\n" ,fileName);
+    }
+    else
+    {
+        char* fileContent = cJSON_Print(profileData);
+        BTRMGRLOG_DEBUG ("Writing data to file - %s, Content - %s\n" ,fileName,fileContent);
+        fprintf(fp, "%s", fileContent);
+        fclose(fp);
+        BTRMGRLOG_DEBUG ("File write Success\n");
+    }
+
+}
+
+/*  Local Op Threads */
+
+
+ /*  Interfaces  */
+eBTRMgrRet
+BTRMgr_PI_Init (
+    tBTRMgrPIHdl* hBTRMgrPiHdl
+) {
     stBTRMgrPIHdl* piHandle = NULL;
 
     if ((piHandle = (stBTRMgrPIHdl*)malloc (sizeof(stBTRMgrPIHdl))) == NULL) {
@@ -52,9 +131,14 @@ eBTRMgrRet BTRMgr_PI_Init (tBTRMgrPIHdl* hBTRMgrPiHdl)
     *hBTRMgrPiHdl = (tBTRMgrPIHdl) piHandle;
     return eBTRMgrSuccess;
 }
-eBTRMgrRet BTRMgr_PI_DeInit (tBTRMgrPIHdl hBTRMgrPiHdl)
-{
+
+
+eBTRMgrRet
+BTRMgr_PI_DeInit (
+    tBTRMgrPIHdl hBTRMgrPiHdl
+) {
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
+
     if( NULL != pstBtrMgrPiHdl)
     {
         free((void*)pstBtrMgrPiHdl);
@@ -69,8 +153,11 @@ eBTRMgrRet BTRMgr_PI_DeInit (tBTRMgrPIHdl hBTRMgrPiHdl)
     }
 }
 
-eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentData_t* persistentData)
-{
+eBTRMgrRet
+BTRMgr_PI_GetAllProfiles (
+    tBTRMgrPIHdl                hBTRMgrPiHdl,
+    BTRMGR_PersistentData_t*    persistentData
+) {
     char *persistent_file_content = NULL;
     int profileCount = 0;
     int deviceCount = 0;
@@ -79,6 +166,7 @@ eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentD
 
     // Validate Handle
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
+
     if (pstBtrMgrPiHdl == NULL)
     {
         BTRMGRLOG_ERROR ("PI Handle not initialized\n");
@@ -155,8 +243,13 @@ eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentD
     }
     return eBTRMgrSuccess;
 }
-eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile)
-{
+
+
+eBTRMgrRet
+BTRMgr_PI_AddProfile (
+    tBTRMgrPIHdl        hBTRMgrPiHdl,
+    BTRMGR_Profile_t    persistProfile
+) {
     // Get Current persistent data in order to append
     BTRMGR_PersistentData_t piData;
     int pcount = 0;
@@ -164,6 +257,7 @@ eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t pers
 
     // Validate Handle
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
+
     if (pstBtrMgrPiHdl == NULL)
     {
         BTRMGRLOG_ERROR ("PI Handle not initialized\n");
@@ -232,8 +326,11 @@ eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t pers
     return eBTRMgrSuccess;
 }
 
-eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentData_t* persistentData)
-{
+eBTRMgrRet
+BTRMgr_PI_SetAllProfiles (
+    tBTRMgrPIHdl                hBTRMgrPiHdl,
+    BTRMGR_PersistentData_t*    persistentData
+) {
     int profileCount = 0;
     int pcount = 0;
     int dcount = 0;
@@ -300,8 +397,12 @@ eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Persistent
 
     return eBTRMgrSuccess;
 }
-eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile)
-{
+
+eBTRMgrRet
+BTRMgr_PI_RemoveProfile (
+    tBTRMgrPIHdl        hBTRMgrPiHdl,
+    BTRMGR_Profile_t    persistProfile
+) {
     // Get Current persistent data in order to append
     BTRMGR_PersistentData_t piData;
     int pcount = 0;
@@ -374,61 +475,22 @@ eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t p
     }
     return eBTRMgrSuccess;
 }
-eBTRMgrRet BTRMgr_PI_GetProfile (stBTRMgrPersistProfile* persistProfile,char* profileName,char* deviceId)
-{
 
+
+eBTRMgrRet
+BTRMgr_PI_GetProfile (
+    stBTRMgrPersistProfile* persistProfile, 
+    char*                   profileName,
+    char*                   deviceId
+) {
     return eBTRMgrSuccess;
 }
 
-static char* readPersistentFile(char *fileName)
-{
-    FILE *fp = NULL;
-    char *fileContent = NULL;
-    BTRMGRLOG_DEBUG ("Reading file - %s\n", fileName);
 
-    if( 0 == access(fileName, F_OK) )
-    { 
-       fp = fopen(fileName, "r");
-       if (fp == NULL)
-       {
-           BTRMGRLOG_ERROR ("Could not open file - %s\n", fileName);
-       }
-       else
-       {
-           int ch_count = 0;
-           fseek(fp, 0, SEEK_END);
-           ch_count = ftell(fp);
-           fseek(fp, 0, SEEK_SET);
-           fileContent = (char *) malloc(sizeof(char) * (ch_count + 1));
-           fread(fileContent, 1, ch_count,fp);
-           fileContent[ch_count] ='\0';
-           BTRMGRLOG_DEBUG ("Reading %s success, Content = %s \n", fileName,fileContent);
-           fclose(fp);
-       }
-    }
-    else
-    { 
-       BTRMGRLOG_WARN ("File %s does not exist!!!", fileName);
-    }
-    return fileContent;
-}
+// Outgoing callbacks Registration Interfaces
 
-static void writeToPersistentFile(char* fileName,cJSON* profileData)
-{
-    FILE *fp = NULL;
-    BTRMGRLOG_DEBUG ("Writing data to file %s\n" ,fileName);
-    fp = fopen(fileName, "w");
-    if (fp == NULL)
-    {
-        BTRMGRLOG_ERROR ("Could not open file to write, -  %s\n" ,fileName);
-    }
-    else
-    {
-        char* fileContent = cJSON_Print(profileData);
-        BTRMGRLOG_DEBUG ("Writing data to file - %s, Content - %s\n" ,fileName,fileContent);
-        fprintf(fp, "%s", fileContent);
-        fclose(fp);
-        BTRMGRLOG_DEBUG ("File write Success\n");
-    }
 
-}
+/*  Incoming Callbacks */
+
+
+ /* End of File */

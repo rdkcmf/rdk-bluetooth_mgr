@@ -375,7 +375,7 @@ main (
 
     stAppData.hBTRCore = lhBTRCore;
     //register callback for unsolicted events, such as powering off a bluetooth device
-    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
+    BTRCore_RegisterStatusCb(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
 
     stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
 
@@ -543,7 +543,7 @@ main (
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                if (BTRCore_FindService(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
+                if (BTRCore_FindService(lhBTRCore, devnum, BTR_CORE_A2SNK, NULL, &bfound) == enBTRCoreSuccess) {
                     if (bfound) {
                         printf("Service UUID BTRCore_A2SNK is found\n");
                     }
@@ -748,11 +748,11 @@ main (
             break;
         case 33:
             printf("register connection-in Intimation CB\n");
-            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_intimation, NULL);
+            BTRCore_RegisterConnectionIntimationCb(lhBTRCore, cb_connection_intimation, NULL);
             break;
         case 34:
             printf("register authentication CB\n");
-            BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            BTRCore_RegisterConnectionAuthenticationCb(lhBTRCore, cb_connection_authentication, NULL);
             break;
         case 35:
             printf("accept the connection\n");

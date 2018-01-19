@@ -77,84 +77,17 @@ typedef struct _stBTRMgrSIGst {
 } stBTRMgrSIGst;
 
 
-/* Local function declarations */
-static gpointer btrMgr_SI_g_main_loop_run_context (gpointer user_data);
+/* Static Function Prototypes */
 static GstState btrMgr_SI_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
 
- /* Incoming Callbacks */
-static gboolean btrMgr_SI_gstBusCall (GstBus* bus, GstMessage* msg, gpointer data);
+/* Local Op Threads Prototypes */
+static gpointer btrMgr_SI_g_main_loop_RunTask (gpointer user_data);
+
+ /* Incoming Callbacks Prototypes */
+static gboolean btrMgr_SI_gstBusCallCb (GstBus* bus, GstMessage* msg, gpointer data);
 
 
-
-/* Local function definitions */
-static gpointer
-btrMgr_SI_g_main_loop_run_context (
-    gpointer user_data
-) {
-    GMainLoop*  loop = (GMainLoop*)user_data;
-
-    if (loop) {
-        BTRMGRLOG_INFO ("GMainLoop Running\n");
-        g_main_loop_run (loop);
-    }
-
-    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
-    return NULL;
-}
-
-
-static gboolean
-btrMgr_SI_gstBusCall (
-    GstBus*     bus,
-    GstMessage* msg,
-    gpointer    data
-) {
-    GMainLoop*  loop = (GMainLoop*)data;
-
-    switch (GST_MESSAGE_TYPE (msg)) {
-        case GST_MESSAGE_EOS: {
-            BTRMGRLOG_INFO ("End-of-stream\n");
-            if (loop) {
-                g_main_loop_quit(loop);
-            }
-            break;
-        }   
-        case GST_MESSAGE_ERROR: {
-            gchar*  debug;
-            GError* err;
-
-            gst_message_parse_error (msg, &err, &debug);
-            BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
-            g_free (debug);
-
-            BTRMGRLOG_ERROR ("Error: %s\n", err->message);
-            g_error_free (err);
-
-            if (loop) {
-                g_main_loop_quit(loop);
-            }
-            break;
-        }   
-        case GST_MESSAGE_WARNING:{
-            gchar*    debug;
-            GError*   warn;
-
-            gst_message_parse_warning (msg, &warn, &debug);
-            BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
-            g_free (debug);
-
-            BTRMGRLOG_WARN ("Warning: %s\n", warn->message);
-            g_error_free (warn);
-            break;
-        }
-        default:
-            break;
-    }
-
-    return TRUE;
-}
-
-
+/* Static Function Definition */
 static GstState 
 btrMgr_SI_validateStateWithTimeout (
     GstElement* element,
@@ -181,6 +114,24 @@ btrMgr_SI_validateStateWithTimeout (
     else
         return gst_current;
 }
+
+
+/* Local Op Threads */
+static gpointer
+btrMgr_SI_g_main_loop_RunTask (
+    gpointer user_data
+) {
+    GMainLoop*  loop = (GMainLoop*)user_data;
+
+    if (loop) {
+        BTRMGRLOG_INFO ("GMainLoop Running\n");
+        g_main_loop_run (loop);
+    }
+
+    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
+    return NULL;
+}
+
 
 
 /* Interfaces */
@@ -245,14 +196,14 @@ BTRMgr_SI_GstInit (
 
 
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    busWatchId = gst_bus_add_watch (bus, btrMgr_SI_gstBusCall, loop);
+    busWatchId = gst_bus_add_watch (bus, btrMgr_SI_gstBusCallCb, loop);
     g_object_unref (bus);
 
     /* setup */
     gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
     gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
 
-    mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_run_context", btrMgr_SI_g_main_loop_run_context, loop);
+    mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_RunTask", btrMgr_SI_g_main_loop_RunTask, loop);
 
         
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
@@ -598,5 +549,66 @@ BTRMgr_SI_GstSendEOS (
     gst_element_send_event (pipeline, gst_event_new_eos ());
 
     return eBTRMgrSIGstSuccess;
+}
+
+// Outgoing callbacks Registration Interfaces
+
+
+/*  Incoming Callbacks */
+static gboolean
+btrMgr_SI_gstBusCallCb (
+    GstBus*     bus,
+    GstMessage* msg,
+    gpointer    data
+) {
+    GMainLoop*  loop = (GMainLoop*)data;
+
+    switch (GST_MESSAGE_TYPE (msg)) {
+
+    case GST_MESSAGE_EOS: {
+
+        BTRMGRLOG_INFO ("End-of-stream\n");
+        if (loop) {
+            g_main_loop_quit(loop);
+        }
+        break;
+    }   
+
+    case GST_MESSAGE_ERROR: {
+        gchar*  debug;
+        GError* err;
+
+        gst_message_parse_error (msg, &err, &debug);
+        BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
+        g_free (debug);
+
+        BTRMGRLOG_ERROR ("Error: %s\n", err->message);
+        g_error_free (err);
+
+        if (loop) {
+            g_main_loop_quit(loop);
+        }
+        break;
+    }   
+
+    case GST_MESSAGE_WARNING:{
+        gchar*    debug;
+        GError*   warn;
+
+        gst_message_parse_warning (msg, &warn, &debug);
+        BTRMGRLOG_DEBUG ("Debugging info: %s\n", (debug) ? debug : "none");
+        g_free (debug);
+
+        BTRMGRLOG_WARN ("Warning: %s\n", warn->message);
+        g_error_free (warn);
+        break;
+    }
+
+    default:
+        break;
+
+    }
+
+    return TRUE;
 }
 

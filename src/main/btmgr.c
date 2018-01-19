@@ -101,17 +101,18 @@ static eBTRMgrRet btrMgr_StartAudioStreamingOut (unsigned char aui8AdapterIdx, B
 static eBTRMgrRet btrMgr_AddPersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
 static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
 
+/*  Local Op Threads Prototypes */
 
 /* Incoming Callbacks Prototypes */
-static eBTRMgrRet btrMgr_ACDataReadyCallback (void* apvAcDataBuf, unsigned int aui32AcDataLen, void* apvUserData);
-static eBTRMgrRet btrMgr_SOStatusCallback (stBTRMgrMediaStatus* apstBtrMgrSoStatus, void* apvUserData);
-static eBTRMgrRet btrMgr_SIStatusCallback (stBTRMgrMediaStatus* apstBtrMgrSiStatus, void* apvUserData);
+static eBTRMgrRet btrMgr_ACDataReadyCb (void* apvAcDataBuf, unsigned int aui32AcDataLen, void* apvUserData);
+static eBTRMgrRet btrMgr_SOStatusCb (stBTRMgrMediaStatus* apstBtrMgrSoStatus, void* apvUserData);
+static eBTRMgrRet btrMgr_SIStatusCb (stBTRMgrMediaStatus* apstBtrMgrSiStatus, void* apvUserData);
 
-static enBTRCoreRet btrMgr_DeviceDiscoveryCallback (stBTRCoreBTDevice devicefound, void* apvUserData);
-static enBTRCoreRet btrMgr_ConnectionInIntimationCallback (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
-static enBTRCoreRet btrMgr_ConnectionInAuthenticationCallback (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
-static enBTRCoreRet btrMgr_DeviceStatusCallback (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
-static enBTRCoreRet btrMgr_MediaStatusCallback (stBTRCoreMediaStatusCBInfo* mediaStatusCB, void* apvUserData);
+static enBTRCoreRet btrMgr_DeviceStatusCb (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
+static enBTRCoreRet btrMgr_DeviceDiscoveryCb (stBTRCoreBTDevice devicefound, void* apvUserData);
+static enBTRCoreRet btrMgr_ConnectionInIntimationCb (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
+static enBTRCoreRet btrMgr_ConnectionInAuthenticationCb (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
+static enBTRCoreRet btrMgr_MediaStatusCb (stBTRCoreMediaStatusCBInfo* mediaStatusCB, void* apvUserData);
 
 
 /* Static Function Definitions */
@@ -351,7 +352,7 @@ btrMgr_StartCastingAudio (
     memset(&lstBtrMgrSoOutASettings, 0, sizeof(lstBtrMgrSoOutASettings));
 
     /* Init StreamOut module - Create Pipeline */
-    if ((lenBtrMgrRet = BTRMgr_SO_Init(&gstBTRMgrStreamingInfo.hBTRMgrSoHdl, btrMgr_SOStatusCallback, &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
+    if ((lenBtrMgrRet = BTRMgr_SO_Init(&gstBTRMgrStreamingInfo.hBTRMgrSoHdl, btrMgr_SOStatusCb, &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("BTRMgr_SO_Init FAILED\n");
         return eBTRMgrInitFailure;
     }
@@ -480,7 +481,7 @@ btrMgr_StartCastingAudio (
 
         if ((lenBtrMgrRet = BTRMgr_AC_Start(gstBTRMgrStreamingInfo.hBTRMgrAcHdl,
                                             &lstBtrMgrAcOutASettings,
-                                            btrMgr_ACDataReadyCallback,
+                                            btrMgr_ACDataReadyCb,
                                             &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
             BTRMGRLOG_ERROR ("BTRMgr_AC_Start FAILED\n");
         }
@@ -550,7 +551,7 @@ btrMgr_StartReceivingAudio (
 
 
     /* Init StreamIn module - Create Pipeline */
-    if ((lenBtrMgrRet = BTRMgr_SI_Init(&gstBTRMgrStreamingInfo.hBTRMgrSiHdl, btrMgr_SIStatusCallback, &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
+    if ((lenBtrMgrRet = BTRMgr_SI_Init(&gstBTRMgrStreamingInfo.hBTRMgrSiHdl, btrMgr_SIStatusCb, &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("BTRMgr_SI_Init FAILED\n");
         return eBTRMgrInitFailure;
     }
@@ -912,7 +913,10 @@ btrMgr_RemovePersistentEntry (
 }
 
 
-/* Public Functions */
+/*  Local Op Threads */
+
+
+/* Interfaces - Public Functions */
 BTRMGR_Result_t
 BTRMGR_Init (
     void
@@ -996,19 +1000,19 @@ BTRMGR_Init (
 
 
     /* Register for callback to get the status of connected Devices */
-    BTRCore_RegisterStatusCallback(ghBTRCoreHdl, btrMgr_DeviceStatusCallback, NULL);
-
-    /* Register for callback to process incoming media events */
-    BTRCore_RegisterMediaStatusCallback(ghBTRCoreHdl, btrMgr_MediaStatusCallback, NULL);
+    BTRCore_RegisterStatusCb(ghBTRCoreHdl, btrMgr_DeviceStatusCb, NULL);
 
     /* Register for callback to get the Discovered Devices */
-    BTRCore_RegisterDiscoveryCallback(ghBTRCoreHdl, btrMgr_DeviceDiscoveryCallback, NULL);
+    BTRCore_RegisterDiscoveryCb(ghBTRCoreHdl, btrMgr_DeviceDiscoveryCb, NULL);
 
     /* Register for callback to process incoming pairing requests */
-    BTRCore_RegisterConnectionIntimationCallback(ghBTRCoreHdl, btrMgr_ConnectionInIntimationCallback, NULL);
+    BTRCore_RegisterConnectionIntimationCb(ghBTRCoreHdl, btrMgr_ConnectionInIntimationCb, NULL);
 
     /* Register for callback to process incoming connection requests */
-    BTRCore_RegisterConnectionAuthenticationCallback(ghBTRCoreHdl, btrMgr_ConnectionInAuthenticationCallback, NULL);
+    BTRCore_RegisterConnectionAuthenticationCb(ghBTRCoreHdl, btrMgr_ConnectionInAuthenticationCb, NULL);
+
+    /* Register for callback to process incoming media events */
+    BTRCore_RegisterMediaStatusCb(ghBTRCoreHdl, btrMgr_MediaStatusCb, NULL);
 
 
     /* Activate Agent on Init */
@@ -1091,6 +1095,7 @@ BTRMGR_DeInit (
 
     BTRMgr_PI_DeInit(&ghBTRMgrPiHdl);
     BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app\n");
+
     BTRCore_DeInit(ghBTRCoreHdl);
     BTRMGRLOG_ERROR ("BTRCore DeInited; Now will we exit the app\n");
 
@@ -2739,6 +2744,7 @@ BTRMGR_GetDeviceTypeAsString (
 }
 
 
+// Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t
 BTRMGR_RegisterEventCallback (
     BTRMGR_EventCallback    afpcBBTRMgrEventOut
@@ -2759,7 +2765,7 @@ BTRMGR_RegisterEventCallback (
 
 /*  Incoming Callbacks */
 static eBTRMgrRet
-btrMgr_ACDataReadyCallback (
+btrMgr_ACDataReadyCb (
     void*           apvAcDataBuf,
     unsigned int    aui32AcDataLen,
     void*           apvUserData
@@ -2780,7 +2786,7 @@ btrMgr_ACDataReadyCallback (
 
 
 static eBTRMgrRet
-btrMgr_SOStatusCallback (
+btrMgr_SOStatusCb (
     stBTRMgrMediaStatus*    apstBtrMgrSoStatus,
     void*                   apvUserData
 ) {
@@ -2814,7 +2820,7 @@ btrMgr_SOStatusCallback (
 
 
 static eBTRMgrRet
-btrMgr_SIStatusCallback (
+btrMgr_SIStatusCb (
     stBTRMgrMediaStatus*    apstBtrMgrSiStatus,
     void*                   apvUserData
 ) {
@@ -2848,167 +2854,7 @@ btrMgr_SIStatusCallback (
 
 
 static enBTRCoreRet
-btrMgr_DeviceDiscoveryCallback (
-    stBTRCoreBTDevice   devicefound,
-    void*               apvUserData
-) {
-    enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
-
-    if (btrMgr_GetDiscoveryInProgress() && (gfpcBBTRMgrEventOut)) {
-        BTRMGR_EventMessage_t lstEventMessage;
-        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-        btrMgr_MapDevstatusInfoToEventInfo ((void*)&devicefound, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
-        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
-    }
-
-    return lenBtrCoreRet;
-}
-
-
-static enBTRCoreRet
-btrMgr_ConnectionInIntimationCallback (
-    stBTRCoreConnCBInfo*    apstConnCbInfo,
-    int*                    api32ConnInIntimResp,
-    void*                   apvUserData
-) {
-    enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
-
-     if (!apstConnCbInfo) {
-        BTRMGRLOG_ERROR ("Invaliid argument\n");
-        return enBTRCoreInvalidArg;
-    }
-
-
-    if (apstConnCbInfo->ui32devPassKey) {
-        BTRMGRLOG_ERROR ("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
-    }
-
-    if (gfpcBBTRMgrEventOut) {
-        BTRMGR_EventMessage_t lstEventMessage;
-        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);  
-        gfpcBBTRMgrEventOut(lstEventMessage); /* Post a callback */
-    }
-    
-
-    /* Max 15 sec timeout - Polled at 500ms second interval */
-    {
-        unsigned int ui32sleepIdx = 30;
-
-        do {
-            usleep(500000);
-        } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
-
-        gEventRespReceived = 0;
-    }
-
-    BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
-    if (gAcceptConnection == 1) {
-        BTRMGRLOG_ERROR ("Pin-Passkey accepted\n");
-        gAcceptConnection = 0;  //reset variabhle for the next connection
-        *api32ConnInIntimResp = 1;
-    }
-    else {
-        BTRMGRLOG_ERROR ("Pin-Passkey Rejected\n");
-        gAcceptConnection = 0;  //reset variabhle for the next connection
-        *api32ConnInIntimResp = 0;
-    }
-
-    return lenBtrCoreRet;
-}
-
-
-static enBTRCoreRet
-btrMgr_ConnectionInAuthenticationCallback (
-    stBTRCoreConnCBInfo*    apstConnCbInfo,
-    int*                    api32ConnInAuthResp,
-    void*                   apvUserData
-) {
-    enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
-
-    if (!apstConnCbInfo) {
-        BTRMGRLOG_ERROR ("Invaliid argument\n");
-        return enBTRCoreInvalidArg;
-    }
-    
-
-    if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
-        apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
-        if (gfpcBBTRMgrEventOut) {
-            BTRMGR_EventMessage_t lstEventMessage;
-            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
-            gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
-        }
-
-        
-        {   /* Max 15 sec timeout - Polled at 500ms second interval */
-            unsigned int ui32sleepIdx = 30;
-
-            do {
-                usleep(500000);
-            } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
-
-            gEventRespReceived = 0;
-        }
-
-        BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
-        if (gAcceptConnection == 1) {
-            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
-            gAcceptConnection = 0;    //reset variabhle for the next connection
-            *api32ConnInAuthResp = 1;
-        }   
-        else {
-            BTRMGRLOG_ERROR ("Incoming Connection denied\n");
-            gAcceptConnection = 0;    //reset variabhle for the next connection
-            *api32ConnInAuthResp = 0;
-        } 
-    }
-    else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset) ||
-             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Loudspeaker) ||
-             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Headphones)) {
-
-        BTRMGRLOG_WARN ("Incoming Connection from BT Speaker/Headset\n");
-        if (btrMgr_GetDevPaired(apstConnCbInfo->stKnownDevice.tDeviceId) && (apstConnCbInfo->stKnownDevice.tDeviceId == ghBTRMgrDevHdlLastConnected)) {
-            BTRMGRLOG_DEBUG ("Paired - Last Connected device...\n");
-
-            //TODO: Check if XRE wants to bring up a Pop-up or Respond
-            if (gfpcBBTRMgrEventOut) {
-                BTRMGR_EventMessage_t lstEventMessage;
-                memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-                btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
-                gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
-            }
-
-            {   /* Max 200msec timeout - Polled at 50ms second interval */
-                unsigned int ui32sleepIdx = 4;
-
-                do {
-                    usleep(50000);
-                } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
-
-                gEventRespReceived = 0;
-            }
-
-            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
-            *api32ConnInAuthResp = 1;
-        }
-        else {
-            BTRMGRLOG_ERROR ("Incoming Connection denied\n");
-            *api32ConnInAuthResp = 0;
-        }
-    }
-
-    return lenBtrCoreRet;
-}
-
-
-static enBTRCoreRet
-btrMgr_DeviceStatusCallback (
+btrMgr_DeviceStatusCb (
     stBTRCoreDevStatusCBInfo*   p_StatusCB,
     void*                       apvUserData
 ) {
@@ -3105,7 +2951,167 @@ btrMgr_DeviceStatusCallback (
 
 
 static enBTRCoreRet
-btrMgr_MediaStatusCallback (
+btrMgr_DeviceDiscoveryCb (
+    stBTRCoreBTDevice   devicefound,
+    void*               apvUserData
+) {
+    enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
+
+    if (btrMgr_GetDiscoveryInProgress() && (gfpcBBTRMgrEventOut)) {
+        BTRMGR_EventMessage_t lstEventMessage;
+        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+        btrMgr_MapDevstatusInfoToEventInfo ((void*)&devicefound, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
+        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+    }
+
+    return lenBtrCoreRet;
+}
+
+
+static enBTRCoreRet
+btrMgr_ConnectionInIntimationCb (
+    stBTRCoreConnCBInfo*    apstConnCbInfo,
+    int*                    api32ConnInIntimResp,
+    void*                   apvUserData
+) {
+    enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+
+     if (!apstConnCbInfo) {
+        BTRMGRLOG_ERROR ("Invaliid argument\n");
+        return enBTRCoreInvalidArg;
+    }
+
+
+    if (apstConnCbInfo->ui32devPassKey) {
+        BTRMGRLOG_ERROR ("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
+    }
+
+    if (gfpcBBTRMgrEventOut) {
+        BTRMGR_EventMessage_t lstEventMessage;
+        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);  
+        gfpcBBTRMgrEventOut(lstEventMessage); /* Post a callback */
+    }
+    
+
+    /* Max 15 sec timeout - Polled at 500ms second interval */
+    {
+        unsigned int ui32sleepIdx = 30;
+
+        do {
+            usleep(500000);
+        } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+        gEventRespReceived = 0;
+    }
+
+    BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
+    if (gAcceptConnection == 1) {
+        BTRMGRLOG_ERROR ("Pin-Passkey accepted\n");
+        gAcceptConnection = 0;  //reset variabhle for the next connection
+        *api32ConnInIntimResp = 1;
+    }
+    else {
+        BTRMGRLOG_ERROR ("Pin-Passkey Rejected\n");
+        gAcceptConnection = 0;  //reset variabhle for the next connection
+        *api32ConnInIntimResp = 0;
+    }
+
+    return lenBtrCoreRet;
+}
+
+
+static enBTRCoreRet
+btrMgr_ConnectionInAuthenticationCb (
+    stBTRCoreConnCBInfo*    apstConnCbInfo,
+    int*                    api32ConnInAuthResp,
+    void*                   apvUserData
+) {
+    enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+
+    if (!apstConnCbInfo) {
+        BTRMGRLOG_ERROR ("Invaliid argument\n");
+        return enBTRCoreInvalidArg;
+    }
+    
+
+    if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
+        apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
+        if (gfpcBBTRMgrEventOut) {
+            BTRMGR_EventMessage_t lstEventMessage;
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
+            gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
+        }
+
+        
+        {   /* Max 15 sec timeout - Polled at 500ms second interval */
+            unsigned int ui32sleepIdx = 30;
+
+            do {
+                usleep(500000);
+            } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+            gEventRespReceived = 0;
+        }
+
+        BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
+        if (gAcceptConnection == 1) {
+            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
+            gAcceptConnection = 0;    //reset variabhle for the next connection
+            *api32ConnInAuthResp = 1;
+        }   
+        else {
+            BTRMGRLOG_ERROR ("Incoming Connection denied\n");
+            gAcceptConnection = 0;    //reset variabhle for the next connection
+            *api32ConnInAuthResp = 0;
+        } 
+    }
+    else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset) ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Loudspeaker) ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Headphones)) {
+
+        BTRMGRLOG_WARN ("Incoming Connection from BT Speaker/Headset\n");
+        if (btrMgr_GetDevPaired(apstConnCbInfo->stKnownDevice.tDeviceId) && (apstConnCbInfo->stKnownDevice.tDeviceId == ghBTRMgrDevHdlLastConnected)) {
+            BTRMGRLOG_DEBUG ("Paired - Last Connected device...\n");
+
+            //TODO: Check if XRE wants to bring up a Pop-up or Respond
+            if (gfpcBBTRMgrEventOut) {
+                BTRMGR_EventMessage_t lstEventMessage;
+                memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
+                gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
+            }
+
+            {   /* Max 200msec timeout - Polled at 50ms second interval */
+                unsigned int ui32sleepIdx = 4;
+
+                do {
+                    usleep(50000);
+                } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+                gEventRespReceived = 0;
+            }
+
+            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
+            *api32ConnInAuthResp = 1;
+        }
+        else {
+            BTRMGRLOG_ERROR ("Incoming Connection denied\n");
+            *api32ConnInAuthResp = 0;
+        }
+    }
+
+    return lenBtrCoreRet;
+}
+
+
+static enBTRCoreRet
+btrMgr_MediaStatusCb (
     stBTRCoreMediaStatusCBInfo*  mediaStatusCB,
     void*                        apvUserData
 ) {
@@ -3163,6 +3169,5 @@ btrMgr_MediaStatusCallback (
 
     return lenBtrCoreRet;
 }
-
 
 /* End of File */

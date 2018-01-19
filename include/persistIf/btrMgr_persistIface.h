@@ -25,7 +25,6 @@
 #ifndef __BTR_MGR_PERSIST_IFCE_H__
 #define __BTR_MGR_PERSIST_IFCE_H__
 
-#include "btrMgr_Types.h"
 
 #define BTRMGR_NAME_LEN_MAX            64
 #define BTRMGR_MAX_PERSISTENT_PROFILE_COUNT 5

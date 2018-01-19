@@ -31,7 +31,8 @@
 
 typedef void* tBTRMgrAcHdl;
 
-typedef eBTRMgrRet (*BTRMgr_AC_DataReadyCb) (void* apvAcDataBuf, unsigned int aui32AcDataLen, void *apvUserData);
+/* Fptr Callbacks types */
+typedef eBTRMgrRet (*fPtr_BTRMgr_AC_DataReadyCb) (void* apvAcDataBuf, unsigned int aui32AcDataLen, void *apvUserData);
 
 /* Interfaces */
 eBTRMgrRet BTRMgr_AC_Init (tBTRMgrAcHdl* phBTRMgrAcHdl);
@@ -39,7 +40,7 @@ eBTRMgrRet BTRMgr_AC_DeInit (tBTRMgrAcHdl hBTRMgrAcHdl);
 eBTRMgrRet BTRMgr_AC_GetDefaultSettings (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrOutASettings* apstBtrMgrAcOutASettings);
 eBTRMgrRet BTRMgr_AC_GetCurrentSettings (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrOutASettings* apstBtrMgrAcOutASettings);
 eBTRMgrRet BTRMgr_AC_GetStatus (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrMediaStatus* apstBtrMgrAcStatus);
-eBTRMgrRet BTRMgr_AC_Start (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrOutASettings* apstBtrMgrAcOutASettings, BTRMgr_AC_DataReadyCb afptrBtrMgrAcDataReadycB, void* apvUserData);
+eBTRMgrRet BTRMgr_AC_Start (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrOutASettings* apstBtrMgrAcOutASettings, fPtr_BTRMgr_AC_DataReadyCb afpcBBtrMgrAcDataReady, void* apvUserData);
 eBTRMgrRet BTRMgr_AC_Stop (tBTRMgrAcHdl hBTRMgrAcHdl);
 eBTRMgrRet BTRMgr_AC_Pause (tBTRMgrAcHdl hBTRMgrAcHdl);
 eBTRMgrRet BTRMgr_AC_Resume (tBTRMgrAcHdl hBTRMgrAcHdl);
