@@ -23,7 +23,8 @@
 #define __BT_MGR_IARM_INTERFACE_H__
 
 
-#define IARM_BUS_BTRMGR_NAME        "BTRMgrBus"
+#define IARM_BUS_BTRMGR_NAME                                "BTRMgrBus"
+#define BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS          15000
 
 
 #define BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS           "GetNumberOfAdapters"

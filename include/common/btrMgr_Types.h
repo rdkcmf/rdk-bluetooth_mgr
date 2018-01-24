@@ -17,7 +17,7 @@
  * limitations under the License.
 */
 /**
- * @file btrMgr_Tyoes.h
+ * @file btrMgr_Types.h
  *
  * @description This file defines bluetooth manager's Types for internal use
  *

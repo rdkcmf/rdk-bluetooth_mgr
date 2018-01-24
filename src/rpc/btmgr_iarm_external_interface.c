@@ -111,7 +111,7 @@ BTRMGR_DeInit (
 
     if (isBTRMGR_Inited) {
         /* This is leading to Crash the BTRMgrBus which is listening; So lets not call this. */
-        //retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DEINIT, 0, 0);
+        //retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DEINIT, 0, 0, BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
         if (IARM_RESULT_SUCCESS == retCode) {
             BTRMGRLOG_INFO ("Success\n");
         }
@@ -142,7 +142,7 @@ BTRMGR_GetNumberOfAdapters (
     }
 
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS, (void *)&num_of_adapters, sizeof(num_of_adapters));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS, (void *)&num_of_adapters, sizeof(num_of_adapters), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         *pNumOfAdapters = num_of_adapters;
         BTRMGRLOG_INFO ("Success; Number of Adapters = %d\n", num_of_adapters);
@@ -170,7 +170,7 @@ BTRMGR_ResetAdapter (
     }
 
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_RESET_ADAPTER, (void *)&index_of_adapter, sizeof(index_of_adapter));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_RESET_ADAPTER, (void *)&index_of_adapter, sizeof(index_of_adapter), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -202,7 +202,7 @@ BTRMGR_SetAdapterName (
     adapterSetting.m_adapterIndex = index_of_adapter;
     strncpy (adapterSetting.m_name, pNameOfAdapter, (BTRMGR_NAME_LEN_MAX - 1));
     
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_ADAPTER_NAME, (void *)&adapterSetting, sizeof(adapterSetting));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_ADAPTER_NAME, (void *)&adapterSetting, sizeof(adapterSetting), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -233,7 +233,7 @@ BTRMGR_GetAdapterName (
     adapterSetting.m_adapterIndex = index_of_adapter;
     memset (adapterSetting.m_name, '\0', sizeof (adapterSetting.m_name));
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_ADAPTER_NAME, (void *)&adapterSetting, sizeof(adapterSetting));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_ADAPTER_NAME, (void *)&adapterSetting, sizeof(adapterSetting), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         strncpy (pNameOfAdapter, adapterSetting.m_name, (BTRMGR_NAME_LEN_MAX - 1));
         BTRMGRLOG_INFO ("Success\n");
@@ -265,7 +265,7 @@ BTRMGR_SetAdapterPowerStatus (
     powerStatus.m_adapterIndex = index_of_adapter;
     powerStatus.m_powerStatus = power_status;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_ADAPTER_POWERSTATUS, (void *)&powerStatus, sizeof(powerStatus));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_ADAPTER_POWERSTATUS, (void *)&powerStatus, sizeof(powerStatus), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -295,7 +295,7 @@ BTRMGR_GetAdapterPowerStatus (
 
     powerStatus.m_adapterIndex = index_of_adapter;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_ADAPTER_POWERSTATUS, (void *)&powerStatus, sizeof(powerStatus));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_ADAPTER_POWERSTATUS, (void *)&powerStatus, sizeof(powerStatus), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         *pPowerStatus = powerStatus.m_powerStatus;
         BTRMGRLOG_INFO ("Success\n");
@@ -329,7 +329,7 @@ BTRMGR_SetAdapterDiscoverable (
     discoverableSetting.m_isDiscoverable = discoverable;
     discoverableSetting.m_timeout = timeout;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE, (void *)&discoverableSetting, sizeof(discoverableSetting));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE, (void *)&discoverableSetting, sizeof(discoverableSetting), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -359,7 +359,7 @@ BTRMGR_IsAdapterDiscoverable (
 
 
     discoverableSetting.m_adapterIndex = index_of_adapter;
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE, (void *)&discoverableSetting, sizeof(discoverableSetting));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE, (void *)&discoverableSetting, sizeof(discoverableSetting), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         *pDiscoverable = discoverableSetting.m_isDiscoverable;
         BTRMGRLOG_INFO ("Success\n");
@@ -391,7 +391,7 @@ BTRMGR_StartDeviceDiscovery (
     deviceDiscovery.m_adapterIndex = index_of_adapter;
     deviceDiscovery.m_setDiscovery = 1; /* TRUE */
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -421,7 +421,7 @@ BTRMGR_StopDeviceDiscovery (
     deviceDiscovery.m_adapterIndex = index_of_adapter;
     deviceDiscovery.m_setDiscovery = 0; /* FALSE */
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -452,7 +452,7 @@ BTRMGR_GetDiscoveredDevices (
     memset (&discoveredDevices, 0, sizeof(discoveredDevices));
     discoveredDevices.m_adapterIndex = index_of_adapter;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES, (void *)&discoveredDevices, sizeof(discoveredDevices));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES, (void *)&discoveredDevices, sizeof(discoveredDevices), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         memcpy (pDiscoveredDevices, &discoveredDevices.m_devices, sizeof(BTRMGR_DiscoveredDevicesList_t));
         BTRMGRLOG_INFO ("Success\n");
@@ -485,7 +485,7 @@ BTRMGR_PairDevice (
     newDevice.m_adapterIndex = index_of_adapter;
     newDevice.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_PAIR_DEVICE, (void *)&newDevice, sizeof(newDevice));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_PAIR_DEVICE, (void *)&newDevice, sizeof(newDevice), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -517,7 +517,7 @@ BTRMGR_UnpairDevice (
     removeDevice.m_adapterIndex = index_of_adapter;
     removeDevice.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_UNPAIR_DEVICE, (void *)&removeDevice, sizeof(removeDevice));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_UNPAIR_DEVICE, (void *)&removeDevice, sizeof(removeDevice), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -548,7 +548,7 @@ BTRMGR_GetPairedDevices (
     memset (&pairedDevices, 0, sizeof(pairedDevices));
     pairedDevices.m_adapterIndex = index_of_adapter;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_PAIRED_DEVICES, (void *)&pairedDevices, sizeof(pairedDevices));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_PAIRED_DEVICES, (void *)&pairedDevices, sizeof(pairedDevices), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         memcpy (pPairedDevices, &pairedDevices.m_devices, sizeof(BTRMGR_PairedDevicesList_t));
         BTRMGRLOG_INFO ("Success\n");
@@ -582,7 +582,7 @@ BTRMGR_ConnectToDevice (
     connectToDevice.m_connectAs = connectAs;
     connectToDevice.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CONNECT_TO_DEVICE, (void *)&connectToDevice, sizeof(connectToDevice));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CONNECT_TO_DEVICE, (void *)&connectToDevice, sizeof(connectToDevice), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -613,7 +613,7 @@ BTRMGR_DisconnectFromDevice (
     disConnectToDevice.m_adapterIndex = index_of_adapter;
     disConnectToDevice.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DISCONNECT_FROM_DEVICE, (void *)&disConnectToDevice, sizeof(disConnectToDevice));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DISCONNECT_FROM_DEVICE, (void *)&disConnectToDevice, sizeof(disConnectToDevice), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -645,7 +645,7 @@ BTRMGR_GetConnectedDevices (
     memset (&connectedDevices, 0, sizeof(connectedDevices));
     connectedDevices.m_adapterIndex = index_of_adapter;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_CONNECTED_DEVICES, (void *)&connectedDevices, sizeof(connectedDevices));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_CONNECTED_DEVICES, (void *)&connectedDevices, sizeof(connectedDevices), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         memcpy (pConnectedDevices, &connectedDevices.m_devices, sizeof(BTRMGR_ConnectedDevicesList_t));
         BTRMGRLOG_INFO ("Success\n");
@@ -678,7 +678,7 @@ BTRMGR_GetDeviceProperties (
     deviceProperty.m_adapterIndex = index_of_adapter;
     deviceProperty.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_DEVICE_PROPERTIES, (void *)&deviceProperty, sizeof(deviceProperty));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_DEVICE_PROPERTIES, (void *)&deviceProperty, sizeof(deviceProperty), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         memcpy (pDeviceProperty, &deviceProperty.m_deviceProperty, sizeof(BTRMGR_DevicesProperty_t));
         BTRMGRLOG_INFO ("Success\n");
@@ -713,7 +713,7 @@ BTRMGR_StartAudioStreamingOut (
     streaming.m_deviceHandle = handle;
     streaming.m_audioPref = streamOutPref;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_OUT, (void *)&streaming, sizeof(streaming));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_OUT, (void *)&streaming, sizeof(streaming), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -744,7 +744,7 @@ BTRMGR_StopAudioStreamingOut (
     streaming.m_adapterIndex = index_of_adapter;
     streaming.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_OUT, (void*) &streaming, sizeof(streaming));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_OUT, (void*) &streaming, sizeof(streaming), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -775,7 +775,7 @@ BTRMGR_IsAudioStreamingOut (
     status.m_adapterIndex = index_of_adapter;
     status.m_streamingStatus = 0;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_OUT, (void *)&status, sizeof(status));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_OUT, (void *)&status, sizeof(status), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         *pStreamingStatus = status.m_streamingStatus;
         BTRMGRLOG_INFO ("Success\n");
@@ -807,7 +807,7 @@ BTRMGR_SetAudioStreamingOutType (
     streamingType.m_adapterIndex = index_of_adapter;
     streamingType.m_audioOutType = type;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_AUDIO_STREAM_OUT_TYPE, (void *)&streamingType, sizeof(streamingType));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_AUDIO_STREAM_OUT_TYPE, (void *)&streamingType, sizeof(streamingType), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -841,7 +841,7 @@ BTRMGR_StartAudioStreamingIn (
     streaming.m_deviceHandle = handle;
     streaming.m_audioPref = streamOutPref;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN, (void *)&streaming, sizeof(streaming));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN, (void *)&streaming, sizeof(streaming), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -872,7 +872,7 @@ BTRMGR_StopAudioStreamingIn (
     streaming.m_adapterIndex = ui8AdapterIdx;
     streaming.m_deviceHandle = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN, (void*) &streaming, sizeof(streaming));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN, (void*) &streaming, sizeof(streaming), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -903,7 +903,7 @@ BTRMGR_IsAudioStreamingIn (
     status.m_adapterIndex = ui8AdapterIdx;
     status.m_streamingStatus = 0;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN, (void *)&status, sizeof(status));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN, (void *)&status, sizeof(status), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         *pStreamingStatus = status.m_streamingStatus;
         BTRMGRLOG_INFO ("Success\n");
@@ -934,7 +934,7 @@ BTRMGR_SetEventResponse (
     lstBtrMgrIArmEvtResp.m_adapterIndex = index_of_adapter;
     memcpy(&lstBtrMgrIArmEvtResp.m_stBTRMgrEvtRsp, apstBTRMgrEvtRsp, sizeof(BTRMGR_EventResponse_t));
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE, (void *)&lstBtrMgrIArmEvtResp, sizeof(lstBtrMgrIArmEvtResp));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE, (void *)&lstBtrMgrIArmEvtResp, sizeof(lstBtrMgrIArmEvtResp), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -967,7 +967,7 @@ BTRMGR_MediaControl (
     mediaProperty.m_deviceHandle    = handle;
     mediaProperty.m_mediaControlCmd = mediaCtrlCmd;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_MEDIA_CONTROL, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_MEDIA_CONTROL, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -999,7 +999,7 @@ BTRMGR_GetMediaTrackInfo (
     mediaProperty.m_adapterIndex    = index_of_adapter;
     mediaProperty.m_deviceHandle    = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
 
     if (IARM_RESULT_SUCCESS == retCode) {
         memcpy (mediaTrackInfo, &mediaProperty.m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
@@ -1033,7 +1033,7 @@ BTRMGR_GetMediaCurrentPosition (
     mediaProperty.m_adapterIndex         = index_of_adapter;
     mediaProperty.m_deviceHandle         = handle;
 
-    retCode = IARM_Bus_Call(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, (void*)&mediaProperty, sizeof(BTRMGR_IARMMediaProperty_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
 
     if (IARM_RESULT_SUCCESS == retCode) {
         memcpy (mediaPositionInfo, &mediaProperty.m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
