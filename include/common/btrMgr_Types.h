@@ -17,9 +17,9 @@
  * limitations under the License.
 */
 /**
- * @file btrMgr_mediaTyoes.h
+ * @file btrMgr_Tyoes.h
  *
- * @description This file defines bluetooth manager's mediatypes for internal use
+ * @description This file defines bluetooth manager's Types for internal use
  *
  */
 #ifndef __BTR_MGR_TYPES_H__

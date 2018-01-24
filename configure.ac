@@ -121,7 +121,7 @@ AC_SUBST([AUDIOCAPTURE_LIBS])
 
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_avMedia.h])
+AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_service.h])
 
 # Use Glib
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
