@@ -586,8 +586,8 @@ BTRMgr_SO_GstResume (
 eBTRMgrSOGstRet
 BTRMgr_SO_GstSendBuffer (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
-    char*   pcInBuf,
-    int     aiInBufSize
+    char*           pcInBuf,
+    int             aiInBufSize
 ) {
     stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
     int             i32InBufOffset = 0;
@@ -630,8 +630,8 @@ BTRMgr_SO_GstSendBuffer (
 
     /* push Buffers */
     while (aiInBufSize > pstBtrMgrSoGst->i32InBufMaxSize) {
-        GstBuffer *gstBuf;
-        GstMapInfo gstBufMap;
+        GstBuffer*  gstBuf;
+        GstMapInfo  gstBufMap;
 
         gstBuf = gst_buffer_new_and_alloc (pstBtrMgrSoGst->i32InBufMaxSize);
         gst_buffer_set_size (gstBuf, pstBtrMgrSoGst->i32InBufMaxSize);
@@ -662,8 +662,8 @@ BTRMgr_SO_GstSendBuffer (
 
 
     {
-        GstBuffer *gstBuf;
-        GstMapInfo gstBufMap;
+        GstBuffer*  gstBuf;
+        GstMapInfo  gstBufMap;
 
         gstBuf = gst_buffer_new_and_alloc (aiInBufSize);
         gst_buffer_set_size (gstBuf, aiInBufSize);

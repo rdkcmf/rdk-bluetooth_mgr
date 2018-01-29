@@ -215,7 +215,7 @@ BTRMgr_SI_GstInit (
 
     pstBtrMgrSiGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSiGst->pSrc            = (void*)fdsrc;
-    pstBtrMgrSiGst->pSrcCapsFilter   = (void*)rtpcapsfilter;
+    pstBtrMgrSiGst->pSrcCapsFilter  = (void*)rtpcapsfilter;
     pstBtrMgrSiGst->pRtpAudioDePay  = (void*)rtpauddepay;
     pstBtrMgrSiGst->pAudioParse     = (void*)audparse;
     pstBtrMgrSiGst->pAudioDec       = (void*)auddec;
@@ -474,8 +474,8 @@ BTRMgr_SI_GstResume (
 eBTRMgrSIGstRet
 BTRMgr_SI_GstSendBuffer (
     tBTRMgrSiGstHdl hBTRMgrSiGstHdl,
-    char*   pcInBuf,
-    int     aiInBufSize
+    char*           pcInBuf,
+    int             aiInBufSize
 ) {
     stBTRMgrSIGst* pstBtrMgrSiGst = (stBTRMgrSIGst*)hBTRMgrSiGstHdl;
 
