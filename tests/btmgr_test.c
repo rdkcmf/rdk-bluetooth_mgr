@@ -61,6 +61,8 @@ static void printOptions (void)
     printf ("30. Get Current Media Track Information\n");
     printf ("31. Get Media Current Play Position\n"); 
     printf ("32. Get StreamingIn Status\n"); 
+    printf ("33. Get LE UUIDs\n");
+    printf ("34. Perform LE Operation\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -453,10 +455,13 @@ int main()
             case 14:
                 {
                     handle = 0;
+                    int ch = 0;
                     printf ("Please Enter the device Handle number of the device that you want to Connect \t: ");
                     handle = getDeviceSelection();
+                    printf ("Enter Device ConnectAs  Type : (AUDIOSINK-0/HEADSET-1/AUDIOSRC-2/LE-3/OTHERS-4)");
+                    ch = getDeviceSelection();
 
-                    rc = BTRMGR_ConnectToDevice(0, handle, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+                    rc = BTRMGR_ConnectToDevice(0, handle, (1 << ch));
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -750,6 +755,47 @@ int main()
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....; Streaming status = %u\n", index);
+                }
+                break;
+            case 33:
+                {
+                    char serviceUuid[BTRMGR_MAX_STR_LEN] = "\0";
+                    char charUuid[BTRMGR_MAX_STR_LEN] = "\0";
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf ("Enter the service UUID : ");
+                    scanf ("%s", serviceUuid);
+                    
+                    rc = BTRMGR_GetLeCharacteristicUUID (0, handle, serviceUuid, charUuid);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess.... \n Char UUID : %s\n", charUuid);               
+                }
+                break;
+            case 34:
+                {
+                    char serviceUuid[BTRMGR_MAX_STR_LEN] = "\0";
+                    char res[BTRMGR_MAX_STR_LEN] = "\0";
+                    unsigned char opt = 0;
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf ("Enter the service UUID : ");
+                    scanf ("%s", serviceUuid);
+                    printf ("Enter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
+                    opt = getDeviceSelection();
+
+                    rc = BTRMGR_PerformLeOp (0, handle, serviceUuid, opt, res);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else {
+                        printf ("\nSuccess.... \n" );
+                        if (opt == 0) {
+                           printf ("Obtained Value : %s\n", res);
+                        }
+                    }
                 }
                 break;
             case 55:

@@ -54,6 +54,8 @@ static IARM_Result_t btrMgr_ResetAdapter (void* arg);
 static IARM_Result_t btrMgr_MediaControl (void* arg);
 static IARM_Result_t btrMgr_GetMediaTrackInfo (void* arg);
 static IARM_Result_t btrMgr_GetMediaCurrentPosition (void* arg);
+static IARM_Result_t btrMgr_GetLeCharacteristicUUID (void* arg);
+static IARM_Result_t btrMgr_PerformLeOp (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
 
 /* Callbacks Prototypes */
@@ -1040,6 +1042,79 @@ btrMgr_GetMediaTrackInfo (
 }
 
 
+
+static IARM_Result_t
+btrMgr_GetLeCharacteristicUUID (
+    void* arg
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMLeStatus_t *leStatus = (BTRMGR_IARMLeStatus_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!leStatus) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_GetLeCharacteristicUUID (leStatus->m_adapterIndex, leStatus->m_deviceHandle, leStatus->m_sUuid, leStatus->m_cUuid);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+
+
+static IARM_Result_t
+btrMgr_PerformLeOp (
+    void* arg
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMLeOp_t *leOp = (BTRMGR_IARMLeOp_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!leOp) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_PerformLeOp (leOp->m_adapterIndex, leOp->m_deviceHandle, leOp->m_uuid, leOp->m_leOpType, (void*)leOp->m_opRes);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+ 
+
+
 static IARM_Result_t
 btrMgr_ResetAdapter (
     void*   arg
@@ -1130,6 +1205,8 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_MEDIA_CONTROL, btrMgr_MediaControl);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, btrMgr_GetMediaTrackInfo);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, btrMgr_GetMediaCurrentPosition);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LE_CHARACTERISTIC_UUID, btrMgr_GetLeCharacteristicUUID);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_PERFORM_LE_OP, btrMgr_PerformLeOp);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
 
         IARM_Bus_RegisterEvent(BTRMGR_IARM_EVENT_MAX);

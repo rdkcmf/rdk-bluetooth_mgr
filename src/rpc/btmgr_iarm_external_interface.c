@@ -1048,6 +1048,83 @@ BTRMGR_GetMediaCurrentPosition (
 }
 
 
+BTRMGR_Result_t
+BTRMGR_GetLeCharacteristicUUID (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    const char*                  apBtrServiceUuid,
+    char*                        apBtrCharUuidList
+) {
+
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMLeStatus_t leStatus;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || NULL == apBtrServiceUuid) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    leStatus.m_adapterIndex = index_of_adapter;
+    leStatus.m_deviceHandle = handle;
+    strncpy(leStatus.m_sUuid, apBtrServiceUuid, BTRMGR_MAX_STR_LEN-1);
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_LE_CHARACTERISTIC_UUID, (void*)&leStatus, sizeof(BTRMGR_IARMLeStatus_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        memcpy (apBtrCharUuidList, leStatus.m_cUuid, BTRMGR_MAX_STR_LEN-1);
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_PerformLeOp (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           handle,
+    const char*                  aBtrLeUuid,
+    BTRMGR_LeOp_t                aLeOpType,
+    void*                        rOpResult
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMLeOp_t leOp;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || NULL == aBtrLeUuid) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    leOp.m_adapterIndex = index_of_adapter;
+    leOp.m_deviceHandle = handle;
+    strncpy(leOp.m_uuid, aBtrLeUuid, BTRMGR_MAX_STR_LEN-1);
+    leOp.m_leOpType = aLeOpType;
+    memset (leOp.m_opRes, 0, BTRMGR_MAX_STR_LEN);
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_PERFORM_LE_OP, (void*)&leOp, sizeof(BTRMGR_IARMLeOp_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+    
+    if (IARM_RESULT_SUCCESS == retCode) {
+        memcpy (rOpResult, leOp.m_opRes, BTRMGR_MAX_STR_LEN-1);
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+
 const char*
 BTRMGR_GetDeviceTypeAsString (
     BTRMGR_DeviceType_t  type

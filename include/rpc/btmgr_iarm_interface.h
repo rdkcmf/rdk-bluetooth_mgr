@@ -54,6 +54,8 @@
 #define BTRMGR_IARM_METHOD_MEDIA_CONTROL                    "MediaControl"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO             "GetMediaTrackInfo"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION       "GetMediaCurrentPosition"
+#define BTRMGR_IARM_METHOD_GET_LE_CHARACTERISTIC_UUID       "GetLeCharacteristicUUID"
+#define BTRMGR_IARM_METHOD_PERFORM_LE_OP                    "PerformLeOp"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
 
@@ -169,4 +171,18 @@ typedef struct _BTRMGR_IARMMediaProperty_t {
     };
 } BTRMGR_IARMMediaProperty_t;
 
+typedef struct _BTRMGR_IARMLeStatus_t {
+    unsigned char           m_adapterIndex;
+    BTRMgrDeviceHandle      m_deviceHandle;
+    char                    m_sUuid[BTRMGR_MAX_STR_LEN];
+    char                    m_cUuid[BTRMGR_MAX_STR_LEN];
+} BTRMGR_IARMLeStatus_t;
+
+typedef struct _BTRMGR_IARMLeOp_t {
+    unsigned char           m_adapterIndex;
+    BTRMgrDeviceHandle      m_deviceHandle;
+    char                    m_uuid[BTRMGR_MAX_STR_LEN];
+    BTRMGR_LeOp_t           m_leOpType;
+    char                    m_opRes[BTRMGR_MAX_STR_LEN];
+} BTRMGR_IARMLeOp_t;    
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

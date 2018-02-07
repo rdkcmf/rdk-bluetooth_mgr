@@ -98,7 +98,8 @@ typedef enum _BTRMGR_DeviceConnect_Type_t {
     BTRMGR_DEVICE_TYPE_AUDIOSINK     = 1 << 0,
     BTRMGR_DEVICE_TYPE_HEADSET       = 1 << 1,
     BTRMGR_DEVICE_TYPE_AUDIOSRC      = 1 << 2,
-    BTRMGR_DEVICE_TYPE_OTHER         = 1 << 3,
+    BTRMGR_DEVICE_TYPE_LE            = 1 << 3,
+    BTRMGR_DEVICE_TYPE_OTHER         = 1 << 4
 } BTRMGR_DeviceConnect_Type_t;
 
 typedef enum _BTRMGR_DevicePower_t {
@@ -126,6 +127,14 @@ typedef enum _BTRMGR_MediaControlCommand_t {
     BTRMGR_MEDIA_CTRL_VOLUMEUP,
     BTRMGR_MEDIA_CTRL_VOLUMEDOWN
 } BTRMGR_MediaControlCommand_t;
+
+typedef enum _BTRMGR_LeOp_t {
+    BTRMGR_LE_OP_READ_VALUE,
+    BTRMGR_LE_OP_WRITE_VALUE,
+    BTRMGR_LE_OP_START_NOTIFY,
+    BTRMGR_LE_OP_STOP_NOTIFY
+} BTRMGR_LeOp_t;
+
 
 typedef struct _BTRMGR_MediaTrackInfo_t {
     char            pcAlbum[BTRMGR_MAX_STR_LEN];
@@ -311,6 +320,9 @@ BTRMGR_Result_t BTRMGR_GetMediaTrackInfo(unsigned char aui8AdapterIdx, BTRMgrDev
 BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
+
+BTRMGR_Result_t BTRMGR_GetLeCharacteristicUUID (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apBtrServiceUuid, char* apBtrCharUuidList);
+BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, void* rOpResult);
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);

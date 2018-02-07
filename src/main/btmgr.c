@@ -602,6 +602,7 @@ btrMgr_ConnectToDevice (
     eBTRMgrRet      lenBtrMgrRet    = eBTRMgrSuccess;
     enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
     unsigned int    ui32retryIdx    = aui32ConnectRetryIdx + 1;
+    enBTRCoreDeviceType lenBTRCoreDeviceType = enBTRCoreUnknown;
 
 
     if (btrMgr_GetDiscoveryInProgress()) {
@@ -609,10 +610,32 @@ btrMgr_ConnectToDevice (
         BTRMGR_StopDeviceDiscovery(aui8AdapterIdx);
     }
 
+    switch (connectAs) {
+    case BTRMGR_DEVICE_TYPE_AUDIOSINK:
+        lenBTRCoreDeviceType = enBTRCoreSpeakers;
+        break;
+    case BTRMGR_DEVICE_TYPE_HEADSET:
+        lenBTRCoreDeviceType = enBTRCoreSpeakers;
+        break;
+    case BTRMGR_DEVICE_TYPE_AUDIOSRC:
+        lenBTRCoreDeviceType = enBTRCoreMobileAudioIn;
+        break;
+    case BTRMGR_DEVICE_TYPE_LE:
+        lenBTRCoreDeviceType = enBTRCoreLE;
+        break;
+    case BTRMGR_DEVICE_TYPE_OTHER:
+    default:
+        break;
+    } 
+
+    if (lenBTRCoreDeviceType == enBTRCoreUnknown) {
+       BTRMGRLOG_ERROR ("Unknown BTRMGR_DeviceConnect_Type_t : %d", lenBTRCoreDeviceType);
+       return eBTRMgrFailure;
+    }
 
     do {
         /* connectAs param is unused for now.. */
-        lenBtrCoreRet = BTRCore_ConnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, enBTRCoreSpeakers);
+        lenBtrCoreRet = BTRCore_ConnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDeviceType);
         if (lenBtrCoreRet != enBTRCoreSuccess) {
             BTRMGRLOG_ERROR ("Failed to Connect to this device\n");
             lenBtrMgrRet = eBTRMgrFailure;
@@ -622,8 +645,7 @@ btrMgr_ConnectToDevice (
             lenBtrMgrRet = eBTRMgrSuccess;
         }
 
-
-        if (lenBtrMgrRet != eBTRMgrFailure) {
+        if (lenBTRCoreDeviceType != enBTRCoreLE && lenBtrMgrRet != eBTRMgrFailure) {
             /* Max 20 sec timeout - Polled at 1 second interval: Confirmed 4 times */
             unsigned int ui32sleepTimeOut = 1;
             unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
@@ -633,7 +655,7 @@ btrMgr_ConnectToDevice (
 
                 do {
                     sleep(ui32sleepTimeOut); 
-                    lenBtrCoreRet = BTRCore_GetDeviceConnected(ghBTRCoreHdl, ahBTRMgrDevHdl, enBTRCoreSpeakers);
+                    lenBtrCoreRet = BTRCore_GetDeviceConnected(ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDeviceType);
                 } while ((lenBtrCoreRet != enBTRCoreSuccess) && (--ui32sleepIdx));
             } while (--ui32confirmIdx);
 
@@ -2121,6 +2143,11 @@ BTRMGR_GetDeviceProperties (
                         }
                     }
                     pDeviceProperty->m_signalLevel = listOfSDevices.devices[i].i32RSSI;
+
+                    if (listOfPDevices.devices[i].bDeviceConnected) {
+                       pDeviceProperty->m_isConnected = 1;
+                    }
+
                     isFound = 1;
                     break;
                 }
@@ -2699,6 +2726,94 @@ BTRMGR_GetMediaCurrentPosition (
 
     return lenBtrMgrResult;
 }
+
+
+BTRMGR_Result_t
+BTRMGR_GetLeCharacteristicUUID (
+    unsigned char                aui8AdapterIdx,
+    BTRMgrDeviceHandle           ahBTRMgrDevHdl,
+    const char*                  apBtrServiceUuid,
+    char*                        apBtrCharUuidList // should check on having enum which indicate the Charr UUID mode (read/write/notify/..
+                                                   // to obtain the specific UUID
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    //BTRMGR_DevicesProperty_t   lBtrLeDevProp;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+    // Check device
+    //BTRMGR_GetDeviceProperties(aui8AdapterIdx, ahBTRMgrDevHdl, lBtrLeDevProp)
+
+    if (enBTRCoreSuccess != BTRCore_GetLEProperty(ghBTRCoreHdl, ahBTRMgrDevHdl, apBtrServiceUuid, enBTRCoreLePropGCharList, (void*)apBtrCharUuidList)) {
+       BTRMGRLOG_ERROR ("Get LE Char UUID for device  %llu Failed!!!\n", ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    return lenBtrMgrResult;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_PerformLeOp (
+    unsigned char                aui8AdapterIdx,
+    BTRMgrDeviceHandle           ahBTRMgrDevHdl,
+    const char*                  aBtrLeUuid,
+    BTRMGR_LeOp_t                aLeOpType,
+    void*                        rOpResult
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    //BTRMGR_DevicesProperty_t   lBtrLeDevProp;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    // Check if device is connected
+    /*BTRMGR_GetDeviceProperties(aui8AdapterIdx, ahBTRMgrDevHdl, lBtrLeDevProp)
+
+    if (lBtrLeDevProp.m_isConnected) {
+       BTRMGRLOG_ERROR ("Device %lld not connected to perform LE Op!!!\n", ahBTRMgrDevHdl);
+       return BTRMGR_RESULT_GENERIC_FAILURE;
+    }*/
+
+    enBTRCoreLeOp aenBTRCoreLeOp =  enBTRCoreLeOpUnknown;
+
+    switch (aLeOpType) {
+    case BTRMGR_LE_OP_READ_VALUE:
+        aenBTRCoreLeOp = enBTRCoreLeOpGReadValue;
+        break;
+    case BTRMGR_LE_OP_WRITE_VALUE:
+        aenBTRCoreLeOp = enBTRCoreLeOpGWriteValue;
+        break;
+    case BTRMGR_LE_OP_START_NOTIFY:
+        aenBTRCoreLeOp = enBTRCoreLeOpGStartNotify;
+        break;
+    case BTRMGR_LE_OP_STOP_NOTIFY:
+        aenBTRCoreLeOp = enBTRCoreLeOpGStopNotify;
+        break;
+    }
+
+    if (enBTRCoreSuccess != BTRCore_PerformLEOp (ghBTRCoreHdl, ahBTRMgrDevHdl, aBtrLeUuid, aenBTRCoreLeOp, NULL, rOpResult)) {
+       BTRMGRLOG_ERROR ("Perform LE Op %d for device  %llu Failed!!!\n", aLeOpType, ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    return lenBtrMgrResult;
+}
+
 
 
 const char*
