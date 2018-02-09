@@ -815,39 +815,40 @@ btrMgr_StartAudioStreamingOut (
                 }
             }
 
-            if (!ui16DevMediaBitrate || (lenBtrCoreRet != enBTRCoreSuccess) || (lenBtrMgrRet != eBTRMgrSuccess)) {
-                BTRMGRLOG_ERROR ("Failed to get Device Data Path. So Will not be able to stream now\n");
-                BTRMGRLOG_ERROR ("Failed to get Valid MediaBitrate. So Will not be able to stream now\n");
-                BTRMGRLOG_ERROR ("Failed to StartCastingAudio. So Will not be able to stream now\n");
-                lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers);
-                if (lenBtrCoreRet == enBTRCoreSuccess) {
-                    /* Max 4 sec timeout - Polled at 1 second interval: Confirmed 2 times */
-                    unsigned int ui32sleepTimeOut = 1;
-                    unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
-                    
-                    do {
-                        unsigned int ui32sleepIdx = aui32SleepIdx + 1;
-
-                        do {
-                            sleep(ui32sleepTimeOut);
-                            lenBtrCoreRet = BTRCore_GetDeviceDisconnected(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers);
-                        } while ((lenBtrCoreRet != enBTRCoreSuccess) && (--ui32sleepIdx));
-                    } while (--ui32confirmIdx);
-
-                    if (lenBtrCoreRet != enBTRCoreSuccess) {
-                        BTRMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
-                        lenBtrMgrRet = eBTRMgrFailure; 
-                    }
-                    else
-                        BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
-                }
-
-                lenBtrMgrRet = eBTRMgrFailure; 
-            }
         }
-        else {
+
+
+        if (!ui16DevMediaBitrate || (lenBtrCoreRet != enBTRCoreSuccess) || (lenBtrMgrRet != eBTRMgrSuccess)) {
+            BTRMGRLOG_ERROR ("Failed to get Device Data Path. So Will not be able to stream now\n");
+            BTRMGRLOG_ERROR ("Failed to get Valid MediaBitrate. So Will not be able to stream now\n");
+            BTRMGRLOG_ERROR ("Failed to StartCastingAudio. So Will not be able to stream now\n");
             BTRMGRLOG_ERROR ("Failed to connect to device and not playing\n");
+            lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers);
+            if (lenBtrCoreRet == enBTRCoreSuccess) {
+                /* Max 4 sec timeout - Polled at 1 second interval: Confirmed 2 times */
+                unsigned int ui32sleepTimeOut = 1;
+                unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
+                
+                do {
+                    unsigned int ui32sleepIdx = aui32SleepIdx + 1;
+
+                    do {
+                        sleep(ui32sleepTimeOut);
+                        lenBtrCoreRet = BTRCore_GetDeviceDisconnected(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers);
+                    } while ((lenBtrCoreRet != enBTRCoreSuccess) && (--ui32sleepIdx));
+                } while (--ui32confirmIdx);
+
+                if (lenBtrCoreRet != enBTRCoreSuccess) {
+                    BTRMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
+                    lenBtrMgrRet = eBTRMgrFailure; 
+                }
+                else
+                    BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
+            }
+
+            lenBtrMgrRet = eBTRMgrFailure; 
         }
+
 
     } while ((lenBtrMgrRet == eBTRMgrFailure) && (--ui32retryIdx));
 
@@ -1108,18 +1109,35 @@ BTRMGR_DeInit (
     void
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet 	lenBtrCoreRet   = enBTRCoreSuccess;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
         return BTRMGR_RESULT_INIT_FAILED;
     }
 
+    if (ghBTRMgrPiHdl) {
+        lenBtrMgrResult = BTRMgr_PI_DeInit(ghBTRMgrPiHdl);
+        ghBTRMgrPiHdl = NULL;
+        BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app = %d\n", lenBtrMgrResult);
+    }
 
-    BTRMgr_PI_DeInit(&ghBTRMgrPiHdl);
-    BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app\n");
+    if (ghBTRCoreHdl) {
+        lenBtrCoreRet = BTRCore_DeInit(ghBTRCoreHdl);
+        ghBTRCoreHdl = NULL;
+        BTRMGRLOG_ERROR ("BTRCore DeInited; Now will we exit the app = %d\n", lenBtrCoreRet);
+    }
 
-    BTRCore_DeInit(ghBTRCoreHdl);
-    BTRMGRLOG_ERROR ("BTRCore DeInited; Now will we exit the app\n");
+    lenBtrMgrResult = ((lenBtrMgrResult == BTRMGR_RESULT_SUCCESS) && 
+                       (lenBtrCoreRet == enBTRCoreSuccess)) ? BTRMGR_RESULT_SUCCESS : BTRMGR_RESULT_GENERIC_FAILURE;
+    BTRMGRLOG_DEBUG ("Exit Status = %d\n", lenBtrMgrResult)
+
+#ifdef RDK_LOGGER_ENABLED
+    /* De-Init the logger */
+    if (b_rdk_logger_enabled == 1) {
+       rdk_logger_deinit();
+    }
+#endif
 
     return lenBtrMgrResult;
 }

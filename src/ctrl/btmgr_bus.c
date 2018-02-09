@@ -23,11 +23,24 @@
  *
  */
 #include <stdio.h>
+#include <stdbool.h>
+#include <signal.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "btmgr.h"
 #include "btrMgr_IarmInternalIfce.h"
+
+
+static bool gbExitBTRMgr = false;
+
+static void
+btrMgr_SignalHandler (
+    int i32SignalNumber
+) {
+    if (i32SignalNumber == SIGTERM)
+        gbExitBTRMgr = true;
+}
 
 
 int
@@ -41,17 +54,31 @@ main (
 
     rc = BTRMGR_Init();
     if (BTRMGR_RESULT_SUCCESS == rc) {
-        while(1) {
+
+        signal(SIGTERM, btrMgr_SignalHandler);
+
+        while (1) {
+            if (gbExitBTRMgr == true)
+                break;
+
             time(&curr);
             printf ("I-ARM BTMgr Bus: HeartBeat at %s\n", ctime(&curr));
+            fflush(stdout);
             sleep(10);
         }
     }
     else {
         printf ("I-ARM BTMgr Bus: Failed it init\n");
+        fflush(stdout);
     }
 
     BTRMgr_TermIARMMode();
+
+    rc = BTRMGR_DeInit();
+
+    time(&curr);
+    printf ("I-ARM BTMgr Bus: BTRMgr_TermIARMMode %s  BTRMGR_DeInit - %d\n", ctime(&curr), rc);
+    fflush(stdout);
 
     return 0;
 }
