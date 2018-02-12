@@ -518,13 +518,13 @@ main (
             printf("Enter discoverable timeout in seconds.  Zero seconds = FOREVER \n");
             lstBTRCoreAdapter.DiscoverableTimeout = getChoice();
             printf("setting DiscoverableTimeout to %d\n",lstBTRCoreAdapter.DiscoverableTimeout);
-            BTRCore_SetDiscoverableTimeout(lhBTRCore, &lstBTRCoreAdapter);
+            BTRCore_SetAdapterDiscoverableTimeout(lhBTRCore, lstBTRCoreAdapter.pcAdapterPath, lstBTRCoreAdapter.DiscoverableTimeout);
             break;
         case 15:
             printf("Set discoverable.  Zero = Not Discoverable, One = Discoverable \n");
             lstBTRCoreAdapter.discoverable = getChoice();
-            printf("setting discoverable to %d\n",lstBTRCoreAdapter.discoverable);
-            BTRCore_SetDiscoverable(lhBTRCore, &lstBTRCoreAdapter);
+            printf("setting discoverable to %d\n", lstBTRCoreAdapter.discoverable);
+            BTRCore_SetAdapterDiscoverable(lhBTRCore, lstBTRCoreAdapter.pcAdapterPath, lstBTRCoreAdapter.discoverable);
             break;
         case 16:
             {
