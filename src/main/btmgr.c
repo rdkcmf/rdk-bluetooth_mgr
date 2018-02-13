@@ -3203,8 +3203,9 @@ btrMgr_ConnectionInAuthenticationCb (
             *api32ConnInAuthResp = 0;
         } 
     }
-    else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset) ||
-             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Loudspeaker) ||
+    else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset)   ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Loudspeaker)       ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HIFIAudioDevice)   ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Headphones)) {
 
         BTRMGRLOG_WARN ("Incoming Connection from BT Speaker/Headset\n");
