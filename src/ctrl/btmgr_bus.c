@@ -24,9 +24,20 @@
  */
 #include <stdio.h>
 #include <stdbool.h>
+
+#if 0
+//TODO: Having Signal handler delays process restart on crash. Fix it
+//Hint: All Dbus Bt-Ifce methods should be async or have short timeouts
 #include <signal.h>
+#include <string.h>
+#endif
+
 #include <time.h>
 #include <unistd.h>
+
+#if defined(ENABLE_SD_NOTIFY)
+#include <systemd/sd-daemon.h>
+#endif
 
 #include "btmgr.h"
 #include "btrMgr_IarmInternalIfce.h"
@@ -34,13 +45,24 @@
 
 static bool gbExitBTRMgr = false;
 
+
+#if 0
+//TODO: Having Signal handler delays process restart on crash. Fix it
+//Hint: All Dbus Bt-Ifce methods should be async or have short timeouts
 static void
 btrMgr_SignalHandler (
     int i32SignalNumber
 ) {
+    time_t curr = 0;
+
+    time(&curr);
+    printf ("Received SIGNAL %d = %s - %s\n", i32SignalNumber, strsignal(i32SignalNumber), ctime(&curr));
+    fflush(stdout);
+
     if (i32SignalNumber == SIGTERM)
         gbExitBTRMgr = true;
 }
+#endif
 
 
 int
@@ -48,37 +70,78 @@ main (
     void
 ) {
     time_t curr = 0;
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
 
-    BTRMgr_BeginIARMMode();
 
-    rc = BTRMGR_Init();
-    if (BTRMGR_RESULT_SUCCESS == rc) {
+    if ((lenBtrMgrResult = BTRMGR_Init()) == BTRMGR_RESULT_SUCCESS) {
 
+#if 0
+        //TODO: Having Signal handler delays process restart on crash. Fix it
+        //Hint: All Dbus Bt-Ifce methods should be async or have short timeouts
         signal(SIGTERM, btrMgr_SignalHandler);
+#endif
 
-        while (1) {
-            if (gbExitBTRMgr == true)
-                break;
+#if defined(ENABLE_SD_NOTIFY)
+        sd_notify(0, "READY=1");
+#endif
 
+        time(&curr);
+        printf ("I-ARM BTMgr Bus: BTRMgr_BeginIARMMode %s\n", ctime(&curr));
+        fflush(stdout);
+
+        BTRMgr_BeginIARMMode();
+
+#if defined(ENABLE_SD_NOTIFY)
+        sd_notifyf(0, "READY=1\n"
+                      "STATUS=BTRMgr Successfully Initialized  - Processing requests…\n"
+                      "MAINPID=%lu", (unsigned long) getpid());
+#endif
+
+        lenBtrMgrResult = BTRMGR_StartAudioStreamingOut_StartUp(0, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+        printf ("BTRMGR_StartAudioStreamingOut_StartUp - %d\n", lenBtrMgrResult);
+        fflush(stdout);
+
+
+        while (gbExitBTRMgr == false) {
             time(&curr);
             printf ("I-ARM BTMgr Bus: HeartBeat at %s\n", ctime(&curr));
             fflush(stdout);
             sleep(10);
         }
+
+#if defined(ENABLE_SD_NOTIFY)
+        sd_notify(0, "STOPPING=1");
+#endif
+
+        BTRMgr_TermIARMMode();
+
+        time(&curr);
+        printf ("I-ARM BTMgr Bus: BTRMgr_TermIARMMode %s\n", ctime(&curr));
+        fflush(stdout);
+
     }
-    else {
-        printf ("I-ARM BTMgr Bus: Failed it init\n");
+
+
+    if (lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) {
+#if defined(ENABLE_SD_NOTIFY)
+        sd_notifyf(0, SD_EMERG "STATUS=BTRMgr Init Failed %d\n", lenBtrMgrResult);
+#endif
+        printf ("BTRMGR_Init Failed\n");
         fflush(stdout);
     }
 
-    BTRMgr_TermIARMMode();
 
-    rc = BTRMGR_DeInit();
+    lenBtrMgrResult = BTRMGR_DeInit();
 
     time(&curr);
-    printf ("I-ARM BTMgr Bus: BTRMgr_TermIARMMode %s  BTRMGR_DeInit - %d\n", ctime(&curr), rc);
+    printf ("BTRMGR_DeInit %d - %s\n", lenBtrMgrResult, ctime(&curr));
     fflush(stdout);
 
-    return 0;
+#if defined(ENABLE_SD_NOTIFY)
+    sd_notifyf(0, "STOPPING=1\n"
+                  "STATUS=BTRMgr Successfully DeInitialized\n"
+                  "MAINPID=%lu", (unsigned long) getpid());
+#endif
+
+    return lenBtrMgrResult;
 }

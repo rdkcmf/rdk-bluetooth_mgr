@@ -22,10 +22,10 @@ After=lighttpd.service iarmbusd.service bluetooth.service audiocapturemgr.servic
 Requires=iarmbusd.service bluetooth.service audiocapturemgr.service
 
 [Service]
-Type=forking
+Type=notify
 TimeoutStartSec=10s
 ExecStartPre=/bin/sh -c 'sleep 5'
-ExecStart=/bin/sh -c "/usr/bin/btMgrBus &"
+ExecStart=/bin/sh -c "/usr/bin/btMgrBus"
 Restart=always
 
 [Install]

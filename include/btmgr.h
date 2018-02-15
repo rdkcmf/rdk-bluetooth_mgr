@@ -303,6 +303,7 @@ BTRMGR_Result_t BTRMGR_GetConnectedDevices(unsigned char aui8AdapterIdx, BTRMGR_
 
 BTRMGR_Result_t BTRMGR_GetDeviceProperties(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DevicesProperty_t *pDeviceProperty);
 
+BTRMGR_Result_t BTRMGR_StartAudioStreamingOut_StartUp(unsigned char aui8AdapterIdx, BTRMGR_DeviceConnect_Type_t aenBTRMgrDevConT);
 BTRMGR_Result_t BTRMGR_StartAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceConnect_Type_t connectAs);
 BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
 BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
