@@ -2855,12 +2855,12 @@ BTRMGR_GetMediaCurrentPosition (
 
 
 BTRMGR_Result_t
-BTRMGR_GetLeCharacteristicUUID (
+BTRMGR_GetLeProperty (
     unsigned char                aui8AdapterIdx,
     BTRMgrDeviceHandle           ahBTRMgrDevHdl,
-    const char*                  apBtrServiceUuid,
-    char*                        apBtrCharUuidList // should check on having enum which indicate the Charr UUID mode (read/write/notify/..
-                                                   // to obtain the specific UUID
+    const char*                  apBtrPropUuid,
+    BTRMGR_LeProperty_t          aenLeProperty,
+    void*                        vpPropValue
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     //BTRMGR_DevicesProperty_t   lBtrLeDevProp;
@@ -2870,15 +2870,46 @@ BTRMGR_GetLeCharacteristicUUID (
         return BTRMGR_RESULT_INIT_FAILED;
     }
 
-    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt() || !apBtrPropUuid) {
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return BTRMGR_RESULT_INVALID_INPUT;
     }
     // Check device
     //BTRMGR_GetDeviceProperties(aui8AdapterIdx, ahBTRMgrDevHdl, lBtrLeDevProp)
 
-    if (enBTRCoreSuccess != BTRCore_GetLEProperty(ghBTRCoreHdl, ahBTRMgrDevHdl, apBtrServiceUuid, enBTRCoreLePropGCharList, (void*)apBtrCharUuidList)) {
-       BTRMGRLOG_ERROR ("Get LE Char UUID for device  %llu Failed!!!\n", ahBTRMgrDevHdl);
+    enBTRCoreLeProp lenBTRCoreLeProp = enBTRCoreLePropUnknown;
+
+    switch(aenLeProperty) {
+    case BTRMGR_LE_PROP_UUID:
+        lenBTRCoreLeProp = enBTRCoreLePropGUUID;
+        break;
+    case BTRMGR_LE_PROP_PRIMARY:
+        lenBTRCoreLeProp = enBTRCoreLePropGPrimary;
+        break;
+    case BTRMGR_LE_PROP_DEVICE:
+        lenBTRCoreLeProp = enBTRCoreLePropGDevice;
+        break;
+    case BTRMGR_LE_PROP_SERVICE:
+        lenBTRCoreLeProp = enBTRCoreLePropGService;
+        break;
+    case BTRMGR_LE_PROP_VALUE:
+        lenBTRCoreLeProp = enBTRCoreLePropGValue;
+        break;
+    case BTRMGR_LE_PROP_NOTIFY:
+        lenBTRCoreLeProp = enBTRCoreLePropGNotifying;
+        break;
+    case BTRMGR_LE_PROP_FLAGS:
+        lenBTRCoreLeProp = enBTRCoreLePropGFlags;
+        break;
+    case BTRMGR_LE_PROP_CHAR:
+        lenBTRCoreLeProp = enBTRCoreLePropGChar;
+        break;
+    default:
+        break;
+    }
+
+    if (enBTRCoreSuccess != BTRCore_GetLEProperty(ghBTRCoreHdl, ahBTRMgrDevHdl, apBtrPropUuid, lenBTRCoreLeProp, vpPropValue)) {
+       BTRMGRLOG_ERROR ("Get LE Property %d for Device/UUID  %llu/%s Failed!!!\n", lenBTRCoreLeProp, ahBTRMgrDevHdl, apBtrPropUuid);
        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
@@ -2902,7 +2933,7 @@ BTRMGR_PerformLeOp (
         return BTRMGR_RESULT_INIT_FAILED;
     }
 
-    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt() || !aBtrLeUuid) {
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return BTRMGR_RESULT_INVALID_INPUT;
     }
@@ -2932,7 +2963,7 @@ BTRMGR_PerformLeOp (
         break;
     }
 
-    if (enBTRCoreSuccess != BTRCore_PerformLEOp (ghBTRCoreHdl, ahBTRMgrDevHdl, aBtrLeUuid, aenBTRCoreLeOp, NULL, rOpResult)) {
+    if (enBTRCoreSuccess != BTRCore_PerformLEOp (ghBTRCoreHdl, ahBTRMgrDevHdl, aBtrLeUuid, aenBTRCoreLeOp, rOpResult)) {
        BTRMGRLOG_ERROR ("Perform LE Op %d for device  %llu Failed!!!\n", aLeOpType, ahBTRMgrDevHdl);
        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }

@@ -61,7 +61,7 @@ static void printOptions (void)
     printf ("30. Get Current Media Track Information\n");
     printf ("31. Get Media Current Play Position\n"); 
     printf ("32. Get StreamingIn Status\n"); 
-    printf ("33. Get LE UUIDs\n");
+    printf ("33. Get LE Property\n");
     printf ("34. Perform LE Operation\n");
     printf ("55. Quit\n");
     printf ("\n\n");
@@ -97,6 +97,18 @@ void getName (char* mychoice)
     if (tmp)
         *tmp = '\0';
 }
+
+static int
+getBitsToString (
+    unsigned short  flagBits
+) {
+    unsigned char i = 0;
+    for (; i<15; i++) {
+        printf("%d", (flagBits >> i) & 1);
+    }
+    return 0;
+}
+
 
 const char* getEventAsString (BTRMGR_Events_t etype)
 {
@@ -458,7 +470,7 @@ int main()
                     int ch = 0;
                     printf ("Please Enter the device Handle number of the device that you want to Connect \t: ");
                     handle = getDeviceSelection();
-                    printf ("Enter Device ConnectAs  Type : (AUDIOSINK-0/HEADSET-1/AUDIOSRC-2/LE-3/OTHERS-4)");
+                    printf ("Enter Device ConnectAs  Type : [0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE ]\n");
                     ch = getDeviceSelection();
 
                     rc = BTRMGR_ConnectToDevice(0, handle, (1 << ch));
@@ -693,7 +705,7 @@ int main()
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
-                    printf ("Please Enter the Medio Control Options(0-Play/1-Pause/2-Stop/3-Next/4-Previous)\n");
+                    printf ("Please Enter the Medio Control Options [0 - Play | 1 - Pause | 2 - Stop | 3 - Next  | 4 - Previous]\n");
                     opt = getDeviceSelection();
 
                     rc = BTRMGR_MediaControl(0, handle, opt);
@@ -759,42 +771,99 @@ int main()
                 break;
             case 33:
                 {
-                    char serviceUuid[BTRMGR_MAX_STR_LEN] = "\0";
-                    char charUuid[BTRMGR_MAX_STR_LEN] = "\0";
+                    char luuid[BTRMGR_MAX_STR_LEN] = "\0";
+                    unsigned char opt = 0;
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
-                    printf ("Enter the service UUID : ");
-                    scanf ("%s", serviceUuid);
-                    
-                    rc = BTRMGR_GetLeCharacteristicUUID (0, handle, serviceUuid, charUuid);
+                    printf ("Enter the UUID : ");
+                    scanf ("%s", luuid);
+                    printf ("Select the property to query...\n");
+                    printf ("[0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value |"
+                            " 5 - Notifying | 6 - Flags | 7 -Character]\n");
+                    opt = getDeviceSelection();
+
+                    if (!opt) {
+                        BTRMGR_DeviceServiceList_t deviceServiceList;
+                        int i=0;
+                        if ((rc = BTRMGR_GetLeProperty (0, handle, luuid, opt, (void*)&deviceServiceList)) == BTRMGR_RESULT_SUCCESS) {
+                            if (deviceServiceList.m_numOfService) {
+                                printf("\n\nObtained 'Flag' indices are based on the below mapping..\n"
+                                       "0  - read\n"
+                                       "1  - write\n"
+                                       "2  - encrypt-read\n"
+                                       "3  - encrypt-write\n"
+                                       "4  - encrypt-authenticated-read\n"
+                                       "5  - encrypt-authenticated-write\n"
+                                       "6  - secure-read (Server only)\n"
+                                       "7  - secure-write (Server only)\n"
+                                       "8  - notify\n"
+                                       "9  - indicate\n"
+                                       "10 - broadcast\n"
+                                       "11 - write-without-response\n"
+                                       "12 - authenticated-signed-writes\n"
+                                       "13 - reliable-write\n"
+                                       "14 - writable-auxiliaries\n");
+
+                                printf("\n\t%-40s Flag\n", "UUID");
+                                for (; i<deviceServiceList.m_numOfService; i++) {
+                                    printf("\n\t%-40s ", deviceServiceList.m_uuidInfo[i].m_uuid);
+                                    getBitsToString(deviceServiceList.m_uuidInfo[i].flags);
+                                }
+                            } else {
+                                printf("\n\n\tNo UUIDs found...\n\n");
+                            }
+                        }
+                    } else
+                    if (opt == 1 || opt == 5 ){
+                       unsigned char val;
+                       if ((rc = BTRMGR_GetLeProperty (0, handle, luuid, opt, (void*)&val)) == BTRMGR_RESULT_SUCCESS) {
+                          printf("\nResult : \n\t%d", val);
+                       }
+                    } else
+                    if (opt == 2 || opt == 3 || opt == 4 || opt == 7) {
+                       char val[BTRMGR_MAX_STR_LEN] = "\0";
+                       if ((rc = BTRMGR_GetLeProperty (0, handle, luuid, opt, (void*)&val)) == BTRMGR_RESULT_SUCCESS) {
+                          printf("\nResult : \n\t%s", val);
+                       }
+                    } else
+                    if (opt == 6) {
+                       char val[5][BTRMGR_NAME_LEN_MAX]; int i=0;
+                       memset (val, 0, sizeof(val));
+                       if ((rc = BTRMGR_GetLeProperty (0, handle, luuid, opt, (void*)&val)) == BTRMGR_RESULT_SUCCESS) {
+                          printf("\n Result :");
+                          for(; i<5 && val[i][0]; i++) {
+                             printf("\n\t- %s", val[i]);
+                          }
+                       }
+                    }
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
-                        printf ("\nSuccess.... \n Char UUID : %s\n", charUuid);               
+                        printf ("\nSuccess.... \n");               
                 }
                 break;
             case 34:
                 {
-                    char serviceUuid[BTRMGR_MAX_STR_LEN] = "\0";
+                    char luuid[BTRMGR_MAX_STR_LEN] = "\0";
                     char res[BTRMGR_MAX_STR_LEN] = "\0";
                     unsigned char opt = 0;
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
-                    printf ("Enter the service UUID : ");
-                    scanf ("%s", serviceUuid);
+                    printf ("Enter the Char UUID : ");
+                    scanf ("%s", luuid);
                     printf ("Enter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
                     opt = getDeviceSelection();
 
-                    rc = BTRMGR_PerformLeOp (0, handle, serviceUuid, opt, res);
+                    rc = BTRMGR_PerformLeOp (0, handle, luuid, opt, res);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else {
-                        printf ("\nSuccess.... \n" );
                         if (opt == 0) {
-                           printf ("Obtained Value : %s\n", res);
+                           printf ("\n\tObtained Value : %s\n", res);
                         }
+                        printf ("\nSuccess.... \n" );
                     }
                 }
                 break;

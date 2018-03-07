@@ -54,8 +54,8 @@
 #define BTRMGR_IARM_METHOD_MEDIA_CONTROL                    "MediaControl"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO             "GetMediaTrackInfo"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION       "GetMediaCurrentPosition"
-#define BTRMGR_IARM_METHOD_GET_LE_CHARACTERISTIC_UUID       "GetLeCharacteristicUUID"
-#define BTRMGR_IARM_METHOD_PERFORM_LE_OP                    "PerformLeOp"
+#define BTRMGR_IARM_METHOD_GET_LE_PROPERTY                  "GetLeProperty"
+#define BTRMGR_IARM_METHOD_PERFORM_LE_OP                    "PerformLeOperation"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
 
@@ -172,12 +172,25 @@ typedef struct _BTRMGR_IARMMediaProperty_t {
     };
 } BTRMGR_IARMMediaProperty_t;
 
-typedef struct _BTRMGR_IARMLeStatus_t {
+
+typedef struct _BTRMGR_IARMLeProperty_t {
     unsigned char           m_adapterIndex;
+    char                    m_propUuid[BTRMGR_MAX_STR_LEN];
     BTRMgrDeviceHandle      m_deviceHandle;
-    char                    m_sUuid[BTRMGR_MAX_STR_LEN];
-    char                    m_cUuid[BTRMGR_MAX_STR_LEN];
-} BTRMGR_IARMLeStatus_t;
+    BTRMGR_LeProperty_t     m_enLeProperty;
+
+    union {
+        BTRMGR_DeviceServiceList_t  m_uuidList;
+        char                        m_devicePath[BTRMGR_MAX_STR_LEN];
+        char                        m_servicePath[BTRMGR_MAX_STR_LEN];
+        char                        m_characteristicPath[BTRMGR_MAX_STR_LEN];
+        char                        m_value[BTRMGR_MAX_STR_LEN];
+        char                        m_flags[BTRMGR_LE_FLAG_LIST_SIZE][BTRMGR_NAME_LEN_MAX];
+        unsigned char               m_primary;
+        unsigned char               m_notifying;
+    };
+} BTRMGR_IARMLeProperty_t;
+
 
 typedef struct _BTRMGR_IARMLeOp_t {
     unsigned char           m_adapterIndex;
@@ -186,4 +199,5 @@ typedef struct _BTRMGR_IARMLeOp_t {
     BTRMGR_LeOp_t           m_leOpType;
     char                    m_opRes[BTRMGR_MAX_STR_LEN];
 } BTRMGR_IARMLeOp_t;    
+
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

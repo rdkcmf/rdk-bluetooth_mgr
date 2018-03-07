@@ -30,6 +30,7 @@ extern "C"
 #define BTRMGR_DEVICE_COUNT_MAX        32
 #define BTRMGR_ADAPTER_COUNT_MAX       16
 #define BTRMGR_MAX_DEVICE_PROFILE      32
+#define BTRMGR_LE_FLAG_LIST_SIZE       10
 
 typedef unsigned long long int BTRMgrDeviceHandle;
 
@@ -127,12 +128,24 @@ typedef enum _BTRMGR_MediaControlCommand_t {
     BTRMGR_MEDIA_CTRL_VOLUMEDOWN
 } BTRMGR_MediaControlCommand_t;
 
+typedef enum _BTRMGR_LeProperty_t {  // looking for a better enum name
+    BTRMGR_LE_PROP_UUID,
+    BTRMGR_LE_PROP_PRIMARY,
+    BTRMGR_LE_PROP_DEVICE,
+    BTRMGR_LE_PROP_SERVICE,
+    BTRMGR_LE_PROP_VALUE,
+    BTRMGR_LE_PROP_NOTIFY,
+    BTRMGR_LE_PROP_FLAGS,
+    BTRMGR_LE_PROP_CHAR
+} BTRMGR_LeProperty_t;
+
 typedef enum _BTRMGR_LeOp_t {
     BTRMGR_LE_OP_READ_VALUE,
     BTRMGR_LE_OP_WRITE_VALUE,
     BTRMGR_LE_OP_START_NOTIFY,
     BTRMGR_LE_OP_STOP_NOTIFY
 } BTRMGR_LeOp_t;
+
 
 
 typedef struct _BTRMGR_MediaTrackInfo_t {
@@ -150,6 +163,11 @@ typedef struct _BTRMGR_MediaPositionInfo_t {
     unsigned int          m_mediaPosition;
 } BTRMGR_MediaPositionInfo_t;
 
+typedef struct _BTRMGR_LeUUID_t {
+    unsigned short  flags;
+    char            m_uuid[BTRMGR_NAME_LEN_MAX];
+} BTRMGR_LeUUID_t;
+
 typedef struct _BTRMGR_DeviceService_t {
     unsigned short  m_uuid;
     char            m_profile[BTRMGR_NAME_LEN_MAX];
@@ -157,7 +175,12 @@ typedef struct _BTRMGR_DeviceService_t {
 
 typedef struct _BTRMGR_DeviceServiceList_t {
     unsigned short          m_numOfService;
-    BTRMGR_DeviceService_t  m_profileInfo[BTRMGR_MAX_DEVICE_PROFILE];
+
+    union { /* have introduced BTRMGR_LeUUID_t inorder that the usage of BTRMGR_DeviceService_t shouldn't be confused
+               if BTRMGR_DeviceService_t  alone is sufficient, then lets change in the next commit */
+        BTRMGR_DeviceService_t  m_profileInfo[BTRMGR_MAX_DEVICE_PROFILE];
+        BTRMGR_LeUUID_t         m_uuidInfo[BTRMGR_MAX_DEVICE_PROFILE];
+    };
 } BTRMGR_DeviceServiceList_t;
 
 typedef struct _BTRMGR_DevicesProperty_t {
@@ -321,7 +344,7 @@ BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition(unsigned char aui8AdapterIdx, BTR
 
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 
-BTRMGR_Result_t BTRMGR_GetLeCharacteristicUUID (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apBtrServiceUuid, char* apBtrCharUuidList);
+BTRMGR_Result_t BTRMGR_GetLeProperty (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apBtrPropUuid, BTRMGR_LeProperty_t aenLeProperty, void* vpPropValue);
 BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, void* rOpResult);
 
 // Outgoing callbacks Registration Interfaces

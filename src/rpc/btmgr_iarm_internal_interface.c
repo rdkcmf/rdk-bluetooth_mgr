@@ -54,7 +54,7 @@ static IARM_Result_t btrMgr_ResetAdapter (void* arg);
 static IARM_Result_t btrMgr_MediaControl (void* arg);
 static IARM_Result_t btrMgr_GetMediaTrackInfo (void* arg);
 static IARM_Result_t btrMgr_GetMediaCurrentPosition (void* arg);
-static IARM_Result_t btrMgr_GetLeCharacteristicUUID (void* arg);
+static IARM_Result_t btrMgr_GetLeProperty (void* arg);
 static IARM_Result_t btrMgr_PerformLeOp (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
 
@@ -1044,12 +1044,13 @@ btrMgr_GetMediaTrackInfo (
 
 
 static IARM_Result_t
-btrMgr_GetLeCharacteristicUUID (
+btrMgr_GetLeProperty (
     void* arg
 ) {
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTRMGR_IARMLeStatus_t *leStatus = (BTRMGR_IARMLeStatus_t*) arg;
+    BTRMGR_IARMLeProperty_t *leProperty = (BTRMGR_IARMLeProperty_t*) arg;
+    void* propValue = NULL;
 
     BTRMGRLOG_INFO ("Entering\n");
 
@@ -1059,13 +1060,42 @@ btrMgr_GetLeCharacteristicUUID (
         return retCode;
     }
 
-    if (!leStatus) {
+    if (!leProperty) {
         retCode = IARM_RESULT_INVALID_PARAM;
         BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
         return retCode;
     }
 
-    rc = BTRMGR_GetLeCharacteristicUUID (leStatus->m_adapterIndex, leStatus->m_deviceHandle, leStatus->m_sUuid, leStatus->m_cUuid);
+    switch (leProperty->m_enLeProperty) {
+    case BTRMGR_LE_PROP_UUID:
+        propValue = &leProperty->m_uuidList;
+        break;
+    case BTRMGR_LE_PROP_DEVICE:
+        propValue = &leProperty->m_devicePath;
+        break;
+    case BTRMGR_LE_PROP_SERVICE:
+        propValue = &leProperty->m_servicePath;
+        break;
+    case BTRMGR_LE_PROP_CHAR:
+        propValue = &leProperty->m_characteristicPath;
+        break;
+    case BTRMGR_LE_PROP_VALUE:
+        propValue = &leProperty->m_value;
+        break;
+    case BTRMGR_LE_PROP_PRIMARY:
+        propValue = &leProperty->m_primary;
+        break;
+    case BTRMGR_LE_PROP_NOTIFY:
+        propValue = &leProperty->m_notifying;
+        break;
+    case BTRMGR_LE_PROP_FLAGS:
+        propValue = &leProperty->m_flags;
+        break;
+    default:
+        break;
+    }
+
+    rc = BTRMGR_GetLeProperty (leProperty->m_adapterIndex, leProperty->m_deviceHandle, leProperty->m_propUuid, leProperty->m_enLeProperty, propValue);
     if (BTRMGR_RESULT_SUCCESS == rc) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -1083,8 +1113,8 @@ static IARM_Result_t
 btrMgr_PerformLeOp (
     void* arg
 ) {
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
-    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t rc      = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode   = IARM_RESULT_SUCCESS;
     BTRMGR_IARMLeOp_t *leOp = (BTRMGR_IARMLeOp_t*) arg;
 
     BTRMGRLOG_INFO ("Entering\n");
@@ -1205,7 +1235,7 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_MEDIA_CONTROL, btrMgr_MediaControl);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, btrMgr_GetMediaTrackInfo);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, btrMgr_GetMediaCurrentPosition);
-        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LE_CHARACTERISTIC_UUID, btrMgr_GetLeCharacteristicUUID);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LE_PROPERTY, btrMgr_GetLeProperty);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_PERFORM_LE_OP, btrMgr_PerformLeOp);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
 

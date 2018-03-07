@@ -1053,31 +1053,60 @@ BTRMGR_GetMediaCurrentPosition (
 
 
 BTRMGR_Result_t
-BTRMGR_GetLeCharacteristicUUID (
+BTRMGR_GetLeProperty (
     unsigned char                index_of_adapter,
     BTRMgrDeviceHandle           handle,
-    const char*                  apBtrServiceUuid,
-    char*                        apBtrCharUuidList
+    const char*                  apBtrUuid,
+    BTRMGR_LeProperty_t          aenLeProperty,
+    void*                        apBtrPropValue
 ) {
 
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
-    BTRMGR_IARMLeStatus_t leStatus;
+    BTRMGR_IARMLeProperty_t leProperty;
 
-    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || NULL == apBtrServiceUuid) {
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || !apBtrUuid) {
         rc = BTRMGR_RESULT_INVALID_INPUT;
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return rc;
     }
+    
+    memset (&leProperty, 0, sizeof(BTRMGR_IARMLeProperty_t));
+    leProperty.m_adapterIndex = index_of_adapter;
+    leProperty.m_deviceHandle = handle;
+    leProperty.m_enLeProperty = aenLeProperty;
+    strncpy(leProperty.m_propUuid, apBtrUuid, BTRMGR_MAX_STR_LEN-1);
 
-    leStatus.m_adapterIndex = index_of_adapter;
-    leStatus.m_deviceHandle = handle;
-    strncpy(leStatus.m_sUuid, apBtrServiceUuid, BTRMGR_MAX_STR_LEN-1);
-
-    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_LE_CHARACTERISTIC_UUID, (void*)&leStatus, sizeof(BTRMGR_IARMLeStatus_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_LE_PROPERTY, (void*)&leProperty, sizeof(BTRMGR_IARMLeProperty_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
 
     if (IARM_RESULT_SUCCESS == retCode) {
-        memcpy (apBtrCharUuidList, leStatus.m_cUuid, BTRMGR_MAX_STR_LEN-1);
+        switch (aenLeProperty) {
+        case BTRMGR_LE_PROP_UUID:
+            memcpy (apBtrPropValue, &leProperty.m_uuidList, sizeof(leProperty.m_uuidList));
+            break;
+        case BTRMGR_LE_PROP_DEVICE:
+            memcpy (apBtrPropValue, &leProperty.m_devicePath, sizeof(leProperty.m_devicePath)-1);
+            break;
+        case BTRMGR_LE_PROP_SERVICE:
+            memcpy (apBtrPropValue, &leProperty.m_servicePath, sizeof(leProperty.m_servicePath)-1);
+            break;
+        case BTRMGR_LE_PROP_CHAR:
+            memcpy (apBtrPropValue, &leProperty.m_characteristicPath, sizeof(leProperty.m_characteristicPath)-1);
+            break;
+        case BTRMGR_LE_PROP_VALUE:
+            memcpy (apBtrPropValue, &leProperty.m_value,  sizeof(leProperty.m_value)-1);
+            break;
+        case BTRMGR_LE_PROP_PRIMARY:
+            *(unsigned char*)apBtrPropValue = leProperty.m_primary;
+            break;
+        case BTRMGR_LE_PROP_NOTIFY:
+            *(unsigned char*)apBtrPropValue = leProperty.m_notifying;
+            break;
+        case BTRMGR_LE_PROP_FLAGS:
+            memcpy (apBtrPropValue, &leProperty.m_flags, sizeof(leProperty.m_flags));
+        default:
+            break;
+        }
         BTRMGRLOG_INFO ("Success\n");
     }
     else {
@@ -1097,7 +1126,7 @@ BTRMGR_PerformLeOp (
     BTRMGR_LeOp_t                aLeOpType,
     void*                        rOpResult
 ) {
-    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
     BTRMGR_IARMLeOp_t leOp;
 
@@ -1107,11 +1136,11 @@ BTRMGR_PerformLeOp (
         return rc;
     }
 
+    memset (&leOp, 0, sizeof(BTRMGR_IARMLeOp_t));
     leOp.m_adapterIndex = index_of_adapter;
     leOp.m_deviceHandle = handle;
+    leOp.m_leOpType     = aLeOpType;
     strncpy(leOp.m_uuid, aBtrLeUuid, BTRMGR_MAX_STR_LEN-1);
-    leOp.m_leOpType = aLeOpType;
-    memset (leOp.m_opRes, 0, BTRMGR_MAX_STR_LEN);
 
     retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_PERFORM_LE_OP, (void*)&leOp, sizeof(BTRMGR_IARMLeOp_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     
