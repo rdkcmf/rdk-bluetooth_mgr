@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "btmgr.h"
-#include "btmgr_priv.h"
+#include "btrMgr_logger.h"
 #include "btmgr_iarm_interface.h"
 #include "btrMgr_IarmInternalIfce.h"
 
@@ -343,9 +343,9 @@ btrMgr_ChangeDeviceDiscoveryStatus (
 
 
     if (pAdapterIndex->m_setDiscovery)
-        rc = BTRMGR_StartDeviceDiscovery(pAdapterIndex->m_adapterIndex);
+        rc = BTRMGR_StartDeviceDiscovery(pAdapterIndex->m_adapterIndex, pAdapterIndex->m_enBTRMgrDevOpT);
     else
-        rc = BTRMGR_StopDeviceDiscovery(pAdapterIndex->m_adapterIndex);
+        rc = BTRMGR_StopDeviceDiscovery(pAdapterIndex->m_adapterIndex, pAdapterIndex->m_enBTRMgrDevOpT);
 
     if (BTRMGR_RESULT_SUCCESS == rc) {
         BTRMGRLOG_INFO ("Success\n");

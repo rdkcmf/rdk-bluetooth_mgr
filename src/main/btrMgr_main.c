@@ -97,7 +97,7 @@ main (
                       "MAINPID=%lu", (unsigned long) getpid());
 #endif
 
-        lenBtrMgrResult = BTRMGR_StartAudioStreamingOut_StartUp(0, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+        lenBtrMgrResult = BTRMGR_StartAudioStreamingOut_StartUp(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
         printf ("BTRMGR_StartAudioStreamingOut_StartUp - %d\n", lenBtrMgrResult);
         fflush(stdout);
 

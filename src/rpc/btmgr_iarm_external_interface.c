@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "btmgr.h"
-#include "btmgr_priv.h"
+#include "btrMgr_logger.h"
 #include "btmgr_iarm_interface.h"
 
 
@@ -375,7 +375,8 @@ BTRMGR_IsAdapterDiscoverable (
 
 BTRMGR_Result_t
 BTRMGR_StartDeviceDiscovery (
-    unsigned char   index_of_adapter
+    unsigned char                index_of_adapter,
+    BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -388,8 +389,9 @@ BTRMGR_StartDeviceDiscovery (
     }
 
 
-    deviceDiscovery.m_adapterIndex = index_of_adapter;
-    deviceDiscovery.m_setDiscovery = 1; /* TRUE */
+    deviceDiscovery.m_adapterIndex  = index_of_adapter;
+    deviceDiscovery.m_setDiscovery  = 1; /* TRUE */
+    deviceDiscovery.m_enBTRMgrDevOpT= aenBTRMgrDevOpT;
 
     retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
@@ -405,7 +407,8 @@ BTRMGR_StartDeviceDiscovery (
 
 BTRMGR_Result_t
 BTRMGR_StopDeviceDiscovery (
-    unsigned char   index_of_adapter
+    unsigned char                index_of_adapter,
+    BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -420,6 +423,7 @@ BTRMGR_StopDeviceDiscovery (
 
     deviceDiscovery.m_adapterIndex = index_of_adapter;
     deviceDiscovery.m_setDiscovery = 0; /* FALSE */
+    deviceDiscovery.m_enBTRMgrDevOpT= aenBTRMgrDevOpT;
 
     retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
@@ -563,9 +567,9 @@ BTRMGR_GetPairedDevices (
 
 BTRMGR_Result_t
 BTRMGR_ConnectToDevice (
-    unsigned char               index_of_adapter,
+    unsigned char                index_of_adapter,
     BTRMgrDeviceHandle           handle,
-    BTRMGR_DeviceConnect_Type_t  connectAs
+    BTRMGR_DeviceOperationType_t connectAs
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -694,9 +698,9 @@ BTRMGR_GetDeviceProperties (
 
 BTRMGR_Result_t
 BTRMGR_StartAudioStreamingOut (
-    unsigned char               index_of_adapter,
-    BTRMgrDeviceHandle          handle,
-    BTRMGR_DeviceConnect_Type_t streamOutPref
+    unsigned char                   index_of_adapter,
+    BTRMgrDeviceHandle              handle,
+    BTRMGR_DeviceOperationType_t    streamOutPref
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -822,9 +826,9 @@ BTRMGR_SetAudioStreamingOutType (
 
 BTRMGR_Result_t
 BTRMGR_StartAudioStreamingIn (
-    unsigned char               ui8AdapterIdx,
-    BTRMgrDeviceHandle          handle,
-    BTRMGR_DeviceConnect_Type_t streamOutPref
+    unsigned char                   ui8AdapterIdx,
+    BTRMgrDeviceHandle              handle,
+    BTRMGR_DeviceOperationType_t    streamOutPref
 ) {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;

@@ -41,7 +41,7 @@
 
 
 /* Interface lib Headers */
-#include "btmgr_priv.h"         //for rdklogger
+#include "btrMgr_logger.h"         //for rdklogger
 
 /* Local Headers */
 #include "btrMgr_streamOutGst.h"

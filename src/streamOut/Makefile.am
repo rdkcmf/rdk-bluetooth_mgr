@@ -20,7 +20,7 @@ SUBDIRS =
 
 INCLUDE_FILES =
 
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/priv
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/logger
 AM_LDFLAGS =
 
 if USE_GSTREAMER1

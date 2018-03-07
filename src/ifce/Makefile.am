@@ -17,11 +17,13 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS =
-if USE_RPC
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/rpc -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/streamOut  -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/priv ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus  ${GLIB_CFLAGS} ${RPC_FLAGS}
-AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -ldbus-1 -lIARMBus -lrdkloggers
+if !USE_RPC
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/common -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/logger -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS}
+AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -lrdkloggers 
 
-bin_PROGRAMS = btMgrBus 
-btMgrBus_SOURCES = btmgr_bus.c ${top_srcdir}/src/rpc/btmgr_iarm_internal_interface.c ${top_srcdir}/src/main/btmgr.c
-btMgrBus_LDADD = $(top_builddir)/src/audioCap/libbtrMgrAudioCapture.la $(top_builddir)/src/persistIf/libbtrMgrPersistInterface.la $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(top_builddir)/src/streamIn/libbtrMgrStreamIn.la
+lib_LTLIBRARIES = libBTMgr.la
+libBTMgr_la_SOURCES = btrMgr.c
+libBTMgr_la_LIBADD = $(top_builddir)/src/audioCap/libbtrMgrAudioCapture.la $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(top_builddir)/src/streamIn/libbtrMgrStreamIn.la
+libBTMgr_la_includedir = $(includedir)
+libBTMgr_la_include_HEADERS = ${top_srcdir}/include/btmgr.h
 endif

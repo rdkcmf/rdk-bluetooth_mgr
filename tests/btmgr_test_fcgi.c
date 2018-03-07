@@ -205,13 +205,13 @@ void startStreaming (unsigned long long int handle )
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
 
     /* Connect to a device first */
-    rc = BTRMGR_ConnectToDevice(0, handle, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+    rc = BTRMGR_ConnectToDevice(0, handle, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
     if (BTRMGR_RESULT_SUCCESS != rc)
         printf ("<tr>" "<td> Connection establishment failed\n </td>" "</tr>" "</table> ");
     else
     {
         sleep(5);
-        rc = BTRMGR_StartAudioStreamingOut(0, handle, BTRMGR_DEVICE_TYPE_AUDIOSINK);
+        rc = BTRMGR_StartAudioStreamingOut(0, handle, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
         if (BTRMGR_RESULT_SUCCESS != rc)
             printf ("<tr>" "<td> Failed to Stream out to this device\n </td>" "</tr>" "</table> ");
         else
@@ -399,7 +399,7 @@ int main ()
                     }
                     else if (NULL != (pInput = strstr (func, pStartDiscovery)))
                     {
-                        rc = BTRMGR_StartDeviceDiscovery(0);
+                        rc = BTRMGR_StartDeviceDiscovery(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
                         if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Failed to Start Discovery... </td>" "</tr>" "</table> ");
                         else
@@ -408,7 +408,7 @@ int main ()
                     else if (NULL != (pInput = strstr (func, pShowDiscovered)))
                     {
                         BTRMGR_DiscoveredDevicesList_t discoveredDevices;
-                        rc = BTRMGR_StopDeviceDiscovery(0);
+                        rc = BTRMGR_StopDeviceDiscovery(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
                         if (BTRMGR_RESULT_SUCCESS != rc)
                             printf ("<tr>" "<td> Stopping Discovery Failed... </td>" "</tr>" "</table> ");
                         else

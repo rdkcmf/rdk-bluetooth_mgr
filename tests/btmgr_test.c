@@ -360,7 +360,7 @@ int main()
                 break;
             case 8:
                 {
-                    rc = BTRMGR_StartDeviceDiscovery(0);
+                    rc = BTRMGR_StartDeviceDiscovery(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -369,7 +369,7 @@ int main()
                 break;
             case 9:
                 {
-                    rc = BTRMGR_StopDeviceDiscovery(0);
+                    rc = BTRMGR_StopDeviceDiscovery(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -517,14 +517,14 @@ int main()
                 break;
             case 17:
                 {
-                    BTRMGR_DeviceConnect_Type_t stream_pref;
+                    BTRMGR_DeviceOperationType_t stream_pref;
 
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device that you want to start play\t: ");
                     handle = getDeviceSelection();
 
                     printf ("Please set the Streaming Pref \t");
-                    stream_pref = (BTRMGR_DeviceConnect_Type_t) getUserSelection();
+                    stream_pref = (BTRMGR_DeviceOperationType_t) getUserSelection();
 
 
                     rc = BTRMGR_StartAudioStreamingOut(0, handle, stream_pref);
@@ -657,14 +657,14 @@ int main()
                break;
             case 27: 
                 {
-                    BTRMGR_DeviceConnect_Type_t stream_pref;
+                    BTRMGR_DeviceOperationType_t stream_pref;
 
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device that you want to start play from\t: ");
                     handle = getDeviceSelection();
 
                     printf ("Please set the Streaming Pref \t");
-                    stream_pref = (BTRMGR_DeviceConnect_Type_t) getUserSelection();
+                    stream_pref = (BTRMGR_DeviceOperationType_t) getUserSelection();
 
 
                     rc = BTRMGR_StartAudioStreamingIn(0, handle, stream_pref);

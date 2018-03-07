@@ -228,7 +228,7 @@ AC_CONFIG_FILES([Makefile
                  src/main/Makefile
                  src/persistIf/Makefile
                  src/rpc/Makefile
-                 src/ctrl/Makefile
+                 src/ifce/Makefile
                  src/audioCap/Makefile
                  src/streamOut/Makefile
                  src/streamIn/Makefile

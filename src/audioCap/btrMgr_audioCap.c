@@ -54,7 +54,7 @@
 #include "audiocapturemgr_iarm.h"
 #endif
 
-#include "btmgr_priv.h"
+#include "btrMgr_logger.h"
 
 /* Local Headers */
 #include "btrMgr_Types.h"

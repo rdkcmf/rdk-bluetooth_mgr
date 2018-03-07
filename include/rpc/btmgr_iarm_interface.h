@@ -99,7 +99,7 @@ typedef struct _BTRMGR_IARMPairDevice_t {
 typedef struct _BTRMGR_IARMConnectDevice_t {
     unsigned char m_adapterIndex;
     BTRMgrDeviceHandle m_deviceHandle;
-    BTRMGR_DeviceConnect_Type_t m_connectAs;
+    BTRMGR_DeviceOperationType_t m_connectAs;
 } BTRMGR_IARMConnectDevice_t;
 
 typedef struct _BTRMGR_IARMAdapterPower_t {
@@ -116,6 +116,7 @@ typedef struct _BTRMGR_IARMAdapterDiscoverable_t {
 typedef struct _BTRMGR_IARMAdapterDiscover_t {
     unsigned char m_adapterIndex;
     unsigned char m_setDiscovery;
+    BTRMGR_DeviceOperationType_t m_enBTRMgrDevOpT;
 } BTRMGR_IARMAdapterDiscover_t;
 
 typedef struct _BTRMGR_IARMDDeviceProperty_t {
@@ -142,7 +143,7 @@ typedef struct _BTRMGR_IARMConnectedDevices_t{
 typedef struct _BTRMGR_IARMStreaming_t {
     unsigned char m_adapterIndex;
     BTRMgrDeviceHandle m_deviceHandle;
-    BTRMGR_DeviceConnect_Type_t m_audioPref;
+    BTRMGR_DeviceOperationType_t m_audioPref;
 } BTRMGR_IARMStreaming_t;
 
 typedef struct _BTRMGR_IARMStreamingStatus_t {
