@@ -306,8 +306,8 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_discoveredDevice.m_deviceType        = btrMgr_MapDeviceTypeFromCore(((stBTRCoreBTDevice*)p_StatusCB)->enDeviceType);
         apstEventMessage->m_discoveredDevice.m_rssi              = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreBTDevice*)p_StatusCB)->i32RSSI);
         apstEventMessage->m_discoveredDevice.m_isPairedDevice    = btrMgr_GetDevPaired(apstEventMessage->m_discoveredDevice.m_deviceHandle);
-        strncpy(apstEventMessage->m_discoveredDevice.m_name, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceName, (BTRMGR_NAME_LEN_MAX-1));
-        strncpy(apstEventMessage->m_discoveredDevice.m_deviceAddress, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceAddress, (BTRMGR_NAME_LEN_MAX-1));
+        strncpy(apstEventMessage->m_discoveredDevice.m_name, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceName, BTRMGR_NAME_LEN_MAX - 1);
+        strncpy(apstEventMessage->m_discoveredDevice.m_deviceAddress, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceAddress, BTRMGR_NAME_LEN_MAX - 1);
     }
     else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST) {
         apstEventMessage->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.tDeviceId;
@@ -315,30 +315,30 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.ui32VendorId;
         apstEventMessage->m_externalDevice.m_isLowEnergyDevice   = 0;
         apstEventMessage->m_externalDevice.m_externalDevicePIN   = ((stBTRCoreConnCBInfo*)p_StatusCB)->ui32devPassKey;
-        strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-        strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.pcDeviceName, BTRMGR_NAME_LEN_MAX - 1);
+        strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.pcDeviceAddress, BTRMGR_NAME_LEN_MAX - 1);
     }
     else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST) {
         apstEventMessage->m_externalDevice.m_deviceHandle        = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.tDeviceId;
         apstEventMessage->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.enDeviceType);
         apstEventMessage->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.ui32VendorId;
         apstEventMessage->m_externalDevice.m_isLowEnergyDevice   = 0;
-        strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-        strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.pcDeviceName, BTRMGR_NAME_LEN_MAX - 1);
+        strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stKnownDevice.pcDeviceAddress, BTRMGR_NAME_LEN_MAX - 1);
     }
     else if (type == BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST) {
         apstEventMessage->m_externalDevice.m_deviceHandle        = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
         apstEventMessage->m_externalDevice.m_deviceType          = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
         apstEventMessage->m_externalDevice.m_vendorID            = 0;
         apstEventMessage->m_externalDevice.m_isLowEnergyDevice   = 0;
-        strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTRMGR_NAME_LEN_MAX - 1));
-        strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, "TO BE FILLED", (BTRMGR_NAME_LEN_MAX - 1));
+        strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
+        strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, "TO BE FILLED", BTRMGR_NAME_LEN_MAX - 1);
     }
     else {
        apstEventMessage->m_pairedDevice.m_deviceHandle           = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
        apstEventMessage->m_pairedDevice.m_deviceType             = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
        apstEventMessage->m_pairedDevice.m_isLastConnectedDevice  = (ghBTRMgrDevHdlLastConnected == apstEventMessage->m_pairedDevice.m_deviceHandle) ? 1 : 0;
-       strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, (BTRMGR_NAME_LEN_MAX-1));
+       strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
     }
 
 
@@ -714,15 +714,15 @@ btrMgr_StartAudioStreamingOut (
     unsigned int                    aui32ConfirmIdx,
     unsigned int                    aui32SleepIdx
 ) {
-    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    eBTRMgrRet      lenBtrMgrRet    = eBTRMgrSuccess;
-    enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
-    unsigned char   isFound = 0;
-    int             i = 0;
-    int             deviceFD = 0;
-    int             deviceReadMTU = 0;
-    int             deviceWriteMTU = 0;
-    unsigned int    ui32retryIdx = aui32ConnectRetryIdx + 1;
+    BTRMGR_Result_t             lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    eBTRMgrRet                  lenBtrMgrRet    = eBTRMgrSuccess;
+    enBTRCoreRet                lenBtrCoreRet   = enBTRCoreSuccess;
+    unsigned char               isFound = 0;
+    int                         i = 0;
+    int                         deviceFD = 0;
+    int                         deviceReadMTU = 0;
+    int                         deviceWriteMTU = 0;
+    unsigned int                ui32retryIdx = aui32ConnectRetryIdx + 1;
     stBTRCorePairedDevicesCount listOfPDevices;
 
 
@@ -875,7 +875,7 @@ btrMgr_StartAudioStreamingOut (
     } while ((lenBtrMgrRet == eBTRMgrFailure) && (--ui32retryIdx));
 
 
-    if (gfpcBBTRMgrEventOut) {
+    {
         BTRMGR_EventMessage_t lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
@@ -887,11 +887,17 @@ btrMgr_StartAudioStreamingOut (
 
         if (lenBtrMgrRet == eBTRMgrSuccess) {
             lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
-            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            }
         }
         else if (lenBtrMgrRet == eBTRMgrFailure) {
             lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_CONNECTION_FAILED;
-            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            }
         }
         else {
             //TODO: Some error specific event to XRE
@@ -1602,7 +1608,7 @@ BTRMGR_StopDeviceDiscovery (
         btrMgr_SetDiscoveryInProgress(0);
         btrMgr_SetCurrentDiscoveryDeviceType(BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
 
-        if (gfpcBBTRMgrEventOut) {
+        {
             BTRMGR_EventMessage_t lstEventMessage;
             memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
@@ -1610,8 +1616,10 @@ BTRMGR_StopDeviceDiscovery (
             lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE;
             lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
-            /*  Post a callback */
-            gfpcBBTRMgrEventOut(lstEventMessage);
+            
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            }
         }
     }
 
@@ -1740,7 +1748,7 @@ BTRMGR_PairDevice (
     }
 
 
-    if (gfpcBBTRMgrEventOut) {
+    {
         BTRMGR_EventMessage_t lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
@@ -1748,8 +1756,10 @@ BTRMGR_PairDevice (
         lstEventMessage.m_eventType    = lBtMgrOutEvent;
         lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
-        /*  Post a callback */
-        gfpcBBTRMgrEventOut(lstEventMessage);
+        
+        if (gfpcBBTRMgrEventOut) {
+            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+        }
     }
 
     /* Update the Paired Device List */
@@ -1844,7 +1854,7 @@ BTRMGR_UnpairDevice (
     }
 
 
-    if (gfpcBBTRMgrEventOut) {
+    {
         BTRMGR_EventMessage_t lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
@@ -1852,8 +1862,9 @@ BTRMGR_UnpairDevice (
         lstEventMessage.m_eventType    = lBtMgrOutEvent;
         lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX; /* Application will have to get the list explicitly for list; Lets return the max value */
 
-        /*  Post a callback */
-        gfpcBBTRMgrEventOut(lstEventMessage);
+        if (gfpcBBTRMgrEventOut) {
+            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+        }
     }
 
     /* Update the Paired Device List */
@@ -2018,7 +2029,7 @@ BTRMGR_DisconnectFromDevice (
         BTRMGRLOG_ERROR ("Failed to Disconnect\n");
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
 
-        if (gfpcBBTRMgrEventOut) {
+        {
             BTRMGR_EventMessage_t lstEventMessage;
             memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
@@ -2026,8 +2037,9 @@ BTRMGR_DisconnectFromDevice (
             lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED;
             lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
-            /*  Post a callback */
-            gfpcBBTRMgrEventOut(lstEventMessage);
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            }
         }
     }
     else {
@@ -3137,7 +3149,7 @@ btrMgr_DeviceStatusCb (
 
     BTRMGRLOG_INFO ("Received status callback\n");
 
-    if ((p_StatusCB) && (gfpcBBTRMgrEventOut)) {
+    if (p_StatusCB) {
 
         switch (p_StatusCB->eDeviceCurrState) {
         case enBTRCoreDevStInitialized:
@@ -3148,7 +3160,10 @@ btrMgr_DeviceStatusCb (
             if (enBTRCoreDevStLost == p_StatusCB->eDevicePrevState || enBTRCoreDevStPaired == p_StatusCB->eDevicePrevState) {
                 if (!gIsAudOutStartupInProgress) {
                     btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_FOUND);  
-                    gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
+
+                    if (gfpcBBTRMgrEventOut) {
+                        gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
+                    }
                 }
             }
             else if (enBTRCoreDevStInitialized != p_StatusCB->eDevicePrevState) {
@@ -3161,13 +3176,19 @@ btrMgr_DeviceStatusCb (
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO) &&
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_CAR_AUDIO) &&
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)) {
-                    gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
+
+                    if (gfpcBBTRMgrEventOut) {
+                        gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
+                    }
                 }
             }
             break;
         case enBTRCoreDevStDisconnected:
             btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
-            gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+            }
 
             if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
                 /* update the flags as the device is NOT Connected */
@@ -3188,7 +3209,10 @@ btrMgr_DeviceStatusCb (
         case enBTRCoreDevStLost:
             if( !gIsUserInitiated ) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OUT_OF_RANGE);
-                gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+                }
 
                 if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
                     /* update the flags as the device is NOT Connected */
@@ -3212,7 +3236,10 @@ btrMgr_DeviceStatusCb (
             if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
                 btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TABLET) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST);
-                gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+                }
             }
             break;
         default:
@@ -3231,12 +3258,15 @@ btrMgr_DeviceDiscoveryCb (
 ) {
     enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
 
-    if (btrMgr_GetDiscoveryInProgress() && (gfpcBBTRMgrEventOut)) {
+    if (btrMgr_GetDiscoveryInProgress()) {
         BTRMGR_EventMessage_t lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
         btrMgr_MapDevstatusInfoToEventInfo ((void*)&devicefound, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
-        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+
+        if (gfpcBBTRMgrEventOut) {
+            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+        }
     }
 
     return lenBtrCoreRet;
@@ -3250,6 +3280,10 @@ btrMgr_ConnectionInIntimationCb (
     void*                   apvUserData
 ) {
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+    BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Events_t         lBtMgrOutEvent  = -1;
+    BTRMGR_EventMessage_t   lstEventMessage;
+    unsigned char           lui8AdapterIdx = 0;
 
      if (!apstConnCbInfo) {
         BTRMGRLOG_ERROR ("Invaliid argument\n");
@@ -3261,18 +3295,19 @@ btrMgr_ConnectionInIntimationCb (
         BTRMGRLOG_ERROR ("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
     }
 
-    if (gfpcBBTRMgrEventOut) {
-        BTRMGR_EventMessage_t lstEventMessage;
-        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
-        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);  
+    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+    btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);  
+
+
+    if (gfpcBBTRMgrEventOut) {
         gfpcBBTRMgrEventOut(lstEventMessage); /* Post a callback */
     }
     
 
-    /* Max 15 sec timeout - Polled at 500ms second interval */
+    /* Max 60 sec timeout - Polled at 500ms second interval */
     {
-        unsigned int ui32sleepIdx = 30;
+        unsigned int ui32sleepIdx = 120;
 
         do {
             usleep(500000);
@@ -3292,6 +3327,32 @@ btrMgr_ConnectionInIntimationCb (
         gAcceptConnection = 0;  //reset variabhle for the next connection
         *api32ConnInIntimResp = 0;
     }
+
+
+    if (*api32ConnInIntimResp == 1) {
+        BTRMGRLOG_INFO ("Paired Successfully\n");
+        lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+        lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE;
+    }
+    else {
+        BTRMGRLOG_ERROR ("Failed to pair a device\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_PAIRING_FAILED;
+    }
+
+
+    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+    lstEventMessage.m_adapterIndex = lui8AdapterIdx;
+    lstEventMessage.m_eventType    = lBtMgrOutEvent;
+    lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+
+    if (gfpcBBTRMgrEventOut) {
+        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+    }
+
+
+    (void)lenBtrMgrResult;
 
     return lenBtrCoreRet;
 }
@@ -3313,17 +3374,18 @@ btrMgr_ConnectionInAuthenticationCb (
 
     if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
         apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
-        if (gfpcBBTRMgrEventOut) {
-            BTRMGR_EventMessage_t lstEventMessage;
-            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+        BTRMGR_EventMessage_t lstEventMessage;
 
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
+        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
+
+        if (gfpcBBTRMgrEventOut) {
             gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
         }
 
         
-        {   /* Max 15 sec timeout - Polled at 500ms second interval */
-            unsigned int ui32sleepIdx = 30;
+        {   /* Max 60 sec timeout - Polled at 500ms second interval */
+            unsigned int ui32sleepIdx = 120;
 
             do {
                 usleep(500000);
@@ -3337,12 +3399,12 @@ btrMgr_ConnectionInAuthenticationCb (
             BTRMGRLOG_WARN ("Incoming Connection accepted\n");
             gAcceptConnection = 0;    //reset variabhle for the next connection
             *api32ConnInAuthResp = 1;
-        }   
+        }
         else {
             BTRMGRLOG_ERROR ("Incoming Connection denied\n");
             gAcceptConnection = 0;    //reset variabhle for the next connection
             *api32ConnInAuthResp = 0;
-        } 
+        }
     }
     else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset)   ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Loudspeaker)       ||
@@ -3351,16 +3413,18 @@ btrMgr_ConnectionInAuthenticationCb (
 
         BTRMGRLOG_WARN ("Incoming Connection from BT Speaker/Headset\n");
         if (btrMgr_GetDevPaired(apstConnCbInfo->stKnownDevice.tDeviceId) && (apstConnCbInfo->stKnownDevice.tDeviceId == ghBTRMgrDevHdlLastConnected)) {
+            BTRMGR_EventMessage_t lstEventMessage;
+
             BTRMGRLOG_DEBUG ("Paired - Last Connected device...\n");
+
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
 
             //TODO: Check if XRE wants to bring up a Pop-up or Respond
             if (gfpcBBTRMgrEventOut) {
-                BTRMGR_EventMessage_t lstEventMessage;
-                memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-                btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);  
                 gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
             }
+
 
             {   /* Max 200msec timeout - Polled at 50ms second interval */
                 unsigned int ui32sleepIdx = 4;
