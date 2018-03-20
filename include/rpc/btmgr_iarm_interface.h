@@ -22,7 +22,19 @@
 #ifndef __BT_MGR_IARM_INTERFACE_H__
 #define __BT_MGR_IARM_INTERFACE_H__
 
+/**
+ * @file  btmgr_iarm_interface.h
+ *
+ * @defgroup  IARM_Interface IARM Interface
+ * This file defines bluetooth manager's iarm interfaces to external BT devices.
+ * @ingroup  BTR_MGR
+ */
 
+/**
+ * @addtogroup  IARM_Interface
+ * @{
+ *
+ */
 #define IARM_BUS_BTRMGR_NAME                                "BTRMgrBus"
 #define BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS          15000
 
@@ -59,7 +71,9 @@
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
 
-
+/**
+ * @brief Represents the events supported by bluetooth manager.
+ */
 typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE,
     BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE,
@@ -200,4 +214,5 @@ typedef struct _BTRMGR_IARMLeOp_t {
     char                    m_opRes[BTRMGR_MAX_STR_LEN];
 } BTRMGR_IARMLeOp_t;    
 
+/** @} */
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

@@ -22,6 +22,13 @@
  * @description This file defines bluetooth manager's data streaming interfaces using GStreamer to external BT devices
  *
  */
+
+/**
+ * @addtogroup  Stream_Out
+ * @{
+ *
+ */
+
 #ifndef __BTR_MGR_STREAMOUT_GST_H__
 #define __BTR_MGR_STREAMOUT_GST_H__
 
@@ -65,8 +72,55 @@ typedef eBTRMgrSOGstRet (*fPtr_BTRMgr_SO_GstStatusCb) (eBTRMgrSOGstStatus aeBtrM
 
 
 /* Interfaces */
+
+/**
+ * @brief This API initializes the streaming interface.
+ *
+ * Uses gstreamer element "appsrc" for initialization.
+ *
+ * @param[in]  phBTRMgrSoGstHdl         Handle to the stream out interface.
+ * @param[in]  afpcBSoGstStatus         Stream Out callback function.
+ * @param[in]  apvUserData              Data for the callback function.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstInit (tBTRMgrSoGstHdl* phBTRMgrSoGstHdl, fPtr_BTRMgr_SO_GstStatusCb afpcBSoGstStatus, void* apvUserData);
+
+/**
+ * @brief This API performs the cleanup operations.
+ *
+ * Cancels the threads that are running within and frees all associated memory.
+ *
+ * @param[in]  hBTRMgrSoGstHdl             Handle to the stream out interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstDeInit (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
+
+/**
+ * @brief This API starts the playback and listens to the events associated with it.
+ *
+ * @param[in]  hBTRMgrSoGstHdl            Handle to the stream out interface.
+ * @param[in]  apcInFmt                   Supported formats.
+ * @param[in]  ai32InRate                 Input rate.
+ * @param[in]  ai32InChannels             Input channels.
+ * @param[in]  ai32OutRate                Output rate.
+ * @param[in]  ai32OutChannels            Channels supported.
+ * @param[in]  apcOutChannelMode          Channel modes.
+ * @param[in]  aui8SbcAllocMethod         Allocation methods.
+ * @param[in]  aui8SbcSubbands            Sub bands.
+ * @param[in]  aui8SbcBlockLength         Blocks.
+ * @param[in]  aui8SbcMinBitpool          Min bit pool.
+ * @param[in]  aui8SbcMaxBitpool          Max bit pool.
+ * @param[in]  ai32InBufMaxSize           Maximum buffer size.
+ * @param[in]  ai32BTDevFd                Input file descriptor.
+ * @param[in]  ai32BTDevMTU               Block size to  read.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, 
                                     int ai32InBufMaxSize,
                                     const char* apcInFmt,
@@ -82,11 +136,63 @@ eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
                                     unsigned char aui8SbcMaxBitpool,
                                     int ai32BTDevFd,
                                     int ai32BTDevMTU);
+
+/**
+ * @brief This API stops the current playback and sets the state as NULL.
+ *
+ * @param[in]  hBTRMgrSoGstHdl           Handle to the stream out interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstStop (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
+
+/**
+ * @brief This API pauses the current playback and listens to the events.
+ *
+ * Checks for the current state if it is playing sets the state to pause.
+ *
+ * @param[in]  hBTRMgrSoGstHdl           Handle to the stream out interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstPause (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
+
+/**
+ * @brief This API resumes the current operation and listens to the events.
+ *
+ * Checks for the current state if it is paused sets the state to playing.
+ *
+ * @param[in]  hBTRMgrSoGstHdl             Handle to the stream out interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstResume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
+
+/**
+ * @brief This API pushes the buffer to the queue.
+ *
+ * @param[in]  hBTRMgrSoGstHdl         Handle to the stream out interface.
+ * @param[in]  pcInBuf                 The buffer to be added to the queue.
+ * @param[in]  aiInBufSize             Buffer size.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstSendBuffer (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, char* pcInBuf, int aiInBufSize);
+
+/**
+ * @brief This API is used to push EOS(End of Stream) to the queue.
+ *
+ * @param[in]  hBTRMgrSoGstHdl             Handle to the stream out interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
 eBTRMgrSOGstRet BTRMgr_SO_GstSendEOS (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
+/** @} */
 
 #endif /* __BTR_MGR_STREAMOUT_GST_H__ */
 

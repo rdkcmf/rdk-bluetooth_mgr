@@ -25,6 +25,16 @@
 #ifndef __BTR_MGR_TYPES_H__
 #define __BTR_MGR_TYPES_H__
 
+/**
+ * @addtogroup  Media_types
+ * @{
+ *
+ */
+
+/**
+ * @brief Represents the bluetooth manager return values.
+ */
+
 typedef enum _eBTRMgrRet {
     eBTRMgrFailure,
     eBTRMgrInitFailure,
@@ -32,4 +42,7 @@ typedef enum _eBTRMgrRet {
     eBTRMgrFailInArg,
     eBTRMgrSuccess
 } eBTRMgrRet;
+
+/** @} */
+
 #endif

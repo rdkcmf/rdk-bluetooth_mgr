@@ -17,15 +17,26 @@
  * limitations under the License.
 */
 /**
- * @file btrMgr_mediaTyoes.h
+ * @file btrMgr_mediaTypes.h
  *
- * @description This file defines bluetooth manager's mediatypes for internal use
+ * @defgroup Media_types  Media Types
+ * This file defines bluetooth manager's mediatypes for internal use.
+ * @ingroup  BTR_MGR
  *
  */
 
 #ifndef __BTR_MGR_MEDIA_TYPES_H__
 #define __BTR_MGR_MEDIA_TYPES_H__
 
+/**
+ * @addtogroup  Media_types
+ * @{
+ *
+ */
+
+/**
+ * @brief Represents the status of media player.
+ */
 typedef enum _eBTRMgrState {
     eBTRMgrStateInitialized,
     eBTRMgrStateDeInitialized,
@@ -38,6 +49,9 @@ typedef enum _eBTRMgrState {
     eBTRMgrStateUnknown
 } eBTRMgrState;
 
+/**
+ * @brief Represents the audio codec types.
+ */
 typedef enum _eBTRMgrAType {
     eBTRMgrATypePCM,
     eBTRMgrATypeSBC,
@@ -46,6 +60,10 @@ typedef enum _eBTRMgrAType {
     eBTRMgrATypeUnknown
 } eBTRMgrAType;
 
+
+/**
+ * @brief Represents the frequency supported.
+ */
 typedef enum _eBTRMgrSFreq {
     eBTRMgrSFreq8K,
     eBTRMgrSFreq16K,
@@ -55,6 +73,9 @@ typedef enum _eBTRMgrSFreq {
     eBTRMgrSFreqUnknown
 } eBTRMgrSFreq;
 
+/**
+ * @brief Represents the PCM bits supported.
+ */
 typedef enum _eBTRMgrSFmt {
     eBTRMgrSFmt8bit,
     eBTRMgrSFmt16bit,
@@ -63,6 +84,9 @@ typedef enum _eBTRMgrSFmt {
     eBTRMgrSFmtUnknown
 } eBTRMgrSFmt;
 
+/**
+ * @brief Represents the Audio channel supported.
+ */
 typedef enum _eBTRMgrAChan {
     eBTRMgrAChanMono,
     eBTRMgrAChanDualChannel,
@@ -73,40 +97,57 @@ typedef enum _eBTRMgrAChan {
     eBTRMgrAChanUnknown
 } eBTRMgrAChan;
 
+/**
+ * @brief Represents the PCM codec details.
+ */
 typedef struct _stBTRMgrPCMInfo {
     eBTRMgrSFreq  eBtrMgrSFreq;
     eBTRMgrSFmt   eBtrMgrSFmt;
     eBTRMgrAChan  eBtrMgrAChan;
 } stBTRMgrPCMInfo;
 
+/**
+ * @brief Represents the Subband coding (SBC) audio codec information.
+ *
+ * This technique is used to connect headphones via wireless Bluetooth links.
+ */
 typedef struct _stBTRMgrSBCInfo {
-    eBTRMgrSFreq    eBtrMgrSbcSFreq;        // frequency
-    eBTRMgrAChan    eBtrMgrSbcAChan;        // channel_mode
-    unsigned char   ui8SbcAllocMethod;      // allocation_method
-    unsigned char   ui8SbcSubbands;         // subbands
-    unsigned char   ui8SbcBlockLength;      // block_length
-    unsigned char   ui8SbcMinBitpool;       // min_bitpool
-    unsigned char   ui8SbcMaxBitpool;       // max_bitpool
-    unsigned short  ui16SbcFrameLen;        // frameLength
-    unsigned short  ui16SbcBitrate;         // bitrate
+    eBTRMgrSFreq    eBtrMgrSbcSFreq;        //!< frequency
+    eBTRMgrAChan    eBtrMgrSbcAChan;        //!< channel_mode
+    unsigned char   ui8SbcAllocMethod;      //!< allocation_method
+    unsigned char   ui8SbcSubbands;         //!< subbands
+    unsigned char   ui8SbcBlockLength;      //!< block_length
+    unsigned char   ui8SbcMinBitpool;       //!< min_bitpool
+    unsigned char   ui8SbcMaxBitpool;       //!< max_bitpool
+    unsigned short  ui16SbcFrameLen;        //!< frameLength
+    unsigned short  ui16SbcBitrate;         //!< bitrate
 } stBTRMgrSBCInfo;
 
+/**
+ * @brief Represents the MPEG codec details.
+ */
 typedef struct _stBTRMgrMPEGInfo {
-    eBTRMgrSFreq    eBtrMgrMpegSFreq;       // frequency
-    eBTRMgrAChan    eBtrMgrMpegAChan;       // channel_mode
-    unsigned char   ui8MpegCrc;             // crc
-    unsigned char   ui8MpegLayer;           // layer
-    unsigned char   ui8MpegMpf;             // mpf
-    unsigned char   ui8MpegRfa;             // rfa
-    unsigned short  ui16MpegBitrate;        // bitrate
+    eBTRMgrSFreq    eBtrMgrMpegSFreq;       //!< frequency
+    eBTRMgrAChan    eBtrMgrMpegAChan;       //!< channel_mode
+    unsigned char   ui8MpegCrc;             //!< crc
+    unsigned char   ui8MpegLayer;           //!< layer
+    unsigned char   ui8MpegMpf;             //!< mpf
+    unsigned char   ui8MpegRfa;             //!< rfa
+    unsigned short  ui16MpegBitrate;        //!< bitrate
 } stBTRMgrMPEGInfo;
 
+/**
+ * @brief Represents the audio input settings.
+ */
 typedef struct _stBTRMgrInASettings {
     eBTRMgrAType    eBtrMgrInAType;
     void*           pstBtrMgrInCodecInfo;
     int             i32BtrMgrInBufMaxSize;
 } stBTRMgrInASettings;
 
+/**
+ * @brief Represents the audio output settings.
+ */
 typedef struct _stBTRMgrOutASettings {
     eBTRMgrAType    eBtrMgrOutAType;
     void*           pstBtrMgrOutCodecInfo;
@@ -115,6 +156,9 @@ typedef struct _stBTRMgrOutASettings {
     int             i32BtrMgrDevMtu;
 } stBTRMgrOutASettings;
 
+/**
+ * @brief Represents the media file status.
+ */
 typedef struct _stBTRMgrMediaStatus {
     eBTRMgrState    eBtrMgrState;
     eBTRMgrSFreq    eBtrMgrSFreq;
@@ -124,6 +168,7 @@ typedef struct _stBTRMgrMediaStatus {
     unsigned int    ui32UnderFlowCnt;
 } stBTRMgrMediaStatus;
 
+/** @} */
 
 
 #endif /* __BTR_MGR_MEDIA_TYPES_H__ */

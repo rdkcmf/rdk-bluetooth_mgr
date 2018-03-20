@@ -18,11 +18,34 @@
 */
 #ifndef __BTR_MGR_H__
 #define __BTR_MGR_H__
+/**
+ * @file btmgr.h
+ *
+ * @defgroup BTR_MGR Bluetooth Manager
+ *
+ * Bluetooth Manager (An RDK component) interfaces with BlueZ through the D-Bus API,
+ * so there is no direct linking of the BlueZ library with Bluetooth Manager.
+ * Bluetooth manager provides an interface to port any Bluetooth stack on RDK
+ * The Bluetooth manager daemon manages Bluetooth services in RDK.
+ * It uses IARM Bus to facilitate communication between the application and Bluetooth driver
+ * through Bluetooth Manager component.
+ * @ingroup  Bluetooth
+ *
+ * @defgroup BTR_MGR_API Bluetooth Manager Data Types and API(s)
+ * This file provides the data types and API(s) used by the bluetooth manager.
+ * @ingroup  BTR_MGR
+ *
+ */
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+/**
+ * @addtogroup BTR_MGR_API
+ * @{
+ */
 
 #define BTRMGR_MAX_STR_LEN             256
 #define BTRMGR_NAME_LEN_MAX            64
@@ -34,6 +57,9 @@ extern "C"
 
 typedef unsigned long long int BTRMgrDeviceHandle;
 
+/**
+ * @brief Represents the status of the operation.
+ */
 typedef enum _BTRMGR_Result_t {
     BTRMGR_RESULT_SUCCESS = 0,
     BTRMGR_RESULT_GENERIC_FAILURE = -1,
@@ -41,6 +67,9 @@ typedef enum _BTRMGR_Result_t {
     BTRMGR_RESULT_INIT_FAILED = -3
 } BTRMGR_Result_t;
 
+/**
+ * @brief Represents the event status.
+ */
 typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_DEVICE_OUT_OF_RANGE = 100,
     BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE,
@@ -67,6 +96,9 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
+/**
+ * @brief Represents the bluetooth device types.
+ */
 typedef enum _BTRMGR_DeviceType_t {
     BTRMGR_DEVICE_TYPE_UNKNOWN,
     BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET,
@@ -92,11 +124,17 @@ typedef enum _BTRMGR_DeviceType_t {
     BTRMGR_DEVICE_TYPE_END
 } BTRMGR_DeviceType_t;
 
+/**
+ * @brief Represents the stream output types.
+ */
 typedef enum _BTRMGR_StreamOut_Type_t {
     BTRMGR_STREAM_PRIMARY = 0,
     BTRMGR_STREAM_SECONDARY,
 } BTRMGR_StreamOut_Type_t;
 
+/**
+ * @brief Represents the operation type for bluetooth device.
+ */
 typedef enum _BTRMGR_DeviceOperationType_t {
     BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT  = 1 << 0,
     BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT   = 1 << 1,
@@ -104,12 +142,18 @@ typedef enum _BTRMGR_DeviceOperationType_t {
     BTRMGR_DEVICE_OP_TYPE_UNKNOWN       = 1 << 3
 } BTRMGR_DeviceOperationType_t;
 
+/**
+ * @brief Represents the bluetooth power states.
+ */
 typedef enum _BTRMGR_DevicePower_t {
     BTRMGR_DEVICE_POWER_ACTIVE = 0,
     BTRMGR_DEVICE_POWER_LOW,
     BTRMGR_DEVICE_POWER_STANDBY
 } BTRMGR_DevicePower_t;
 
+/**
+ * @brief Represents the bluetooth signal strength
+ */
 typedef enum _BTRMGR_RSSIValue_type_t {
     BTRMGR_RSSI_NONE = 0,      //!< No signal (0 bar)
     BTRMGR_RSSI_POOR,          //!< Poor (1 bar)
@@ -118,6 +162,9 @@ typedef enum _BTRMGR_RSSIValue_type_t {
     BTRMGR_RSSI_EXCELLENT      //!< Excellent (4 bars)
 } BTRMGR_RSSIValue_t;
 
+/**
+ * @brief Represents the commands to control the media files.
+ */
 typedef enum _BTRMGR_MediaControlCommand_t {
     BTRMGR_MEDIA_CTRL_PLAY,
     BTRMGR_MEDIA_CTRL_PAUSE,
@@ -141,6 +188,9 @@ typedef enum _BTRMGR_LeProperty_t {  // looking for a better enum name
     BTRMGR_LE_PROP_CHAR
 } BTRMGR_LeProperty_t;
 
+/**
+ * @brief Represents the Low energy operations.
+ */
 typedef enum _BTRMGR_LeOp_t {
     BTRMGR_LE_OP_READ_VALUE,
     BTRMGR_LE_OP_WRITE_VALUE,
@@ -166,8 +216,9 @@ typedef enum _BTRMGR_GattCharFlags_t {
     BTRMGR_GATT_CHAR_FLAG_WRITABLE_AUXILIARIES         = 1 << 14
 } BTRMGR_GattCharFlags_t;
 
-
-
+/**
+ * @brief Represents the media track info.
+ */
 typedef struct _BTRMGR_MediaTrackInfo_t {
     char            pcAlbum[BTRMGR_MAX_STR_LEN];
     char            pcGenre[BTRMGR_MAX_STR_LEN];
@@ -178,6 +229,9 @@ typedef struct _BTRMGR_MediaTrackInfo_t {
     unsigned int    ui32NumberOfTracks;
 } BTRMGR_MediaTrackInfo_t;
 
+/**
+ * @brief Represents the media position info.
+ */
 typedef struct _BTRMGR_MediaPositionInfo_t {
     unsigned int          m_mediaDuration;
     unsigned int          m_mediaPosition;
@@ -188,11 +242,17 @@ typedef struct _BTRMGR_LeUUID_t {
     char            m_uuid[BTRMGR_NAME_LEN_MAX];
 } BTRMGR_LeUUID_t;
 
+/**
+ * @brief Represents the supported service of the device.
+ */
 typedef struct _BTRMGR_DeviceService_t {
     unsigned short  m_uuid;
     char            m_profile[BTRMGR_NAME_LEN_MAX];
 } BTRMGR_DeviceService_t;
 
+/**
+ * @brief Represents device services list.
+ */
 typedef struct _BTRMGR_DeviceServiceList_t {
     unsigned short          m_numOfService;
 
@@ -203,6 +263,9 @@ typedef struct _BTRMGR_DeviceServiceList_t {
     };
 } BTRMGR_DeviceServiceList_t;
 
+/**
+ * @brief Represents the property of the device.
+ */
 typedef struct _BTRMGR_DevicesProperty_t {
     BTRMgrDeviceHandle          m_deviceHandle;
     BTRMGR_DeviceType_t         m_deviceType;
@@ -217,6 +280,9 @@ typedef struct _BTRMGR_DevicesProperty_t {
     BTRMGR_DeviceServiceList_t  m_serviceInfo;
 } BTRMGR_DevicesProperty_t;
 
+/**
+ * @brief Represents the details of device connected.
+ */
 typedef struct _BTRMGR_ConnectedDevice_t {
     BTRMgrDeviceHandle          m_deviceHandle;
     BTRMGR_DeviceType_t         m_deviceType;
@@ -229,6 +295,9 @@ typedef struct _BTRMGR_ConnectedDevice_t {
     BTRMGR_DevicePower_t        m_powerStatus;
 } BTRMGR_ConnectedDevice_t;
 
+/**
+ * @brief Represents the paired devices information.
+ */
 typedef struct _BTRMGR_PairedDevices_t {
     BTRMgrDeviceHandle          m_deviceHandle;
     BTRMGR_DeviceType_t         m_deviceType;
@@ -242,6 +311,9 @@ typedef struct _BTRMGR_PairedDevices_t {
     unsigned int                m_ui32DevClassBtSpec;
 } BTRMGR_PairedDevices_t;
 
+/**
+ * @brief Represents the discovered device's details.
+ */
 typedef struct _BTRMGR_DiscoveredDevices_t {
     BTRMgrDeviceHandle  m_deviceHandle;
     BTRMGR_DeviceType_t m_deviceType;
@@ -258,21 +330,33 @@ typedef struct _BTRMGR_DiscoveredDevices_t {
     unsigned int        m_ui32DevClassBtSpec;
 } BTRMGR_DiscoveredDevices_t;
 
+/**
+ * @brief Represents the connected devices list.
+ */
 typedef struct _BTRMGR_ConnectedDevicesList_t {
     unsigned short              m_numOfDevices;
     BTRMGR_ConnectedDevice_t    m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
 } BTRMGR_ConnectedDevicesList_t;
 
+/**
+ * @brief Represents the list of paired devices.
+ */
 typedef struct _BTRMGR_PairedDevicesList_t {
     unsigned short          m_numOfDevices;
     BTRMGR_PairedDevices_t  m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
 } BTRMGR_PairedDevicesList_t;
 
+/**
+ * @brief Represents the list of scanned devices.
+ */
 typedef struct _BTRMGR_DiscoveredDevicesList_t {
     unsigned short              m_numOfDevices;
     BTRMGR_DiscoveredDevices_t  m_deviceProperty[BTRMGR_DEVICE_COUNT_MAX];
 } BTRMGR_DiscoveredDevicesList_t;
 
+/**
+ * @brief Represents the details of external devices connected.
+ */
 typedef struct _BTRMGR_ExternalDevice_t {
     BTRMgrDeviceHandle          m_deviceHandle;
     BTRMGR_DeviceType_t         m_deviceType;
@@ -284,6 +368,9 @@ typedef struct _BTRMGR_ExternalDevice_t {
     unsigned int                m_externalDevicePIN;
 } BTRMGR_ExternalDevice_t;
 
+/**
+ * @brief Represents the media info.
+ */
 typedef struct _BTRMGR_MediaInfo_t {
     BTRMgrDeviceHandle     m_deviceHandle;
     BTRMGR_DeviceType_t    m_deviceType;
@@ -294,6 +381,9 @@ typedef struct _BTRMGR_MediaInfo_t {
     };
 } BTRMGR_MediaInfo_t;
 
+/**
+ * @brief Represents the event message info.
+ */
 typedef struct _BTRMGR_EventMessage_t {
     unsigned char   m_adapterIndex;
     BTRMGR_Events_t m_eventType;
@@ -306,6 +396,9 @@ typedef struct _BTRMGR_EventMessage_t {
     };
 } BTRMGR_EventMessage_t;
 
+/**
+ * @brief Represents the event response.
+ */
 typedef struct _BTRMGR_EventResponse_t {
     BTRMGR_Events_t     m_eventType;
     BTRMgrDeviceHandle  m_deviceHandle;
@@ -320,59 +413,420 @@ typedef BTRMGR_Result_t (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t astEventMe
 
 
 /* Interfaces */
+
+/**
+ * @brief  This API initializes the bluetooth manager.
+ *
+ * This API performs the following operations:
+ *
+ * - Initializes the bluetooth core layer.
+ * - Initialize the Paired Device List for Default adapter.
+ * - Register for callback to get the status of connected Devices.
+ * - Register for callback to get the Discovered Devices.
+ * - Register for callback to process incoming pairing requests.
+ * - Register for callback to process incoming connection requests.
+ * - Register for callback to process incoming media events.
+ * - Activates the default agent.
+ * - Initializes the persistant interface and saves all bluetooth profiles to the database.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_Init(void);
+
+/**
+ * @brief  This API invokes the deinit function of bluetooth core and persistant interface module.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_DeInit(void);
 
+/**
+ * @brief  This API returns the number of bluetooth adapters available.
+ *
+ * @param[out] pNumOfAdapters    Indicates the number of adapters available.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetNumberOfAdapters(unsigned char *pNumOfAdapters);
+
+
+/**
+ * @brief  This API is designed to reset the bluetooth adapter.
+ *
+ * As of now, HAL implementation is not available for this API.
+ *
+ * @param[in] aui8AdapterIdx     Index of bluetooth adapter.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_ResetAdapter(unsigned char aui8AdapterIdx);
 
+/**
+ * @brief  This API is used to set the new name to the bluetooth adapter
+ *
+ * @param[in] aui8AdapterIdx     Index of bluetooth adapter.
+ * @param[in] pNameOfAdapter     The name to set.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_SetAdapterName(unsigned char aui8AdapterIdx, const char* pNameOfAdapter);
+
+
+/**
+ * @brief  This API fetches the bluetooth adapter name.
+ *
+ * @param[in]  aui8AdapterIdx     Index of bluetooth adapter.
+ * @param[out] pNameOfAdapter     Bluetooth adapter name.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetAdapterName(unsigned char aui8AdapterIdx, char* pNameOfAdapter);
 
+/**
+ * @brief  This API sets the bluetooth adapter power to ON/OFF.
+ *
+ * @param[in] aui8AdapterIdx     Index of bluetooth adapter.
+ * @param[in] power_status        Value to set the  power. 0 to OFF & 1 to ON.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_SetAdapterPowerStatus(unsigned char aui8AdapterIdx, unsigned char power_status);
+
+/**
+ * @brief  This API fetches the power status, either 0 or 1.
+ *
+ * @param[in]  aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[out] pPowerStatus    Indicates the power status.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetAdapterPowerStatus(unsigned char aui8AdapterIdx, unsigned char *pPowerStatus);
 
+/**
+ * @brief  This API is to make the adapter discoverable until the given timeout.
+ *
+ * @param[in]  aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[in]  discoverable    Value to turn on or off the discovery.
+ * @param[in]  timeout         Timeout to turn on discovery.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_SetAdapterDiscoverable(unsigned char aui8AdapterIdx, unsigned char discoverable, int timeout);
+
+/**
+ * @brief  This API checks the adapter is discoverable or not.
+ *
+ * @param[in]   aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[out]  pDiscoverable   Indicates discoverable or not.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_IsAdapterDiscoverable(unsigned char aui8AdapterIdx, unsigned char *pDiscoverable);
 
+/**
+ * @brief  This API initiates the scanning process.
+ *
+ * @param[in]   aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[in]   aenBTRMgrDevOpT Device operation type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_StartDeviceDiscovery(unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT);
+
+/**
+ * @brief  This API terminates the scanning process.
+ *
+ * @param[in]   aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[in]   aenBTRMgrDevOpT Device operation type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_StopDeviceDiscovery(unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT);
+
+/**
+ * @brief  This API fetches the list of devices scanned.
+ *
+ * @param[in]   aui8AdapterIdx        Index of bluetooth adapter.
+ * @param[out]  pDiscoveredDevices    Structure which holds the details of device scanned.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetDiscoveredDevices(unsigned char aui8AdapterIdx, BTRMGR_DiscoveredDevicesList_t *pDiscoveredDevices);
 
+/**
+ * @brief  This API is used to pair the device that you wish to pair.
+ *
+ * @param[in] aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[in] ahBTRMgrDevHdl  Indicates the device handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_PairDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+/**
+ * @brief  This API is used to remove the pairing information of the device selected.
+ *
+ * @param[in]   aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]   ahBTRMgrDevHdl       Device handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_UnpairDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+/**
+ * @brief  This API returns the list of devices paired.
+ *
+ * @param[in] aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[in] pPairedDevices  Structure which holds the paired devices information.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetPairedDevices(unsigned char aui8AdapterIdx, BTRMGR_PairedDevicesList_t *pPairedDevices);
 
+/**
+ * @brief  This API connects the device as audio sink/headset/audio src based on the device type specified.
+ *
+ * @param[in] aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in] ahBTRMgrDevHdl        Indicates device handle.
+ * @param[in] connectAs            Device operation type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_ConnectToDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t connectAs);
+
+/**
+ * @brief  This API terminates the current connection.
+ *
+ * @param[in] aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in] ahBTRMgrDevHdl        Indicates device handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_DisconnectFromDevice(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+/**
+ * @brief  This API returns the list of devices connected.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[out] pConnectedDevices    List of connected devices.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetConnectedDevices(unsigned char aui8AdapterIdx, BTRMGR_ConnectedDevicesList_t *pConnectedDevices);
 
+/**
+ * @brief  This API returns the device information that includes the device name, mac address, RSSI value etc.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Indicates device handle.
+ * @param[out] pDeviceProperty      Device property information.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
+
 BTRMGR_Result_t BTRMGR_GetDeviceProperties(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DevicesProperty_t *pDeviceProperty);
+/**
+ * @brief  This API initates the streaming from the device with default operation type.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  aenBTRMgrDevConT     Device opeartion type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 
 BTRMGR_Result_t BTRMGR_StartAudioStreamingOut_StartUp(unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aenBTRMgrDevConT);
+/**
+ * @brief  This API initates the streaming from the device with the selected operation type.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Indicates device Handle.
+ * @param[in]  connectAs            Device operation type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
+
 BTRMGR_Result_t BTRMGR_StartAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t connectAs);
+
+/**
+ * @brief  This API terminates the streaming from the device.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Indicates device Handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+/**
+ * @brief  This API returns the stream out status.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[out] pStreamingStatus     Streaming status.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
+
+/**
+ * @brief  This API is to set the audio type as primary or secondary.
+ *
+ * Secondary audio support is not implemented yet. Always primary audio is played for now.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  type                 Streaming type primary/secondary
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_SetAudioStreamingOutType(unsigned char aui8AdapterIdx, BTRMGR_StreamOut_Type_t type);
 
+/**
+ * @brief  This API starts the audio streaming.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  connectAs            Device opeartion type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_StartAudioStreamingIn(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t connectAs);
+
+/**
+ * @brief  This API termines the audio streaming.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+/**
+ * @brief  This API returns the audio streaming status.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[out] pStreamingStatus     Streaming status.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
 
+/**
+ * @brief  This API handles the events received.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  apstBTRMgrEvtRsp     Structure which holds the event response.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char aui8AdapterIdx, BTRMGR_EventResponse_t* apstBTRMgrEvtRsp);
 
+/**
+ * @brief  This API is used to perform the media control operations.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  mediaCtrlCmd         Indicates the play, pause, resume etc.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_MediaControl(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaControlCommand_t mediaCtrlCmd);
 
+/**
+ * @brief  This API fetches the media track info like title, genre, duration, number of tracks, current track number.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[out]  mediaTrackInfo       Track info like title, genre, duration etc.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetMediaTrackInfo(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
+
+/**
+ * @brief  This API fetches the current position and total duration of the media.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[out] mediaPositionInfo    Media position info.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
 
+/**
+ * @brief  This API fetches the Device name of the media.
+ *
+ * @param[in]  type		Device type.
+ *
+ * @return Returns the device name.
+ */
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 
 BTRMGR_Result_t BTRMGR_GetLeProperty (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apBtrPropUuid, BTRMGR_LeProperty_t aenLeProperty, void* vpPropValue);
+
+/**
+ * @brief  This API fetches the characteristic uuid of Le device.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  apBtrServiceUuid     service UUID.
+ * @param[out] apBtrCharUuidList    uuid list.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_GetLeCharacteristicUUID (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apBtrServiceUuid, char* apBtrCharUuidList);
+
+/**
+ * @brief  This API performs LE operations on the specified bluetooth adapter.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  aBtrLeUuid           LE device uuid.
+ * @param[in]  aLeOpType            LE device operation type.
+ * @param[out] rOpResult            LE device operation result.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
 BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, void* rOpResult);
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);
+
+/** @} */
 
 #ifdef __cplusplus
 }

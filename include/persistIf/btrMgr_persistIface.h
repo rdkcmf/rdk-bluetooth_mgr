@@ -19,12 +19,19 @@
 /**
  * @file btrMgr_persistIface.h
  *
- * @description This file defines bluetooth manager's Persistent storage interfaces
+ * @defgroup Persistant_Interface Persistant Interface
+ * This file defines bluetooth manager's Persistent storage interfaces.
+ * @ingroup  BTR_MGR
  *
  */
 #ifndef __BTR_MGR_PERSIST_IFCE_H__
 #define __BTR_MGR_PERSIST_IFCE_H__
 
+/**
+ * @addtogroup  Persistant_Interface
+ * @{
+ *
+ */
 
 #define BTRMGR_NAME_LEN_MAX            64
 #define BTRMGR_MAX_PERSISTENT_PROFILE_COUNT 5
@@ -35,7 +42,9 @@
 
 typedef void* tBTRMgrPIHdl;
 
-
+/**
+ * @brief  This API initializes bluetooth manager's persistent storage interface.
+ */
 typedef struct _stBTRMgrPersistDevice {
     unsigned long long deviceId;
     int isConnected;
@@ -62,19 +71,72 @@ typedef struct _BTRMGR_Profile_t {
     int isConnect;
 } BTRMGR_Profile_t;
 
-/* Interfaces */
+
+/**
+ * @brief  This API initializes bluetooth manager's persistent storage interface.
+ *
+ * @param[in] hBTRMgrPiHdl      Handle to the audio capture interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 eBTRMgrRet BTRMgr_PI_Init (tBTRMgrPIHdl* hBTRMgrPiHdl);
+
+
+/**
+* @brief  This API deinitializes bluetooth manager's persistent storage interface.
+*
+* @param[in] hBTRMgrPiHdl      Handle to the audio capture interface.
+*
+* @return Returns the status of the operation.
+* @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+*/
 eBTRMgrRet BTRMgr_PI_DeInit (tBTRMgrPIHdl hBTRMgrPiHdl);
 
-// Read all bluetooth profiles from json file and load to BTRMGR_PersistentProfileList_t
+/**
+ * @brief  This API reads all bluetooth profiles from json file and saves to BTRMGR_PersistentData_t structure.
+ *
+ * @param[in] hBTRMgrPiHdl     Handle to the audio capture interface.
+ * @param[out] persistentData  Structure that fetches persistent profiles data.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 eBTRMgrRet BTRMgr_PI_GetAllProfiles(tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentData_t* persistentData);
 
+
+/**
+ * @brief  This API sets all bluetooth profiles.
+ *
+ * @param[in] hBTRMgrPiHdl     Handle to the audio capture interface.
+ * @param[in] persistentData   Structure that is used to set the profiles data.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_PersistentData_t* persistentData);
 
-//Add a single bluetooth profile to json file
+/**
+ * @brief  This API adds a single bluetooth profile to json file.
+ *
+ * @param[in] hBTRMgrPiHdl    Handle to the audio capture interface.
+ * @param[in] persistProfile  Profile to be added.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile);
 
-//Remove a single bluetooth profile from json file
+/**
+ * @brief  This API removes a single bluetooth profile from json file.
+ *
+ * @param[in] hBTRMgrPiHdl     Handle to the persistant storage interface.
+ * @param[in] persistProfile   Profile to be removed.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
 eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile);
+/** @} */
 
 #endif /* __BTR_MGR_PERSIST_IFCE_H__ */
