@@ -1273,9 +1273,11 @@ BTRMGR_SetAdapterPowerStatus (
     unsigned char   aui8AdapterIdx,
     unsigned char   power_status
 ) {
-    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
-    const char*     pAdapterPath    = NULL;
+    BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+    enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreSpeakers;
+    enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
+    const char*             pAdapterPath    = NULL;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -1290,9 +1292,20 @@ BTRMGR_SetAdapterPowerStatus (
     /* Check whether the requested device is connected n playing. */
     if ((ghBTRMgrDevHdlCurStreaming) && (power_status == 0)) {
         /* This will internall stops the playback as well as disconnects. */
-        lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming);
-        if (lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) {
-            BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback. Going Ahead to power off Adapter.\n");
+        lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+        BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+            /* Streaming-Out is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback. Going Ahead to power off Adapter.-Out\n");
+            }
+        }
+        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+            /* Streaming-In is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback. Going Ahead to  power off Adapter.-In\n");
+            }
         }
     }
 
@@ -1785,10 +1798,12 @@ BTRMGR_UnpairDevice (
     unsigned char       aui8AdapterIdx,
     BTRMgrDeviceHandle  ahBTRMgrDevHdl
 ) {
-    BTRMGR_Result_t     lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
-    BTRMGR_Events_t     lBtMgrOutEvent  = -1;
-    unsigned char       ui8reActivateAgent = 0;
+    BTRMGR_Result_t         lenBtrMgrResult     = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet            lenBtrCoreRet       = enBTRCoreSuccess;
+    enBTRCoreDeviceType     lenBTRCoreDevTy     = enBTRCoreSpeakers;
+    enBTRCoreDeviceClass    lenBTRCoreDevCl     = enBTRCore_DC_Unknown;
+    BTRMGR_Events_t         lBtMgrOutEvent      = -1;
+    unsigned char           ui8reActivateAgent  = 0;
 
 
     if (!ghBTRCoreHdl) {
@@ -1835,9 +1850,20 @@ BTRMGR_UnpairDevice (
     /* Check whether the requested device is connected n playing. */
     if (ghBTRMgrDevHdlCurStreaming == ahBTRMgrDevHdl) {
         /* This will internall stops the playback as well as disconnects. */
-        lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming);
-        if (lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) {
-            BTRMGRLOG_ERROR ("BTRMGR_UnpairDevice :This device is being Connected n Playing. Failed to stop Playback. Going Ahead to unpair.\n");
+        lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+        BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+            /* Streaming-Out is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("BTRMGR_UnpairDevice :This device is being Connected n Playing. Failed to stop Playback. Going Ahead to unpair.-Out\n");
+            }
+        }
+        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+            /* Streaming-In is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("BTRMGR_UnpairDevice :This device is being Connected n Playing. Failed to stop Playback. Going Ahead to unpair.-In\n");
+            }
         }
     }
 
@@ -1985,8 +2011,10 @@ BTRMGR_DisconnectFromDevice (
     unsigned char       aui8AdapterIdx,
     BTRMgrDeviceHandle  ahBTRMgrDevHdl
 ) {
-    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
+    BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+    enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreSpeakers;
+    enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2014,17 +2042,35 @@ BTRMGR_DisconnectFromDevice (
         }
     }
 
+
+
     if (ghBTRMgrDevHdlCurStreaming) {
-        /* The streaming is happening; stop it */
-        lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming);
-        if (lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) {
-            BTRMGRLOG_ERROR ("Streamout is failed to stop\n");
+        lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+        BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+            /* Streaming-Out is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("Streamout failed to stop\n");
+            }
+        }
+        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+            /* Streaming-In is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("Streamin failed to stop\n");
+            }
         }
     }
 
+
     gIsUserInitiated = 1;
+
+
+    lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
     /* connectAs param is unused for now.. */
-    lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, enBTRCoreSpeakers);
+    lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDevTy);
     if (lenBtrCoreRet != enBTRCoreSuccess) {
         BTRMGRLOG_ERROR ("Failed to Disconnect\n");
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
@@ -2597,6 +2643,9 @@ BTRMGR_StopAudioStreamingIn (
         free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
         gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
     }
+
+    /* We had Reset the ghBTRMgrDevHdlCurStreaming to avoid recursion/looping; so no worries */
+    lenBtrMgrResult = BTRMGR_DisconnectFromDevice(aui8AdapterIdx, ahBTRMgrDevHdl);
 
     return lenBtrMgrResult;
 }
@@ -3176,6 +3225,10 @@ btrMgr_DeviceStatusCb (
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO) &&
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_CAR_AUDIO) &&
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)) {
+
+                    /* Update the flag as the Device is Connected */
+                    gIsDeviceConnected = 1;
+
 
                     if (gfpcBBTRMgrEventOut) {
                         gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
