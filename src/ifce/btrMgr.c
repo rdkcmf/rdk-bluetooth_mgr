@@ -257,6 +257,9 @@ btrMgr_MapDeviceTypeFromCore (
     case enBTRCore_DC_VideoConference:
         type = BTRMGR_DEVICE_TYPE_VIDEO_CONFERENCE;
         break;
+    case enBTRCore_DC_Tile:
+        type = BTRMGR_DEVICE_TYPE_TILE;
+        break;
     case enBTRCore_DC_Reserved:
     case enBTRCore_DC_Unknown:
         type = BTRMGR_DEVICE_TYPE_UNKNOWN;
@@ -2026,7 +2029,10 @@ BTRMGR_DisconnectFromDevice (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    if (!gIsDeviceConnected) {
+    lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+    if (lenBTRCoreDevTy != enBTRCoreLE && !gIsDeviceConnected) {
         BTRMGRLOG_ERROR ("No Device is connected at this time\n");
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2044,10 +2050,7 @@ BTRMGR_DisconnectFromDevice (
 
 
 
-    if (ghBTRMgrDevHdlCurStreaming) {
-        lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
-        BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
-
+    if (lenBTRCoreDevTy != enBTRCoreLE && ghBTRMgrDevHdlCurStreaming) {
         if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
             /* Streaming-Out is happening; stop it */
             if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
@@ -2064,10 +2067,6 @@ BTRMGR_DisconnectFromDevice (
 
 
     gIsUserInitiated = 1;
-
-
-    lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
-    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
 
     /* connectAs param is unused for now.. */
     lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDevTy);
@@ -3072,6 +3071,8 @@ BTRMGR_GetDeviceTypeAsString (
         return "SMARTPHONE";
     else if (type == BTRMGR_DEVICE_TYPE_TABLET)
         return "TABLET";
+    else if (type == BTRMGR_DEVICE_TYPE_TILE)
+        return "LE TILE";
     else
         return "UNKNOWN DEVICE";
 }
@@ -3237,25 +3238,27 @@ btrMgr_DeviceStatusCb (
             }
             break;
         case enBTRCoreDevStDisconnected:
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
+            if (enBTRCoreDevStConnecting != p_StatusCB->eDevicePrevState) {
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
 
-            if (gfpcBBTRMgrEventOut) {
-                gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
-            }
-
-            if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
-                /* update the flags as the device is NOT Connected */
-                gIsDeviceConnected = 0;
-
-                BTRMGRLOG_INFO ("lstEventMessage.m_pairedDevice.m_deviceType = %d\n", lstEventMessage.m_pairedDevice.m_deviceType);
-                if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
-                    lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
-                    /* Stop the playback which already stopped internally but to free up the memory */
-                    BTRMGR_StopAudioStreamingIn(0, ghBTRMgrDevHdlCurStreaming);
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
                 }
-                else {
-                    /* Stop the playback which already stopped internally but to free up the memory */
-                    BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming);
+
+                if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
+                    /* update the flags as the device is NOT Connected */
+                    gIsDeviceConnected = 0;
+
+                    BTRMGRLOG_INFO ("lstEventMessage.m_pairedDevice.m_deviceType = %d\n", lstEventMessage.m_pairedDevice.m_deviceType);
+                    if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
+                        lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+                        /* Stop the playback which already stopped internally but to free up the memory */
+                        BTRMGR_StopAudioStreamingIn(0, ghBTRMgrDevHdlCurStreaming);
+                    }
+                    else {
+                        /* Stop the playback which already stopped internally but to free up the memory */
+                        BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming);
+                    }
                 }
             }
             break;

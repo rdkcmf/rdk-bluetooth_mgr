@@ -274,6 +274,18 @@ cb_unsolicited_bluetooth_status (
     return enBTRCoreSuccess;
 }
 
+static int
+getBitsToString (
+    unsigned short  flagBits
+) {
+    unsigned char i = 0;
+    for (; i<16; i++) {
+        printf("%d", (flagBits >> i) & 1);
+    }
+
+    return 0;
+}
+
 static void
 printMenu (
     void
@@ -321,7 +333,9 @@ printMenu (
     printf("41. Get Track Information for Current Media item\n");
     printf("42. Get Media Properties\n");
     printf("43. Scan for LE Devices\n");
-
+    printf("44. Connect to the scanned LE Device\n");
+    printf("45. Get LE Property\n");
+    printf("46. Perform LE Operation\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -873,6 +887,106 @@ main (
             }
             else {
                 printf("%d\t: %s - Error, no default_adapter set\n", __LINE__, __FUNCTION__);
+            }
+            break;
+        case 44: 
+            {
+                stBTRCoreScannedDevicesCount lListOfScannedDevices;
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfScannedDevices (lhBTRCore, &lListOfScannedDevices);
+                printf("Pick a Device to Connect...\n");
+                devnum = getChoice();
+                BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreLE);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection
+                printf("device connect process completed.\n");
+                break;
+            }
+        case 45:
+            {
+                char leUuidString[BTRCORE_UUID_LEN] = "\0";
+                unsigned char propSelection = 0;
+                printf("Pick a Device to Connect...\n");
+                devnum = getChoice();
+                printf ("Enter the UUID : ");
+                scanf ("%s", leUuidString);
+                printf ("Select the property to query...\n");
+                printf ("[0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value |"
+                        " 5 - Notifying | 6 - Flags | 7 -Character]\n");
+                propSelection = getChoice();
+
+                if (!propSelection) {
+                    stBTRCoreUUIDList lstBTRCoreUUIDList;
+                    unsigned char i = 0;
+                    BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&lstBTRCoreUUIDList);
+                    if (lstBTRCoreUUIDList.numberOfUUID) {
+                        printf("\n\nObtained 'Flag' indices are based on the below mapping..\n"
+                               "0  - read\n"
+                               "1  - write\n"
+                               "2  - encrypt-read\n"
+                               "3  - encrypt-write\n"
+                               "4  - encrypt-authenticated-read\n"
+                               "5  - encrypt-authenticated-write\n"
+                               "6  - secure-read (Server only)\n"
+                               "7  - secure-write (Server only)\n"
+                               "8  - notify\n"
+                               "9  - indicate\n"
+                               "10 - broadcast\n"
+                               "11 - write-without-response\n"
+                               "12 - authenticated-signed-writes\n"
+                               "13 - reliable-write\n"
+                               "14 - writable-auxiliaries\n");
+                        printf("\n\t%-40s Flag\n", "UUID List");
+                        for (; i<lstBTRCoreUUIDList.numberOfUUID; i++) {
+                            printf("\n\t%-40s ", lstBTRCoreUUIDList.uuidList[i].uuid);
+                            getBitsToString(lstBTRCoreUUIDList.uuidList[i].flags);
+                        }
+                    } else {
+                        printf ("\n\n\tNo UUIDs Found...\n");
+                    }
+                } else
+                if (propSelection == 1 || propSelection == 5) {
+                    unsigned char val = 0;
+                    BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
+                    printf("\n\tResult : %d\n", val);
+                } else
+                if (propSelection == 4 || propSelection == 2 ||
+                    propSelection == 3 || propSelection == 7 ){
+                    char val[BTRCORE_MAX_STR_LEN] = "\0";
+                    BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
+                    printf("\n\tResult : %s\n", val);
+                } else
+                if (propSelection == 6) {
+                    char val[15][64]; int i=0;
+                    memset (val, 0, sizeof(val));
+                    BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
+                    printf("\n\tResult :\n");
+                    for (; i < 15 && val[i][0]; i++) {
+                        printf("\t- %s\n", val[i]);
+                    }
+                }
+            }
+            break;
+        case 46:
+            {
+                char leUuidString[BTRCORE_UUID_LEN] = "\0";
+                printf("%d\t: %s - Pick a connected LE Device to Perform Operation.\n", __LINE__, __FUNCTION__);
+                printf("Pick a Device to Connect...\n");
+                devnum = getChoice();
+                printf ("Enter the UUID : ");
+                scanf ("%s", leUuidString);
+
+                printf("%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
+                printf("\t[0 - ReadValue | 1 - WriteValue | 2 - StartNotify | 3 - StopNotify]\n");
+
+                enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
+
+                if (leUuidString[0]) {
+                    char val[BTRCORE_MAX_STR_LEN] = "\0";
+                    BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, (void*)&val);
+                    if (aenBTRCoreLeOp == 0) {
+                        printf("%d\t: %s - Obtained Value [%s]\n", __LINE__, __FUNCTION__, val  );
+                    }
+                }
             }
             break;
 

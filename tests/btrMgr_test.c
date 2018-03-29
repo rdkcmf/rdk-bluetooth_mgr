@@ -372,7 +372,10 @@ int main()
                 break;
             case 8:
                 {
-                    rc = BTRMGR_StartDeviceDiscovery(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+                    int ch = 0;
+                    printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) ]\n");
+                    ch = getDeviceSelection();
+                    rc = BTRMGR_StartDeviceDiscovery(0, (ch)?(1 << 2):0);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -535,11 +538,11 @@ int main()
                     printf ("Please Enter the device Handle number of the device that you want to start play\t: ");
                     handle = getDeviceSelection();
 
-                    printf ("Please set the Streaming Pref \t");
+                    printf ("Please set the Streaming Pref\t[0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE ]\n");
                     stream_pref = (BTRMGR_DeviceOperationType_t) getUserSelection();
 
 
-                    rc = BTRMGR_StartAudioStreamingOut(0, handle, stream_pref);
+                    rc = BTRMGR_StartAudioStreamingOut(0, handle, (1 << stream_pref));
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else

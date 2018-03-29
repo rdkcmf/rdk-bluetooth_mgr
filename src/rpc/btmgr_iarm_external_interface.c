@@ -1196,6 +1196,8 @@ BTRMGR_GetDeviceTypeAsString (
         return "SMARTPHONE";
     else if (type == BTRMGR_DEVICE_TYPE_TABLET)
         return "TABLET";
+    else if (type == BTRMGR_DEVICE_TYPE_TILE)
+        return "LE TILE";
     else
         return "UNKNOWN DEVICE";
 }
