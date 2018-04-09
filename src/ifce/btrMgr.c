@@ -309,6 +309,7 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_discoveredDevice.m_deviceType        = btrMgr_MapDeviceTypeFromCore(((stBTRCoreBTDevice*)p_StatusCB)->enDeviceType);
         apstEventMessage->m_discoveredDevice.m_rssi              = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreBTDevice*)p_StatusCB)->i32RSSI);
         apstEventMessage->m_discoveredDevice.m_isPairedDevice    = btrMgr_GetDevPaired(apstEventMessage->m_discoveredDevice.m_deviceHandle);
+        apstEventMessage->m_discoveredDevice.m_isLowEnergyDevice = (apstEventMessage->m_discoveredDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//We shall make it generic later
         strncpy(apstEventMessage->m_discoveredDevice.m_name, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceName, BTRMGR_NAME_LEN_MAX - 1);
         strncpy(apstEventMessage->m_discoveredDevice.m_deviceAddress, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceAddress, BTRMGR_NAME_LEN_MAX - 1);
     }
@@ -670,7 +671,7 @@ btrMgr_ConnectToDevice (
             lenBtrMgrRet = eBTRMgrSuccess;
         }
 
-        if (lenBTRCoreDeviceType != enBTRCoreLE && lenBtrMgrRet != eBTRMgrFailure) {
+        if (lenBtrMgrRet != eBTRMgrFailure) {
             /* Max 20 sec timeout - Polled at 1 second interval: Confirmed 4 times */
             unsigned int ui32sleepTimeOut = 1;
             unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
@@ -691,15 +692,17 @@ btrMgr_ConnectToDevice (
             else {
                 BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
 
-                if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
-                   BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
-                   btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected);
-                }
+                if (lenBTRCoreDeviceType != enBTRCoreLE) { 
+                    if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
+                       BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
+                       btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected);
+                    }
 
-                btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl);
-                gIsDeviceConnected = 1;
-                gIsUserInitiated = 0;
-                ghBTRMgrDevHdlLastConnected = ahBTRMgrDevHdl;
+                    btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl);
+                    gIsDeviceConnected = 1;
+                    gIsUserInitiated = 0;
+                    ghBTRMgrDevHdlLastConnected = ahBTRMgrDevHdl;
+                }
             }
         }
     } while ((lenBtrMgrRet == eBTRMgrFailure) && (--ui32retryIdx));
@@ -2102,7 +2105,7 @@ BTRMGR_DisconnectFromDevice (
 
             do {
                 sleep(ui32sleepTimeOut);
-                lenBtrCoreRet = BTRCore_GetDeviceDisconnected(ghBTRCoreHdl, ahBTRMgrDevHdl, enBTRCoreSpeakers);
+                lenBtrCoreRet = BTRCore_GetDeviceDisconnected(ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDevTy);
             } while ((lenBtrCoreRet != enBTRCoreSuccess) && (--ui32sleepIdx));
         } while (--ui32confirmIdx);
 
@@ -2112,9 +2115,12 @@ BTRMGR_DisconnectFromDevice (
         }
         else {
             BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
-            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
-            gIsDeviceConnected = 0;
-            ghBTRMgrDevHdlLastConnected = 0;
+
+            if (lenBTRCoreDevTy != enBTRCoreLE) {
+                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
+                gIsDeviceConnected = 0;
+                ghBTRMgrDevHdlLastConnected = 0;
+            }
         }
     }
 
@@ -2215,10 +2221,11 @@ BTRMGR_GetDeviceProperties (
         if (listOfPDevices.numberOfDevices) {
             for (i = 0; i < listOfPDevices.numberOfDevices; i++) {
                 if (ahBTRMgrDevHdl == listOfPDevices.devices[i].tDeviceId) {
-                    pDeviceProperty->m_deviceHandle = listOfPDevices.devices[i].tDeviceId;
-                    pDeviceProperty->m_deviceType = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
-                    pDeviceProperty->m_vendorID = listOfPDevices.devices[i].ui32VendorId;
-                    pDeviceProperty->m_isPaired = 1;
+                    pDeviceProperty->m_deviceHandle      = listOfPDevices.devices[i].tDeviceId;
+                    pDeviceProperty->m_deviceType        = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
+                    pDeviceProperty->m_isLowEnergyDevice = (pDeviceProperty->m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0; //We shall make it generic later
+                    pDeviceProperty->m_vendorID          = listOfPDevices.devices[i].ui32VendorId;
+                    pDeviceProperty->m_isPaired          = 1;
                     strncpy(pDeviceProperty->m_name, listOfPDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
                     strncpy(pDeviceProperty->m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
 
@@ -2250,9 +2257,10 @@ BTRMGR_GetDeviceProperties (
             for (i = 0; i < listOfSDevices.numberOfDevices; i++) {
                 if (ahBTRMgrDevHdl == listOfSDevices.devices[i].tDeviceId) {
                     if (!isFound) {
-                        pDeviceProperty->m_deviceHandle = listOfSDevices.devices[i].tDeviceId;
-                        pDeviceProperty->m_deviceType = btrMgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].enDeviceType);
-                        pDeviceProperty->m_vendorID = listOfSDevices.devices[i].ui32VendorId;
+                        pDeviceProperty->m_deviceHandle      = listOfSDevices.devices[i].tDeviceId;
+                        pDeviceProperty->m_deviceType        = btrMgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].enDeviceType);
+                        pDeviceProperty->m_vendorID          = listOfSDevices.devices[i].ui32VendorId;
+                        pDeviceProperty->m_isLowEnergyDevice = (pDeviceProperty->m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0; //We shall make it generic later
                         strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
                         strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
 
