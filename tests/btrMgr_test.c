@@ -25,6 +25,10 @@
 volatile int wait = 1;
 int uselection = 0;
 BTRMgrDeviceHandle gDeviceHandle = 0;
+int cliDisabled = 0;
+int cliArgCounter = 0;
+char **gArgv;
+int gArgc;
 
 static void printOptions (void)
 {
@@ -73,29 +77,53 @@ static void printOptions (void)
 static int getUserSelection (void)
 {
     int mychoice;
+    if (cliDisabled)
+    {
     printf("Enter a choice...\n");
     scanf("%d", &mychoice);
     getchar();//to catch newline
+    }
+    else
+    {
+	cliArgCounter++;
+	mychoice = atoi(gArgv[cliArgCounter]);	
+    }
     return mychoice;
 }
 
 static BTRMgrDeviceHandle getDeviceSelection(void)
 {
     BTRMgrDeviceHandle mychoice;
+    if (cliDisabled)
+    {
     printf("Enter a choice...\n");
     scanf("%llu", &mychoice);
     getchar();//to catch newline
+    }
+    else
+    {
+        cliArgCounter++;
+        mychoice = atoi(gArgv[cliArgCounter]);
+    }
     return mychoice;
 }
 
 
-void getName (char* mychoice)
+void getString (char* mychoice)
 {
+    if (cliDisabled)
+    {
     char *tmp = NULL;
-    fgets (mychoice, 30, stdin);
+    fgets (mychoice, BTRMGR_NAME_LEN_MAX, stdin);
     tmp = strchr(mychoice, '\n');
     if (tmp)
         *tmp = '\0';
+    }
+    else
+    {
+        cliArgCounter++;
+        strcpy(mychoice , gArgv[cliArgCounter]);
+    }
 }
 
 static int
@@ -258,24 +286,47 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     int loop = 1, i = 0;
     char array[32] = "";
     BTRMgrDeviceHandle handle = 0;
+    int counter;
+    size_t sz;
 
     rc = BTRMGR_Init();
 
     if (BTRMGR_RESULT_SUCCESS != rc)
     {
-        printf ("Failed to init BTRMgr.. Quiting.. \n");
-        loop = 0;
+	    printf ("Failed to init BTRMgr.. Quiting.. \n");
+	    loop = 0;
+	    return 0;
     }
 
     BTRMGR_RegisterEventCallback (eventCallback);
+    if(argc==1){
+	    printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
+	    cliDisabled = 1;
+    }
+    else
+    {
+	    printf("\n Executing in CLI mode\n");
+	    gArgv = malloc(argc * sizeof (char*));
+	    gArgc = argc;
+	    for (counter = 0; counter < argc; ++counter) {
+		    sz = strlen(argv[counter]) + 1;
+		    gArgv[counter] = malloc(sz * sizeof (char));
+		    strcpy(gArgv[counter], argv[counter]);
+	    }
 
-    while(loop)
+	    for (counter = 0; counter < argc; ++counter) {
+		    printf("%s\n", gArgv[counter]);
+	    }
+
+    }
+    
+    do
     {
         printOptions();
         i = getUserSelection();
@@ -295,7 +346,7 @@ int main()
                 {
                     memset (array, '\0', sizeof(array));
                     printf ("Please Enter the name that you want to set to your adapter\t: ");
-                    getName(array);
+                    getString(array);
 
                     printf ("We received @@%s@@ from you..  Hope this is correct. Let me try to set it..\n", array);
                     rc = BTRMGR_SetAdapterName(0, array);
@@ -780,7 +831,7 @@ int main()
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
                     printf ("Enter the UUID : ");
-                    scanf ("%s", luuid);
+                    getString (luuid);
                     printf ("Select the property to query...\n");
                     printf ("[0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value |"
                             " 5 - Notifying | 6 - Flags | 7 -Character]\n");
@@ -855,7 +906,7 @@ int main()
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
                     printf ("Enter the Char UUID : ");
-                    scanf ("%s", luuid);
+                    getString (luuid);
                     printf ("Enter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
                     opt = getDeviceSelection();
 
@@ -877,8 +928,13 @@ int main()
                 printf ("Invalid Selection.....\n");
                 break;
         }
-    }
+    }while(loop && cliDisabled);
 
+    if (cliDisabled ==0)
+    {
+	    for(counter = 0; counter < argc; ++counter) free(gArgv[counter]);
+	    free(gArgv);
+    }
     BTRMGR_DeInit();
     return 0;
 }
