@@ -3237,6 +3237,7 @@ btrMgr_DeviceStatusCb (
 
                     /* Update the flag as the Device is Connected */
                     gIsDeviceConnected = 1;
+                    ghBTRMgrDevHdlLastConnected = lstEventMessage.m_pairedDevice.m_deviceHandle;
 
 
                     if (gfpcBBTRMgrEventOut) {
@@ -3262,10 +3263,22 @@ btrMgr_DeviceStatusCb (
                         lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
                         /* Stop the playback which already stopped internally but to free up the memory */
                         BTRMGR_StopAudioStreamingIn(0, ghBTRMgrDevHdlCurStreaming);
+                        ghBTRMgrDevHdlLastConnected = 0;
                     }
                     else {
                         /* Stop the playback which already stopped internally but to free up the memory */
                         BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming);
+                    }
+                }
+                else if ((gIsDeviceConnected == 1) &&
+                         (ghBTRMgrDevHdlLastConnected == lstEventMessage.m_pairedDevice.m_deviceHandle)) {
+
+                    if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
+                        lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+                        ghBTRMgrDevHdlLastConnected = 0;
+                    }
+                    else {
+                        //TODO: Add what to do for other device types
                     }
                 }
             }
@@ -3287,6 +3300,7 @@ btrMgr_DeviceStatusCb (
                         lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
                         /* Stop the playback which already stopped internally but to free up the memory */
                         BTRMGR_StopAudioStreamingIn(0, ghBTRMgrDevHdlCurStreaming);
+                        ghBTRMgrDevHdlLastConnected = 0;
                     }
                     else {
                         /* Stop the playback which already stopped internally but to free up the memory */
@@ -3438,36 +3452,49 @@ btrMgr_ConnectionInAuthenticationCb (
 
     if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
         apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
-        BTRMGR_EventMessage_t lstEventMessage;
 
-        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-        btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
+        BTRMGRLOG_WARN ("Incoming Connection from BT SmartPhone/Tablet\n");
+        if (apstConnCbInfo->stKnownDevice.tDeviceId != ghBTRMgrDevHdlLastConnected) {
+            BTRMGR_EventMessage_t lstEventMessage;
 
-        if (gfpcBBTRMgrEventOut) {
-            gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
-        }
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
 
-        
-        {   /* Max 60 sec timeout - Polled at 500ms second interval */
-            unsigned int ui32sleepIdx = 120;
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
+            }
 
-            do {
-                usleep(500000);
-            } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+            
+            {   /* Max 60 sec timeout - Polled at 500ms second interval */
+                unsigned int ui32sleepIdx = 120;
+
+                do {
+                    usleep(500000);
+                } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+            }
+
+            if (gEventRespReceived == 1) {
+                BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
+                if (gAcceptConnection == 1) {
+                    BTRMGRLOG_WARN ("Incoming Connection accepted\n");
+                    ghBTRMgrDevHdlLastConnected = lstEventMessage.m_externalDevice.m_deviceHandle;
+                }
+                else {
+                    BTRMGRLOG_ERROR ("Incoming Connection denied\n");
+                }
+
+                *api32ConnInAuthResp = gAcceptConnection;
+            }
+            else {
+                BTRMGRLOG_ERROR ("Incoming Connection Rejected\n");
+                *api32ConnInAuthResp = 0;
+            }
 
             gEventRespReceived = 0;
         }
-
-        BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
-        if (gAcceptConnection == 1) {
-            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
-            gAcceptConnection = 0;    //reset variabhle for the next connection
-            *api32ConnInAuthResp = 1;
-        }
         else {
-            BTRMGRLOG_ERROR ("Incoming Connection denied\n");
-            gAcceptConnection = 0;    //reset variabhle for the next connection
-            *api32ConnInAuthResp = 0;
+            BTRMGRLOG_ERROR ("Incoming Connection From Dev = %lld Status %d LastConnectedDev = %lld\n", apstConnCbInfo->stKnownDevice.tDeviceId, gAcceptConnection, ghBTRMgrDevHdlLastConnected);
+            *api32ConnInAuthResp = gAcceptConnection;
         }
     }
     else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset)   ||
