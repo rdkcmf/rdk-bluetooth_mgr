@@ -60,7 +60,6 @@ typedef struct appDataStruct{
 
 
 //test func
-void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* pstGetAdapter);
 static int streamOutTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStart (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStop (appDataStruct *pstAppData);
@@ -990,9 +989,6 @@ main (
             }
             break;
 
-        case 88:
-            test_func(lhBTRCore, &lstBTRCoreAdapter);
-            break;
         case 99: 
             printf("Quitting program!\n");
             BTRCore_DeInit(lhBTRCore);
