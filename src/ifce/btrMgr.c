@@ -310,6 +310,11 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_discoveredDevice.m_rssi              = btrMgr_MapSignalStrengthToRSSI(((stBTRCoreBTDevice*)p_StatusCB)->i32RSSI);
         apstEventMessage->m_discoveredDevice.m_isPairedDevice    = btrMgr_GetDevPaired(apstEventMessage->m_discoveredDevice.m_deviceHandle);
         apstEventMessage->m_discoveredDevice.m_isLowEnergyDevice = (apstEventMessage->m_discoveredDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//We shall make it generic later
+
+        apstEventMessage->m_discoveredDevice.m_isDiscovered         = ((stBTRCoreBTDevice*)p_StatusCB)->bFound;
+        apstEventMessage->m_discoveredDevice.m_isLastConnectedDevice= (ghBTRMgrDevHdlLastConnected == apstEventMessage->m_discoveredDevice.m_deviceHandle) ? 1 : 0;
+        apstEventMessage->m_discoveredDevice.m_ui32DevClassBtSpec   = ((stBTRCoreBTDevice*)p_StatusCB)->ui32DevClassBtSpec;
+
         strncpy(apstEventMessage->m_discoveredDevice.m_name, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceName, BTRMGR_NAME_LEN_MAX - 1);
         strncpy(apstEventMessage->m_discoveredDevice.m_deviceAddress, ((stBTRCoreBTDevice*)p_StatusCB)->pcDeviceAddress, BTRMGR_NAME_LEN_MAX - 1);
     }
@@ -339,10 +344,11 @@ btrMgr_MapDevstatusInfoToEventInfo (
         strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, "TO BE FILLED", BTRMGR_NAME_LEN_MAX - 1);
     }
     else {
-       apstEventMessage->m_pairedDevice.m_deviceHandle           = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
-       apstEventMessage->m_pairedDevice.m_deviceType             = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
-       apstEventMessage->m_pairedDevice.m_isLastConnectedDevice  = (ghBTRMgrDevHdlLastConnected == apstEventMessage->m_pairedDevice.m_deviceHandle) ? 1 : 0;
-       strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
+        apstEventMessage->m_pairedDevice.m_deviceHandle          = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
+        apstEventMessage->m_pairedDevice.m_deviceType            = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
+        apstEventMessage->m_pairedDevice.m_isLastConnectedDevice = (ghBTRMgrDevHdlLastConnected == apstEventMessage->m_pairedDevice.m_deviceHandle) ? 1 : 0;
+        apstEventMessage->m_pairedDevice.m_ui32DevClassBtSpec    = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->ui32DevClassBtSpec;
+        strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
     }
 
 
@@ -3336,7 +3342,7 @@ btrMgr_DeviceDiscoveryCb (
 ) {
     enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
 
-    if (btrMgr_GetDiscoveryInProgress()) {
+    if (btrMgr_GetDiscoveryInProgress() || (devicefound.bFound == FALSE)) { /* Not a big fan of this */
         BTRMGR_EventMessage_t lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 

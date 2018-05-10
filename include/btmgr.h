@@ -239,6 +239,7 @@ typedef struct _BTRMGR_PairedDevices_t {
     unsigned char               m_isLowEnergyDevice;
     unsigned char               m_isConnected; /* This must be used only when m_isPaired is TRUE */
     unsigned char               m_isLastConnectedDevice;
+    unsigned int                m_ui32DevClassBtSpec;
 } BTRMGR_PairedDevices_t;
 
 typedef struct _BTRMGR_DiscoveredDevices_t {
@@ -252,6 +253,9 @@ typedef struct _BTRMGR_DiscoveredDevices_t {
     unsigned char       m_isLowEnergyDevice;
     BTRMGR_RSSIValue_t  m_rssi;
     int                 m_signalLevel;
+    unsigned char       m_isDiscovered;
+    unsigned char       m_isLastConnectedDevice;
+    unsigned int        m_ui32DevClassBtSpec;
 } BTRMGR_DiscoveredDevices_t;
 
 typedef struct _BTRMGR_ConnectedDevicesList_t {
