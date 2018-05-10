@@ -27,7 +27,7 @@ extern "C"
 #define BTRMGR_MAX_STR_LEN             256
 #define BTRMGR_NAME_LEN_MAX            64
 #define BTRMGR_STR_LEN                 32
-#define BTRMGR_DEVICE_COUNT_MAX        64
+#define BTRMGR_DEVICE_COUNT_MAX        32
 #define BTRMGR_ADAPTER_COUNT_MAX       16
 #define BTRMGR_MAX_DEVICE_PROFILE      32
 #define BTRMGR_LE_FLAG_LIST_SIZE       10
