@@ -74,9 +74,52 @@ static void printOptions (void)
     return;
 }
 
+static void printOptionsCli (void)
+{
+    printf ("\n\n");
+    printf (" 1. Get Number of Adapter\n Usage: btrMgrTest 1\n");
+    printf (" 2. Set Name to your Adapter\n Usage: btrMgrTest 2 <Name>\n");
+    printf (" 3. Get Name of your Adapter\n Usage: btrMgrTest 3\n");
+    printf (" 4. Set Adapter Power; 0 to OFF & 1 to ON\n Usage: btrMgrTest 4 <PowerMode>\n");
+    printf (" 5. Get Adapter Power\n Usage: btrMgrTest 5\n");
+    printf (" 6. Set Discoverable\n Usage: btrMgrTest 6 <Discoverable> <TimeOut> \n 1 or 0 to Make it Discoverable ON or OFF\n");
+    printf (" 7. Is it Discoverable\n Usage: btrMgrTest 7\n");
+    printf (" 8. Start Discovering\n Usage: btrMgrTest 8 <ScanType> \n 0 - Normal(BR/EDR) | 1 - LE (BLE)\n");
+    printf (" 9. Stop Discovering\n Usage: btrMgrTest 9\n");
+    printf ("10. Get List of Discovered Devices\n Usage: btrMgrTest 10\n");
+    printf ("11. Pair a Device\n Usage: btrMgrTest 11 <Handle>\n");
+    printf ("12. UnPair a Device\n Usage: btrMgrTest 12 <Handle>\n");
+    printf ("13. Get List of Paired Devices\n Usage: btrMgrTest 13\n");
+    printf ("14. Connect to Device\n Usage: btrMgrTest 14 <Handle> <ConnectType>\n Device ConnectAs  Type : [0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE ]\n");
+    printf ("15. DisConnect from Device\n Usage: btrMgrTest 15 <Handle>\n");
+    printf ("16. Get Device Properties\n Usage: btrMgrTest 16 <Handle>\n");
+    printf ("17. Start Streaming\n Usage: btrMgrTest 17 <Handle> <StreamingPref>\n[0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE ]\n");
+    printf ("18. Stop Streaming\n Usage: btrMgrTest 18 <Handle>\n");
+    printf ("19. Get StreamingOut Status\n Usage: btrMgrTest 19 \n");
+    printf ("20. Check auto connection of external Device\n Usage: btrMgrTest 20 \n");
+    printf ("21. Accept External Pair Request\n Usage: btrMgrTest 21 \n");
+    printf ("22. Deny External Pair Request\nUsage: btrMgrTest 22 \n");
+    printf ("23. Accept External Connect Request\n Usage: btrMgrTest 23 \n");
+    printf ("24. Deny External Connect Request\n Usage: btrMgrTest 24 \n");
+    printf ("25. Accept External Playback Request\n Usage: btrMgrTest 25 \n");
+    printf ("26. Deny External Playback Request\n Usage: btrMgrTest 26 \n");
+    printf ("27. Start Streaming-In\n Usage: btrMgrTest 27 <Handle> <StreamingPref> \n");
+    printf ("28. Stop Streaming-In\n Usage: btrMgrTest 28 <Handle> \n");
+    printf ("29. Perform Media Control Options\n Usage: btrMgrTest 29 <Handle> <MediaControlOpt> \n Medio Control Options [0 - Play | 1 - Pause | 2 - Stop | 3 - Next  | 4 - Previous \n");
+    printf ("30. Get Current Media Track Information\n Usage: btrMgrTest 30 <Handle> \n");
+    printf ("31. Get Media Current Play Position\n Usage: btrMgrTest 31 <Handle>\n"); 
+    printf ("32. Get StreamingIn Status\n Usage: btrMgrTest 32 \n"); 
+    printf ("33. Get LE Property\n Usage: btrMgrTest 33 <Handle> <UUID> <Property>\n property to query: [0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value | 5 - Notifying | 6 - Flags | 7 -Character]\n");
+    printf ("34. Perform LE Operation\n Usage: btrMgrTest 34 <Handle> <UUID> <Option> \nEnter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
+    printf ("55. Quit\n");
+    printf ("\n\n");
+
+    return;
+}
+
 static int getUserSelection (void)
 {
-    int mychoice;
+    int mychoice = 0;
     if (cliDisabled)
     {
     printf("Enter a choice...\n");
@@ -86,14 +129,19 @@ static int getUserSelection (void)
     else
     {
 	cliArgCounter++;
-	mychoice = atoi(gArgv[cliArgCounter]);	
+	if (cliArgCounter < gArgc){
+	   mychoice = atoi(gArgv[cliArgCounter]);	
+	}
+	else{
+	   printf("\n No Value entered , Sending 0\n");
+	}
     }
     return mychoice;
 }
 
 static BTRMgrDeviceHandle getDeviceSelection(void)
 {
-    BTRMgrDeviceHandle mychoice;
+    BTRMgrDeviceHandle mychoice = 0;
     if (cliDisabled)
     {
     printf("Enter a choice...\n");
@@ -103,7 +151,13 @@ static BTRMgrDeviceHandle getDeviceSelection(void)
     else
     {
         cliArgCounter++;
-        mychoice = atoi(gArgv[cliArgCounter]);
+        if (cliArgCounter < gArgc){
+           mychoice = atoi(gArgv[cliArgCounter]);
+        }
+        else{
+           printf("\n No Value entered , Sending 0\n");
+        }
+
     }
     return mychoice;
 }
@@ -122,7 +176,12 @@ void getString (char* mychoice)
     else
     {
         cliArgCounter++;
-        strcpy(mychoice , gArgv[cliArgCounter]);
+        if (cliArgCounter < gArgc){
+           strcpy(mychoice , gArgv[cliArgCounter]);
+        }
+        else{
+           printf("\n No Value entered , Sending NULL \n");
+        }
     }
 }
 
@@ -308,10 +367,12 @@ int main(int argc, char *argv[])
     if(argc==1){
 	    printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
 	    cliDisabled = 1;
+            printOptions();
     }
     else
     {
 	    printf("\n Executing in CLI mode\n");
+            printOptionsCli();
 	    gArgv = malloc(argc * sizeof (char*));
 	    gArgc = argc;
 	    for (counter = 0; counter < argc; ++counter) {
@@ -325,10 +386,8 @@ int main(int argc, char *argv[])
 	    }
 
     }
-    
     do
     {
-        printOptions();
         i = getUserSelection();
         switch (i)
         {
