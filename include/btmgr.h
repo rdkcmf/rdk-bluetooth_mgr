@@ -93,6 +93,7 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_MEDIA_TRACK_POSITION,
     BTRMGR_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED,
+    BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
@@ -215,6 +216,14 @@ typedef enum _BTRMGR_GattCharFlags_t {
     BTRMGR_GATT_CHAR_FLAG_RELIABLE_WRITE               = 1 << 13,
     BTRMGR_GATT_CHAR_FLAG_WRITABLE_AUXILIARIES         = 1 << 14
 } BTRMGR_GattCharFlags_t;
+
+
+typedef enum _BTRMGR_ScanFilter_t {
+    BTRMGR_DISCOVERY_FILTER_UUID,
+    BTRMGR_DISCOVERY_FILTER_RSSI,
+    BTRMGR_DISCOVERY_FILTER_PATH_LOSS,
+    BTRMGR_DISCOVERY_FILTER_SCAN_TYPE
+} BTRMGR_ScanFilter_t;
 
 /**
  * @brief Represents the media track info.
@@ -406,6 +415,19 @@ typedef struct _BTRMGR_EventResponse_t {
         unsigned char   m_eventResp;
     };
 } BTRMGR_EventResponse_t;
+
+typedef struct _BTRMGR_UUID_t {
+    char**  m_uuid;
+    short   m_uuidCount;
+} BTRMGR_UUID_t;
+
+typedef struct _BTRMGR_DiscoveryFilterHandle_t {
+    
+    BTRMGR_UUID_t               m_btuuid;
+    int                         m_rssi;
+    int                         m_pathloss;
+    //BTRMGR_DeviceScanType_t     m_scanType;
+} BTRMGR_DiscoveryFilterHandle_t;
 
 
 /* Fptr Callbacks types */
@@ -689,6 +711,7 @@ BTRMGR_Result_t BTRMGR_StopAudioStreamingOut(unsigned char aui8AdapterIdx, BTRMg
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
+//TODO: Return deviceHandle if we are streaming out
 BTRMGR_Result_t BTRMGR_IsAudioStreamingOut(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
 
 /**
@@ -736,6 +759,7 @@ BTRMGR_Result_t BTRMGR_StopAudioStreamingIn(unsigned char aui8AdapterIdx, BTRMgr
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
+//TODO: Return  deviceHandle if we are streaming in
 BTRMGR_Result_t BTRMGR_IsAudioStreamingIn(unsigned char aui8AdapterIdx, unsigned char *pStreamingStatus);
 
 /**

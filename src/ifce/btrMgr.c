@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <glib.h>
 
 #include "btrCore.h"
 
@@ -42,7 +43,9 @@
 #define BTRMGR_CONNECT_RETRY_ATTEMPTS       2
 #define BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS 3
 
+#define BTRMGR_DISCOVERY_HOLD_OFF_TIME      120
 
+// Move to private header ?
 typedef struct _stBTRMgrStreamingInfo {
     tBTRMgrAcHdl    hBTRMgrAcHdl;
     tBTRMgrSoHdl    hBTRMgrSoHdl;
@@ -53,12 +56,28 @@ typedef struct _stBTRMgrStreamingInfo {
     unsigned        bitsPerSample;
 } stBTRMgrStreamingInfo;
 
+typedef enum _BTRMGR_DiscoveryState_t {
+    BTRMGR_DISCOVERY_ST_UNKNOWN,
+    BTRMGR_DISCOVERY_ST_STARTED,
+    BTRMGR_DISCOVERY_ST_PAUSED,
+    BTRMGR_DISCOVERY_ST_RESUMED,
+    BTRMGR_DISCOVERY_ST_STOPPED,
+} BTRMGR_DiscoveryState_t;
+
+typedef struct _BTRMGR_DiscoveryHandle_t {
+    BTRMGR_DeviceOperationType_t    m_devOpType;
+    BTRMGR_DiscoveryState_t         m_disStatus;
+    BTRMGR_DiscoveryFilterHandle_t  m_disFilter;
+} BTRMGR_DiscoveryHandle_t;
 
 //TODO: Move to a local handle. Mutex protect all
 static tBTRCoreHandle               ghBTRCoreHdl                = NULL;
 static tBTRMgrPIHdl  		        ghBTRMgrPiHdl               = NULL;
 static BTRMgrDeviceHandle           ghBTRMgrDevHdlLastConnected = 0;
 static BTRMgrDeviceHandle           ghBTRMgrDevHdlCurStreaming  = 0;
+static BTRMGR_DiscoveryHandle_t     ghBTRMgrDiscoveryHdl;
+static BTRMGR_DiscoveryHandle_t     ghBTRMgrBgDiscoveryHdl;
+
 
 static stBTRCoreAdapter             gDefaultAdapterContext;
 static stBTRCoreListAdapters        gListOfAdapters;
@@ -66,17 +85,20 @@ static stBTRCoreDevMediaInfo        gstBtrCoreDevMediaInfo;
 static BTRMGR_PairedDevicesList_t   gListOfPairedDevices;
 static stBTRMgrStreamingInfo        gstBTRMgrStreamingInfo;
 
-static unsigned char                gIsDiscoveryInProgress      = 0;
+
 static unsigned char                gIsDeviceConnected          = 0;
+static unsigned char                gIsLeDeviceConnected        = 0;
 static unsigned char                gIsAgentActivated           = 0;
 static unsigned char                gEventRespReceived          = 0;
 static unsigned char                gAcceptConnection           = 0;
 static unsigned char                gIsUserInitiated            = 0;
 static unsigned char                gIsAudOutStartupInProgress  = 0;
+static guint                        gTimeOutRef                 = 0;
+static unsigned char                gDiscHoldOffTimeOutCbData   = 0;
 
-static BTRMGR_DeviceOperationType_t gDiscoveryType          = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
+static BTRMGR_DeviceOperationType_t gBgDiscoveryType            = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
 
-static BTRMGR_EventCallback         gfpcBBTRMgrEventOut     = NULL;
+static BTRMGR_EventCallback         gfpcBBTRMgrEventOut         = NULL;
 
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
@@ -89,10 +111,6 @@ static inline unsigned char btrMgr_GetAdapterCnt (void);
 static const char* btrMgr_GetAdapterPath (unsigned char aui8AdapterIdx);
 static void btrMgr_SetAgentActivated (unsigned char aui8AgentActivated);
 static unsigned char btrMgr_GetAgentActivated (void);
-static void btrMgr_SetDiscoveryInProgress (unsigned char status);
-static unsigned char btrMgr_GetDiscoveryInProgress (void);
-static void btrMgr_SetCurrentDiscoveryDeviceType (BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT);
-static BTRMGR_DeviceOperationType_t btrMgr_GetCurrentDiscoveryDeviceType (void);
 static unsigned char btrMgr_GetDevPaired (BTRMgrDeviceHandle ahBTRMgrDevHdl); 
 static BTRMGR_DeviceType_t btrMgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type);
 static BTRMGR_RSSIValue_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
@@ -105,6 +123,26 @@ static eBTRMgrRet btrMgr_ConnectToDevice (unsigned char aui8AdapterIdx, BTRMgrDe
 static eBTRMgrRet btrMgr_StartAudioStreamingOut (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t streamOutPref, unsigned int aui32ConnectRetryIdx, unsigned int aui32ConfirmIdx, unsigned int aui32SleepIdx);
 static eBTRMgrRet btrMgr_AddPersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
 static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+static eBTRMgrRet btrMgr_PreCheckDiscoveryStatus (unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aDevOpType);
+static eBTRMgrRet btrMgr_PostCheckDiscoveryStatus (unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aDevOpType);
+
+static eBTRMgrRet btrMgr_PauseDeviceDiscovery (unsigned char aui8AdapterIdx, BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl);
+static eBTRMgrRet btrMgr_ResumeDeviceDiscovery (unsigned char aui8AdapterIdx, BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl);
+static eBTRMgrRet btrMgr_StopDeviceDiscovery (unsigned char aui8AdapterIdx, BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl);
+
+static inline BTRMGR_DiscoveryHandle_t* btrMgr_GetDiscoveryInProgress (void);
+static inline BTRMGR_DeviceOperationType_t btrMgr_GetBgDiscoveryType (void);
+static inline eBTRMgrRet btrMgr_SetBgDiscoveryType (BTRMGR_DeviceOperationType_t adevOpType);
+static inline BTRMGR_DiscoveryState_t btrMgr_GetDiscoveryState (BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl);
+static inline eBTRMgrRet btrMgr_SetDiscoveryState (BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl, BTRMGR_DiscoveryState_t aScanStatus);
+static inline BTRMGR_DeviceOperationType_t btrMgr_GetDiscoveryDeviceType (BTRMGR_DiscoveryHandle_t*  ahdiscoveryHdl);
+static inline eBTRMgrRet btrMgr_SetDiscoveryDeviceType (BTRMGR_DiscoveryHandle_t*  ahdiscoveryHdl, BTRMGR_DeviceOperationType_t aeDevOpType);
+
+static inline const char* btrMgr_GetDiscoveryDeviceTypeAsString (BTRMGR_DeviceOperationType_t adevOpType);
+static inline const char* btrMgr_GetDiscoveryStateAsString (BTRMGR_DiscoveryState_t  aScanStatus);
+
+static inline BOOLEAN btrMgr_isTimeOutSet (void);
 
 /*  Local Op Threads Prototypes */
 
@@ -119,6 +157,7 @@ static enBTRCoreRet btrMgr_ConnectionInIntimationCb (stBTRCoreConnCBInfo* apstCo
 static enBTRCoreRet btrMgr_ConnectionInAuthenticationCb (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
 static enBTRCoreRet btrMgr_MediaStatusCb (stBTRCoreMediaStatusCBInfo* mediaStatusCB, void* apvUserData);
 
+static gboolean btrMgr_DiscoveryHoldOffTimerCb (gpointer gptr);
 
 /* Static Function Definitions */
 static inline unsigned char
@@ -126,6 +165,13 @@ btrMgr_GetAdapterCnt (
     void
 ) {
     return gListOfAdapters.number_of_adapters;
+}
+
+static inline BOOLEAN
+btrMgr_isTimeOutSet (
+    void
+) {
+    return (gTimeOutRef)? TRUE : FALSE;
 }
 
 static const char* 
@@ -157,32 +203,19 @@ btrMgr_GetAgentActivated (
     return gIsAgentActivated;
 }
 
-static void
-btrMgr_SetDiscoveryInProgress (
-    unsigned char   status
+static inline eBTRMgrRet
+btrMgr_SetBgDiscoveryType (
+    BTRMGR_DeviceOperationType_t    adevOpType
 ) {
-    gIsDiscoveryInProgress = status;
+    gBgDiscoveryType = adevOpType;
+    return eBTRMgrSuccess;
 }
 
-static unsigned char
-btrMgr_GetDiscoveryInProgress (
+static inline BTRMGR_DeviceOperationType_t
+btrMgr_GetBgDiscoveryType (
     void
 ) {
-    return gIsDiscoveryInProgress;
-}
-
-static void
-btrMgr_SetCurrentDiscoveryDeviceType (
-    BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT
-) {
-    gDiscoveryType = aenBTRMgrDevOpT;
-}
-
-static BTRMGR_DeviceOperationType_t
-btrMgr_GetCurrentDiscoveryDeviceType (
-    void
-) {
-    return gDiscoveryType;
+    return gBgDiscoveryType;
 }
 
 static unsigned char
@@ -199,6 +232,7 @@ btrMgr_GetDevPaired (
 
     return 0;
 }
+
 
 static BTRMGR_DeviceType_t
 btrMgr_MapDeviceTypeFromCore (
@@ -347,6 +381,7 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_pairedDevice.m_deviceHandle          = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
         apstEventMessage->m_pairedDevice.m_deviceType            = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
         apstEventMessage->m_pairedDevice.m_isLastConnectedDevice = (ghBTRMgrDevHdlLastConnected == apstEventMessage->m_pairedDevice.m_deviceHandle) ? 1 : 0;
+        apstEventMessage->m_pairedDevice.m_isLowEnergyDevice     = (apstEventMessage->m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//We shall make it generic later
         apstEventMessage->m_pairedDevice.m_ui32DevClassBtSpec    = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->ui32DevClassBtSpec;
         strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
     }
@@ -620,6 +655,365 @@ btrMgr_StopReceivingAudio (
     return lenBtrMgrRet;
 }
 
+static inline const char*
+btrMgr_GetDiscoveryDeviceTypeAsString (
+    BTRMGR_DeviceOperationType_t    adevOpType
+) {
+    char* opType = NULL;
+
+    switch (adevOpType) {
+    case BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT:
+        opType = "AUDIO_OUT";
+        break;
+    case BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT:
+        opType = "AUDIO_IN";
+        break;
+    case BTRMGR_DEVICE_OP_TYPE_LE:
+        opType = "LE";
+        break;
+    case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
+        opType = "UNKNOWN";
+    }
+    return opType;
+}
+
+#if 0
+static inline const char*
+btrMgr_GetDiscoveryFilterAsString (
+    BTRMGR_ScanFilter_t ascanFlt
+) {
+    char* filter = NULL;
+
+    switch (ascanFlt) {
+    case BTRMGR_DISCOVERY_FILTER_UUID:
+        filter = "UUID";
+        break;
+    case BTRMGR_DISCOVERY_FILTER_RSSI:
+        filter = "RSSI";
+        break;
+    case BTRMGR_DISCOVERY_FILTER_PATH_LOSS:
+        filter = "PATH_LOSS";
+        break;
+    case BTRMGR_DISCOVERY_FILTER_SCAN_TYPE:
+        filter = "SCAN_TYPE";
+    }
+    return filter;
+}
+#endif
+
+static inline const char*
+btrMgr_GetDiscoveryStateAsString (
+    BTRMGR_DiscoveryState_t         aScanStatus
+) {
+    char* state = NULL;
+
+    switch (aScanStatus) { 
+    case BTRMGR_DISCOVERY_ST_STARTED:
+        state = "ST_STARTED";
+        break;
+    case BTRMGR_DISCOVERY_ST_PAUSED:
+        state = "ST_PAUSED";
+        break;
+    case BTRMGR_DISCOVERY_ST_RESUMED:
+        state = "ST_RESUMED";
+        break;
+    case BTRMGR_DISCOVERY_ST_STOPPED:
+        state = "ST_STOPPED";
+        break;
+    case BTRMGR_DISCOVERY_ST_UNKNOWN:
+    default:
+        state = "ST_UNKNOWN";
+    }
+    return state;
+}
+
+static inline BTRMGR_DiscoveryState_t
+btrMgr_GetDiscoveryState (
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    return ahdiscoveryHdl->m_disStatus;
+}
+
+static inline eBTRMgrRet
+btrMgr_SetDiscoveryState (
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl,
+    BTRMGR_DiscoveryState_t         aScanStatus
+) {
+    ahdiscoveryHdl->m_disStatus = aScanStatus;
+    return eBTRMgrSuccess;
+}
+
+static inline BTRMGR_DeviceOperationType_t
+btrMgr_GetDiscoveryDeviceType (
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    return ahdiscoveryHdl->m_devOpType;
+}
+
+static inline eBTRMgrRet
+btrMgr_SetDiscoveryDeviceType (
+    BTRMGR_DiscoveryHandle_t*       ahdiscoveryHdl,
+    BTRMGR_DeviceOperationType_t    aeDevOpType
+) {
+    ahdiscoveryHdl->m_devOpType = aeDevOpType;
+    return eBTRMgrSuccess;
+}
+
+#if 0
+static inline BTRMGR_DiscoveryFilterHandle_t*
+btrMgr_GetDiscoveryFilter (
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    return &ahdiscoveryHdl->m_disFilter;
+}
+
+static eBTRMgrRet
+btrMgr_SetDiscoveryFilter (
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl,
+    BTRMGR_ScanFilter_t         aeScanFilterType,
+    void*                       aFilterValue
+) {
+    BTRMGR_DiscoveryFilterHandle_t* ldisFilter = btrMgr_GetDiscoveryFilter(ahdiscoveryHdl);
+
+    if (btrMgr_GetDiscoveryState(ahdiscoveryHdl) != BTRMGR_DISCOVERY_ST_INITIALIZING){
+        BTRMGRLOG_ERROR ("Not in Initializing state !!!. Current state is %s\n"
+                        , btrMgr_GetDiscoveryStateAsString (btrMgr_GetDiscoveryState(ahdiscoveryHdl)));
+        return eBTRMgrFailure;
+    }
+
+    switch (aeScanFilterType) {
+    case BTRMGR_DISCOVERY_FILTER_UUID:
+        ldisFilter->m_btuuid.m_uuid     = (char**) realloc (ldisFilter->m_btuuid.m_uuid, (sizeof(char*) * (++ldisFilter->m_btuuid.m_uuidCount)));
+        ldisFilter->m_btuuid.m_uuid[ldisFilter->m_btuuid.m_uuidCount]   = (char*)  malloc  (BTRMGR_NAME_LEN_MAX);
+        strncpy (ldisFilter->m_btuuid.m_uuid[ldisFilter->m_btuuid.m_uuidCount-1], (char*)aFilterValue, BTRMGR_NAME_LEN_MAX-1);
+        break;
+    case BTRMGR_DISCOVERY_FILTER_RSSI:
+        ldisFilter->m_rssi      = *(short*)aFilterValue;
+        break;
+    case BTRMGR_DISCOVERY_FILTER_PATH_LOSS:
+        ldisFilter->m_pathloss  = *(short*)aFilterValue;
+        break;
+    case BTRMGR_DISCOVERY_FILTER_SCAN_TYPE:
+        ldisFilter->m_scanType  = *(BTRMGR_DeviceScanType_t*)aFilterValue;
+    }
+
+    BTRMGRLOG_DEBUG ("Discovery Filter is set successfully with the given %s...\n"
+                    , btrMgr_GetDiscoveryFilterAsString(aeScanFilterType));
+
+    return eBTRMgrSuccess;
+}
+
+
+static eBTRMgrRet
+btrMgr_ClearDiscoveryFilter (
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    BTRMGR_DiscoveryFilterHandle_t* ldisFilter = btrMgr_GetDiscoveryFilter(ahdiscoveryHdl);
+
+    if (btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_INITIALIZED || 
+        btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_STARTED     ||
+        btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_RESUMED     ||
+        btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_PAUSED      ){
+        BTRMGRLOG_WARN ("Cannot clear Discovery Filter when Discovery is in %s\n"
+                        , btrMgr_GetDiscoveryStateAsString(btrMgr_GetDiscoveryState(ahdiscoveryHdl)));
+        return eBTRMgrFailure;
+     }
+
+    if (ldisFilter->m_btuuid.m_uuidCount) {
+        while (ldisFilter->m_btuuid.m_uuidCount) {
+            free (ldisFilter->m_btuuid.m_uuid[ldisFilter->m_btuuid.m_uuidCount-1]);
+            ldisFilter->m_btuuid.m_uuid[ldisFilter->m_btuuid.m_uuidCount-1] = NULL;
+            ldisFilter->m_btuuid.m_uuidCount--;
+        }
+        free (ldisFilter->m_btuuid.m_uuid);
+    }
+
+    ldisFilter->m_btuuid.m_uuid = NULL;
+    ldisFilter->m_rssi          = 0;
+    ldisFilter->m_pathloss      = 0;
+    ldisFilter->m_scanType      = BTRMGR_DEVICE_SCAN_TYPE_AUTO;
+
+    return eBTRMgrSuccess;
+}
+#endif 
+
+static eBTRMgrRet
+btrMgr_PauseDeviceDiscovery (
+    unsigned char               aui8AdapterIdx,
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    eBTRMgrRet  lenBtrMgrRet   = eBTRMgrSuccess;
+
+    if (btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_STARTED ||
+        btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_RESUMED ){
+
+        if (BTRMGR_RESULT_SUCCESS == BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl))) {
+
+            btrMgr_SetDiscoveryState (ahdiscoveryHdl, BTRMGR_DISCOVERY_ST_PAUSED);
+            BTRMGRLOG_DEBUG ("[%s] Successfully Paused Scan\n"
+                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+        }
+        else {
+            BTRMGRLOG_ERROR ("[%s] Failed to Pause Scan\n"
+                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+            lenBtrMgrRet =  eBTRMgrFailure;
+        }
+    }
+    return lenBtrMgrRet;
+}
+
+static eBTRMgrRet
+btrMgr_ResumeDeviceDiscovery (
+    unsigned char               aui8AdapterIdx,
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    eBTRMgrRet  lenBtrMgrRet   = eBTRMgrSuccess;
+    
+    if (btrMgr_GetDiscoveryState(ahdiscoveryHdl) != BTRMGR_DISCOVERY_ST_PAUSED) {
+        BTRMGRLOG_WARN ("\n[%s] Device Discovery Resume is requested, but current state is %s !!!\n"
+                        , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl))
+                        , btrMgr_GetDiscoveryStateAsString (btrMgr_GetDiscoveryState(ahdiscoveryHdl)));
+        BTRMGRLOG_WARN ("\n Still continuing to Resume Discovery\n");
+    }
+    #if 0
+    if (enBTRCoreSuccess != BTRCore_ApplyDiscoveryFilter (btrMgr_GetDiscoveryFilter(ahdiscoveryHdl))) {
+        BTRMGRLOG_ERROR ("[%s] Failed to set Discovery Filter!!!"
+                        , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+        lenBtrMgrRet = eBTRMgrFailure;
+    }
+    else {
+    #endif
+        if (BTRMGR_RESULT_SUCCESS == BTRMGR_StartDeviceDiscovery (aui8AdapterIdx, btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl))) {
+
+            btrMgr_SetDiscoveryState (ahdiscoveryHdl, BTRMGR_DISCOVERY_ST_RESUMED);
+            BTRMGRLOG_DEBUG ("[%s] Successfully Resumed Scan\n"
+                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+        } else {
+            BTRMGRLOG_ERROR ("[%s] Failed Resume Scan!!!\n"
+                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+        }
+    //}
+
+    return lenBtrMgrRet;
+}
+
+static eBTRMgrRet
+btrMgr_StopDeviceDiscovery (
+    unsigned char               aui8AdapterIdx,
+    BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl
+) {
+    eBTRMgrRet  lenBtrMgrRet   = eBTRMgrSuccess;
+
+    if (btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_STARTED ||
+        btrMgr_GetDiscoveryState(ahdiscoveryHdl) == BTRMGR_DISCOVERY_ST_RESUMED ){
+
+        if (BTRMGR_RESULT_SUCCESS == BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl))) {
+
+            BTRMGRLOG_DEBUG ("[%s] Successfully Stopped scan\n"
+                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+        }
+        else {
+            BTRMGRLOG_ERROR ("[%s] Failed to Stop scan\n"
+                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
+            lenBtrMgrRet =  eBTRMgrFailure;
+        }
+    }
+    return lenBtrMgrRet;
+}
+
+
+static inline BTRMGR_DiscoveryHandle_t*
+btrMgr_GetDiscoveryInProgress (
+    void
+) {
+    BTRMGR_DiscoveryHandle_t*   ldiscoveryHdl = NULL;
+
+    if (btrMgr_GetDiscoveryState(&ghBTRMgrDiscoveryHdl) == BTRMGR_DISCOVERY_ST_STARTED ||
+        btrMgr_GetDiscoveryState(&ghBTRMgrDiscoveryHdl) == BTRMGR_DISCOVERY_ST_RESUMED ){
+        ldiscoveryHdl = &ghBTRMgrDiscoveryHdl;
+    }
+    else
+    if (btrMgr_GetDiscoveryState(&ghBTRMgrBgDiscoveryHdl) == BTRMGR_DISCOVERY_ST_STARTED ||
+        btrMgr_GetDiscoveryState(&ghBTRMgrBgDiscoveryHdl) == BTRMGR_DISCOVERY_ST_RESUMED ){
+        ldiscoveryHdl = &ghBTRMgrBgDiscoveryHdl;
+    }
+        
+    if (ldiscoveryHdl) {
+        BTRMGRLOG_DEBUG ("[%s] Scan in Progress...\n"
+                        , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)));
+    }
+
+    return ldiscoveryHdl;
+}
+
+static eBTRMgrRet
+btrMgr_PreCheckDiscoveryStatus (
+    unsigned char                   aui8AdapterIdx,
+    BTRMGR_DeviceOperationType_t    aDevOpType
+) {
+    eBTRMgrRet                lenBtrMgrRet  = eBTRMgrSuccess;
+    BTRMGR_DiscoveryHandle_t* ldiscoveryHdl = NULL;
+
+    if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
+
+        if ( btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl) == btrMgr_GetBgDiscoveryType()) {
+            btrMgr_PauseDeviceDiscovery (aui8AdapterIdx, ldiscoveryHdl);
+        }
+        else
+        if (aDevOpType != btrMgr_GetBgDiscoveryType()) {
+            btrMgr_StopDeviceDiscovery (aui8AdapterIdx, ldiscoveryHdl);
+        }
+        else {
+            BTRMGRLOG_WARN ("[%s] Scan in Progress.. Request for %s scan is rejected...\n"
+                           , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl))
+                           , btrMgr_GetDiscoveryDeviceTypeAsString (aDevOpType));
+            lenBtrMgrRet = eBTRMgrFailure;
+        }
+    }
+
+    return lenBtrMgrRet;
+}
+
+static eBTRMgrRet
+btrMgr_PostCheckDiscoveryStatus (
+    unsigned char                   aui8AdapterIdx,
+    BTRMGR_DeviceOperationType_t    aDevOpType
+) {
+    eBTRMgrRet                lenBtrMgrRet  = eBTRMgrSuccess;
+    BTRMGR_DiscoveryHandle_t* ldiscoveryHdl = NULL;
+
+    if (btrMgr_isTimeOutSet()) {
+
+        BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
+        g_source_remove (gTimeOutRef);
+        gTimeOutRef =  g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
+        BTRMGRLOG_DEBUG ("DiscoveryHoldOffTimeOut reset to  +%u  seconds\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME);
+    }
+    else if (aDevOpType == BTRMGR_DEVICE_OP_TYPE_UNKNOWN) {
+        if (btrMgr_GetDiscoveryState(&ghBTRMgrBgDiscoveryHdl) == BTRMGR_DISCOVERY_ST_PAUSED) {
+
+            lenBtrMgrRet = btrMgr_ResumeDeviceDiscovery (aui8AdapterIdx, &ghBTRMgrBgDiscoveryHdl);
+        }
+    }
+    else {
+        if (aDevOpType == btrMgr_GetBgDiscoveryType()) {
+            ldiscoveryHdl = &ghBTRMgrBgDiscoveryHdl;
+        }
+        else {
+            ldiscoveryHdl = &ghBTRMgrDiscoveryHdl;
+        }
+        
+        if (btrMgr_GetDiscoveryState(ldiscoveryHdl) != BTRMGR_DISCOVERY_ST_PAUSED) {
+        	btrMgr_SetDiscoveryDeviceType (ldiscoveryHdl, aDevOpType);
+        	btrMgr_SetDiscoveryState (ldiscoveryHdl, BTRMGR_DISCOVERY_ST_STARTED);
+        	// set Filter in the handle from the global Filter
+        }
+    }
+
+    return lenBtrMgrRet;
+}
+
+
 static eBTRMgrRet
 btrMgr_ConnectToDevice (
     unsigned char                   aui8AdapterIdx,
@@ -631,18 +1025,14 @@ btrMgr_ConnectToDevice (
     eBTRMgrRet      lenBtrMgrRet    = eBTRMgrSuccess;
     enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
     unsigned int    ui32retryIdx    = aui32ConnectRetryIdx + 1;
-    enBTRCoreDeviceType lenBTRCoreDeviceType = enBTRCoreUnknown;
+    enBTRCoreDeviceType lenBTRCoreDeviceType  = enBTRCoreUnknown;
+    BTRMGR_DeviceOperationType_t lenDevOpType = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
 
+    lenBtrMgrRet = btrMgr_PreCheckDiscoveryStatus(aui8AdapterIdx, connectAs);
 
-    if (btrMgr_GetDiscoveryInProgress()) {
-        if (btrMgr_GetCurrentDiscoveryDeviceType() == BTRMGR_DEVICE_OP_TYPE_LE) {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_LE);
-        }
-        else {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
-        }
+    if (eBTRMgrSuccess != lenBtrMgrRet) {
+        BTRMGRLOG_ERROR ("Pre Check Discovery State Rejected !!!\n");
+        return lenBtrMgrRet;
     }
 
     switch (connectAs) {
@@ -705,11 +1095,15 @@ btrMgr_ConnectToDevice (
                     gIsDeviceConnected = 1;
                     gIsUserInitiated = 0;
                     ghBTRMgrDevHdlLastConnected = ahBTRMgrDevHdl;
+                } else {
+                    lenDevOpType = connectAs;
+                    gIsLeDeviceConnected = 1;
                 }
             }
         }
     } while ((lenBtrMgrRet == eBTRMgrFailure) && (--ui32retryIdx));
 
+    btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, lenDevOpType);
 
     return lenBtrMgrRet;
 }
@@ -891,6 +1285,7 @@ btrMgr_StartAudioStreamingOut (
         lstEventMessage.m_adapterIndex                 = aui8AdapterIdx;
         lstEventMessage.m_pairedDevice.m_deviceHandle  = listOfPDevices.devices[i].tDeviceId;
         lstEventMessage.m_pairedDevice.m_deviceType    = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
+        lstEventMessage.m_pairedDevice.m_isLowEnergyDevice = (lstEventMessage.m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//will make it generic later
         strncpy(lstEventMessage.m_pairedDevice.m_name, listOfPDevices.devices[i].pcDeviceName, BTRMGR_NAME_LEN_MAX);
         lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
@@ -1016,7 +1411,7 @@ BTRMGR_Init (
     memset(&gstBTRMgrStreamingInfo, 0, sizeof(gstBTRMgrStreamingInfo));
     memset(&gListOfPairedDevices, 0, sizeof(gListOfPairedDevices));
     memset(&gstBtrCoreDevMediaInfo, 0, sizeof(gstBtrCoreDevMediaInfo));
-    gIsDiscoveryInProgress = 0;
+    //gIsDiscoveryInProgress = 0;
 
 
     /* Init the mutex */
@@ -1085,6 +1480,8 @@ BTRMGR_Init (
         }
     }
 
+    btrMgr_SetBgDiscoveryType (BTRMGR_DEVICE_OP_TYPE_LE);
+
     /* Initialize the Paired Device List for Default adapter */
     BTRMGR_GetPairedDevices (gDefaultAdapterContext.adapter_number, &gListOfPairedDevices);
 
@@ -1116,6 +1513,10 @@ BTRMGR_DeInit (
         lenBtrMgrPiResult = BTRMgr_PI_DeInit(ghBTRMgrPiHdl);
         ghBTRMgrPiHdl = NULL;
         BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app = %d\n", lenBtrMgrPiResult);
+    }
+
+    if (btrMgr_isTimeOutSet()) {
+        g_source_remove (gTimeOutRef);
     }
 
     if (ghBTRCoreHdl) {
@@ -1494,16 +1895,16 @@ BTRMGR_IsAdapterDiscoverable (
     return lenBtrMgrResult;
 }
 
-
 BTRMGR_Result_t
 BTRMGR_StartDeviceDiscovery (
     unsigned char                aui8AdapterIdx, 
     BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT
 ) {
-    BTRMGR_Result_t     lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
+    BTRMGR_Result_t     lenBtrMgrResult      = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet        lenBtrCoreRet        = enBTRCoreSuccess;
     enBTRCoreDeviceType lenBTRCoreDeviceType = enBTRCoreUnknown;
-    const char*         pAdapterPath    = NULL;
+    const char*         pAdapterPath         = NULL;
+    BTRMGR_DiscoveryHandle_t* ldiscoveryHdl  = NULL;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -1518,25 +1919,26 @@ BTRMGR_StartDeviceDiscovery (
         BTRMGRLOG_ERROR ("Failed to get adapter path\n");
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
-
-
-    if (btrMgr_GetDiscoveryInProgress()) {
-        if (btrMgr_GetCurrentDiscoveryDeviceType() == aenBTRMgrDevOpT) {
-            BTRMGRLOG_WARN("Scanning is already in progress\n");
+    // TODO Try to move this check logically into btrMgr_PreCheckDiscoveryStatus
+    if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
+        if (aenBTRMgrDevOpT == btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)) {
+            BTRMGRLOG_WARN ("[%s] Scan already in Progress..."
+                           , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)));
             return BTRMGR_RESULT_SUCCESS;
-        }
-        else {
-            if (btrMgr_GetCurrentDiscoveryDeviceType() == BTRMGR_DEVICE_OP_TYPE_LE) {
-                BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-                BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_LE);
-            }
-            else {
-                BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-                BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
-            }
         }
     }
 
+    if (eBTRMgrSuccess != btrMgr_PreCheckDiscoveryStatus(aui8AdapterIdx, aenBTRMgrDevOpT)) {
+        BTRMGRLOG_ERROR ("Pre Check Discovery State Rejected !!!\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    if (btrMgr_isTimeOutSet()) {
+        BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
+        g_source_remove (gTimeOutRef);
+        gTimeOutRef = 0;
+        gDiscHoldOffTimeOutCbData = 0;
+    }
 
     /* Populate the currently Paired Devices. This will be used only for the callback DS update */
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
@@ -1566,13 +1968,27 @@ BTRMGR_StartDeviceDiscovery (
     }
     else {
         BTRMGRLOG_INFO ("Discovery started Successfully\n");
-        btrMgr_SetCurrentDiscoveryDeviceType(aenBTRMgrDevOpT);
-        btrMgr_SetDiscoveryInProgress(1);
+
+        {
+            BTRMGR_EventMessage_t lstEventMessage;
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+            lstEventMessage.m_adapterIndex = aui8AdapterIdx;
+            lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED;
+            lstEventMessage.m_numOfDevices = 0;
+
+
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            }
+        }
     }
 
-    
+    btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, aenBTRMgrDevOpT);
+
     return lenBtrMgrResult;
 }
+
 
 BTRMGR_Result_t
 BTRMGR_StopDeviceDiscovery (
@@ -1583,8 +1999,9 @@ BTRMGR_StopDeviceDiscovery (
     enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
     enBTRCoreDeviceType lenBTRCoreDeviceType = enBTRCoreUnknown;
     const char*         pAdapterPath    = NULL;
+    BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl = NULL;
 
-    if (!btrMgr_GetDiscoveryInProgress()) {
+    if (!(ahdiscoveryHdl=btrMgr_GetDiscoveryInProgress())) {
         BTRMGRLOG_WARN("Scanning is not running now\n");
     }
     else if (!ghBTRCoreHdl) {
@@ -1627,8 +2044,17 @@ BTRMGR_StopDeviceDiscovery (
     }
     else {
         BTRMGRLOG_INFO ("Discovery Stopped Successfully\n");
-        btrMgr_SetDiscoveryInProgress(0);
-        btrMgr_SetCurrentDiscoveryDeviceType(BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
+
+        if (ahdiscoveryHdl) {
+            btrMgr_SetDiscoveryState (ahdiscoveryHdl, BTRMGR_DISCOVERY_ST_STOPPED);
+        }
+
+        if (BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT == aenBTRMgrDevOpT && !btrMgr_isTimeOutSet()) {
+
+            gDiscHoldOffTimeOutCbData = aui8AdapterIdx;
+
+            gTimeOutRef = g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
+        }
 
         {
             BTRMGR_EventMessage_t lstEventMessage;
@@ -1692,8 +2118,9 @@ BTRMGR_GetDiscoveredDevices (
                 ptr->m_deviceType = btrMgr_MapDeviceTypeFromCore(listOfDevices.devices[i].enDeviceType);
                 ptr->m_isPairedDevice = btrMgr_GetDevPaired(listOfDevices.devices[i].tDeviceId);
 
-                if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == ptr->m_deviceHandle))
+                if (listOfDevices.devices[i].bDeviceConnected) {
                     ptr->m_isConnected = 1;
+                }
             }
             /*  Success */
             BTRMGRLOG_INFO ("Successful\n");
@@ -1727,16 +2154,7 @@ BTRMGR_PairDevice (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    if (btrMgr_GetDiscoveryInProgress()) {
-        if (btrMgr_GetCurrentDiscoveryDeviceType() == BTRMGR_DEVICE_OP_TYPE_LE) {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_LE);
-        }
-        else {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
-        }
-    }
+    btrMgr_PreCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
 
     /* Update the Paired Device List */
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
@@ -1799,6 +2217,8 @@ BTRMGR_PairDevice (
         }
     }
 
+    btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
+
     return lenBtrMgrResult;
 }
 
@@ -1825,16 +2245,7 @@ BTRMGR_UnpairDevice (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    if (btrMgr_GetDiscoveryInProgress()) {
-        if (btrMgr_GetCurrentDiscoveryDeviceType() == BTRMGR_DEVICE_OP_TYPE_LE) {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_LE);
-        }
-        else {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
-        }
-    }
+    btrMgr_PreCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
 
     /* Get the latest Paired Device List; This is added as the developer could add a device thro test application and try unpair thro' UI */
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
@@ -1917,6 +2328,8 @@ BTRMGR_UnpairDevice (
         }
     }
 
+    btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
+
     return lenBtrMgrResult;
 }
 
@@ -1971,8 +2384,9 @@ BTRMGR_GetPairedDevices (
                     strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfDevices.devices[i].stDeviceProfile.profile[j].profile_name);
                 }
 
-                if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == ptr->m_deviceHandle))
+                if (listOfDevices.devices[i].bDeviceConnected) {
                     ptr->m_isConnected = 1;
+                }
             }
             /*  Success */
             BTRMGRLOG_INFO ("Successful\n");
@@ -2024,6 +2438,7 @@ BTRMGR_DisconnectFromDevice (
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
     enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreSpeakers;
     enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
+    BTRMGR_DeviceOperationType_t lenBtrMgrDevOpType = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2043,36 +2458,45 @@ BTRMGR_DisconnectFromDevice (
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
-    if (btrMgr_GetDiscoveryInProgress()) {
-        if (btrMgr_GetCurrentDiscoveryDeviceType() == BTRMGR_DEVICE_OP_TYPE_LE) {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_LE);
+    if (lenBTRCoreDevTy == enBTRCoreLE && !gIsLeDeviceConnected) {
+        BTRMGRLOG_ERROR ("No LE Device is connected at this time\n");
+        btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    if (lenBTRCoreDevTy == enBTRCoreLE) {
+        lenBtrMgrDevOpType = BTRMGR_DEVICE_OP_TYPE_LE;
+    }
+
+    if (eBTRMgrSuccess != btrMgr_PreCheckDiscoveryStatus(aui8AdapterIdx, lenBtrMgrDevOpType)) {
+        BTRMGRLOG_ERROR ("Pre Check Discovery State Failed !!!\n");
+        if (lenBTRCoreDevTy == enBTRCoreLE) {
+            btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
         }
-        else {
-            BTRMGRLOG_WARN("Scanning is still running now; Lets stop it\n");
-            BTRMGR_StopDeviceDiscovery (aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
-        }
+        return BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
 
+    if (lenBTRCoreDevTy != enBTRCoreLE) {
 
-    if (lenBTRCoreDevTy != enBTRCoreLE && ghBTRMgrDevHdlCurStreaming) {
-        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
-            /* Streaming-Out is happening; stop it */
-            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
-                BTRMGRLOG_ERROR ("Streamout failed to stop\n");
+        if (ghBTRMgrDevHdlCurStreaming) {
+            if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+                /* Streaming-Out is happening; stop it */
+                if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                    BTRMGRLOG_ERROR ("Streamout failed to stop\n");
+                }
+            }
+            else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+                /* Streaming-In is happening; stop it */
+                if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                    BTRMGRLOG_ERROR ("Streamin failed to stop\n");
+                }
             }
         }
-        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
-            /* Streaming-In is happening; stop it */
-            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
-                BTRMGRLOG_ERROR ("Streamin failed to stop\n");
-            }
-        }
+
+        gIsUserInitiated = 1;
     }
 
-
-    gIsUserInitiated = 1;
 
     /* connectAs param is unused for now.. */
     lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDevTy);
@@ -2087,6 +2511,7 @@ BTRMGR_DisconnectFromDevice (
             lstEventMessage.m_adapterIndex = aui8AdapterIdx;
             lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED;
             lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+            lstEventMessage.m_pairedDevice.m_isLowEnergyDevice = (lenBTRCoreDevCl==enBTRCore_DC_Tile)?1:0;//Will make it generic later
 
             if (gfpcBBTRMgrEventOut) {
                 gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
@@ -2123,10 +2548,13 @@ BTRMGR_DisconnectFromDevice (
                 btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
                 gIsDeviceConnected = 0;
                 ghBTRMgrDevHdlLastConnected = 0;
+            } else {
+                gIsLeDeviceConnected = 0;
             }
         }
     }
 
+    btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
 
     return lenBtrMgrResult;
 }
@@ -2137,9 +2565,10 @@ BTRMGR_GetConnectedDevices (
     unsigned char                   aui8AdapterIdx,
     BTRMGR_ConnectedDevicesList_t*  pConnectedDevices
 ) {
-    BTRMGR_Result_t             lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet                lenBtrCoreRet   = enBTRCoreSuccess;
-    stBTRCorePairedDevicesCount listOfPDevices;
+    BTRMGR_Result_t              lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet                 lenBtrCoreRet   = enBTRCoreSuccess;
+    stBTRCorePairedDevicesCount  listOfPDevices;
+    stBTRCoreScannedDevicesCount listOfSDevices;
     unsigned char i = 0;
     unsigned char j = 0;
 
@@ -2155,33 +2584,68 @@ BTRMGR_GetConnectedDevices (
 
 
     memset (pConnectedDevices, 0, sizeof(BTRMGR_ConnectedDevicesList_t));
-    memset (&listOfPDevices, 0, sizeof(listOfPDevices));
+    memset (&listOfPDevices,   0, sizeof(listOfPDevices));
+    memset (&listOfSDevices,   0, sizeof(listOfSDevices));
 
     lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &listOfPDevices);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
         if (listOfPDevices.numberOfDevices) {
             for (i = 0; i < listOfPDevices.numberOfDevices; i++) {
                 if (listOfPDevices.devices[i].bDeviceConnected) {
-                   pConnectedDevices->m_numOfDevices  = 1; /* as we don't support multiple device connection for now */
-                   pConnectedDevices->m_deviceProperty[0].m_deviceHandle = listOfPDevices.devices[i].tDeviceId;
-                   pConnectedDevices->m_deviceProperty[0].m_deviceType   = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
-                   pConnectedDevices->m_deviceProperty[0].m_vendorID     = listOfPDevices.devices[i].ui32VendorId;
-                   pConnectedDevices->m_deviceProperty[0].m_isConnected  = 1;
-                   strncpy (pConnectedDevices->m_deviceProperty[0].m_name, listOfPDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                   strncpy (pConnectedDevices->m_deviceProperty[0].m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+                   BTRMGR_ConnectedDevice_t* ptr = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
+                   ptr->m_deviceHandle = listOfPDevices.devices[i].tDeviceId;
+                   ptr->m_deviceType   = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
+                   ptr->m_vendorID     = listOfPDevices.devices[i].ui32VendorId;
+                   ptr->m_isConnected  = 1;
+                   strncpy (ptr->m_name, listOfPDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
+                   strncpy (ptr->m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
 
-                   pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_numOfService = listOfPDevices.devices[i].stDeviceProfile.numberOfService;
+                   ptr->m_serviceInfo.m_numOfService = listOfPDevices.devices[i].stDeviceProfile.numberOfService;
                    for (j = 0; j < listOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                       pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                       strncpy (pConnectedDevices->m_deviceProperty[0].m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                       ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                       strncpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                    }
-                   BTRMGRLOG_INFO ("Successfully posted the connected device information\n");
-                   break;
+                   pConnectedDevices->m_numOfDevices++;
+                   BTRMGRLOG_INFO ("Successfully obtained the connected device information from paried list\n");
+                   break; // can be eliminated later
                 }
             }
         }
+        else {
+            BTRMGRLOG_WARN("No Device in paired list\n");
+        }
     }
-    else {
+
+    lenBtrCoreRet  = BTRCore_GetListOfScannedDevices (ghBTRCoreHdl, &listOfSDevices);
+    if (lenBtrCoreRet == enBTRCoreSuccess) {
+        if (listOfSDevices.numberOfDevices) {
+            for (i = 0; i < listOfSDevices.numberOfDevices; i++) {
+                if (listOfSDevices.devices[i].bDeviceConnected) {
+                    BTRMGR_ConnectedDevice_t* ptr = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
+                    ptr->m_deviceHandle = listOfSDevices.devices[i].tDeviceId;
+                    ptr->m_deviceType   = btrMgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].enDeviceType);
+                    ptr->m_vendorID     = listOfSDevices.devices[i].ui32VendorId;
+                    ptr->m_isConnected  = 1;
+                    strncpy (ptr->m_name, listOfSDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
+                    strncpy (ptr->m_deviceAddress, listOfSDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+
+                    ptr->m_serviceInfo.m_numOfService = listOfSDevices.devices[i].stDeviceProfile.numberOfService;
+                    for (j = 0; j < listOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
+                        ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                        strncpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                    }
+                    pConnectedDevices->m_numOfDevices++;
+                    BTRMGRLOG_INFO ("Successfully obtained the connected device information from scanned list\n");
+                    break; // can be eliminated later
+                }
+            }
+        }
+        else {
+            BTRMGRLOG_WARN("No Device in scan list\n");
+        }
+    }
+
+    if (enBTRCoreSuccess != lenBtrCoreRet) {
         BTRMGRLOG_ERROR ("Failed to get connected device information\n");
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2769,6 +3233,8 @@ BTRMGR_MediaControl (
     BTRMGR_ConnectedDevicesList_t   listOfCDevices;
     enBTRCoreMediaCtrl              aenBTRCoreMediaCtrl = 0;
     enBTRCoreDeviceType             lenBtrCoreDevType = enBTRCoreUnknown;
+    unsigned char isConnected  = 0;
+    unsigned short ui16LoopIdx = 0;
 
 
     if (!ghBTRCoreHdl) {
@@ -2783,16 +3249,22 @@ BTRMGR_MediaControl (
 
     /* Check whether the device is in the Connected list */
     BTRMGR_GetConnectedDevices (aui8AdapterIdx, &listOfCDevices);
-    /* As the stack allows only single dev conn for now  */
-    if (listOfCDevices.m_deviceProperty[0].m_deviceHandle != ahBTRMgrDevHdl) {
+    for ( ;ui16LoopIdx < listOfCDevices.m_numOfDevices; ui16LoopIdx++) {
+        if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle == ahBTRMgrDevHdl) {
+            isConnected = listOfCDevices.m_deviceProperty[ui16LoopIdx].m_isConnected;
+            break;
+        }
+    }
+
+    if (!isConnected) {
        BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_INVALID_INPUT;
     }
     /* Can implement a reverse mapping when our dev class usecases grow later point of time */
-    if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+    if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
        lenBtrCoreDevType = enBTRCoreMobileAudioIn;
     }
-    else if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+    else if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
        lenBtrCoreDevType = enBTRCorePCAudioIn;
     }
 
@@ -2844,6 +3316,9 @@ BTRMGR_GetMediaTrackInfo (
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     BTRMGR_ConnectedDevicesList_t listOfCDevices;
     enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
+    unsigned char isConnected  = 0;
+    unsigned short ui16LoopIdx = 0;
+
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2857,16 +3332,22 @@ BTRMGR_GetMediaTrackInfo (
 
     /* Check whether the device is in the Connected list */
     BTRMGR_GetConnectedDevices (aui8AdapterIdx, &listOfCDevices);
-    /* As the stack allows only single dev conn for now  */
-    if (listOfCDevices.m_deviceProperty[0].m_deviceHandle != ahBTRMgrDevHdl) {
+    for ( ;ui16LoopIdx < listOfCDevices.m_numOfDevices; ui16LoopIdx++) {
+        if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle == ahBTRMgrDevHdl) {
+            isConnected = listOfCDevices.m_deviceProperty[ui16LoopIdx].m_isConnected;
+            break;
+        }
+    }
+
+    if (!isConnected) {
        BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_INVALID_INPUT;
     }
     /* Can implement a reverse mapping when our dev class usecases grow later point of time */
-    if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+    if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
        lenBtrCoreDevType = enBTRCoreMobileAudioIn;
     }
-    else if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+    else if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
        lenBtrCoreDevType = enBTRCorePCAudioIn;
     }
 
@@ -2889,6 +3370,9 @@ BTRMGR_GetMediaCurrentPosition (
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     BTRMGR_ConnectedDevicesList_t listOfCDevices;
     enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
+    unsigned char isConnected  = 0;
+    unsigned short ui16LoopIdx = 0;
+
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2902,16 +3386,22 @@ BTRMGR_GetMediaCurrentPosition (
 
     /* Check whether the device is in the Connected list */ 
     BTRMGR_GetConnectedDevices (aui8AdapterIdx, &listOfCDevices);
-    /* As the stack allows only single dev conn for now  */
-    if (listOfCDevices.m_deviceProperty[0].m_deviceHandle != ahBTRMgrDevHdl) {
+    for ( ;ui16LoopIdx < listOfCDevices.m_numOfDevices; ui16LoopIdx++) {
+        if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle == ahBTRMgrDevHdl) {
+            isConnected = listOfCDevices.m_deviceProperty[ui16LoopIdx].m_isConnected;
+            break;
+        }
+    }
+
+    if (!isConnected) {
        BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_INVALID_INPUT;
     }
     /* Can implement a reverse mapping when our dev class usecases grow later point of time */
-    if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
+    if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
        lenBtrCoreDevType = enBTRCoreMobileAudioIn;
     }
-    else if (listOfCDevices.m_deviceProperty[0].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
+    else if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
        lenBtrCoreDevType = enBTRCorePCAudioIn;
     }
 
@@ -2934,7 +3424,6 @@ BTRMGR_GetLeProperty (
     void*                        vpPropValue
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    //BTRMGR_DevicesProperty_t   lBtrLeDevProp;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2945,8 +3434,6 @@ BTRMGR_GetLeProperty (
         BTRMGRLOG_ERROR ("Input is invalid\n");
         return BTRMGR_RESULT_INVALID_INPUT;
     }
-    // Check device
-    //BTRMGR_GetDeviceProperties(aui8AdapterIdx, ahBTRMgrDevHdl, lBtrLeDevProp)
 
     enBTRCoreLeProp lenBTRCoreLeProp = enBTRCoreLePropUnknown;
 
@@ -2997,7 +3484,10 @@ BTRMGR_PerformLeOp (
     void*                        rOpResult
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    //BTRMGR_DevicesProperty_t   lBtrLeDevProp;
+    BTRMGR_ConnectedDevicesList_t listOfCDevices;
+    unsigned char isConnected  = 0;
+    unsigned short ui16LoopIdx = 0;
+
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -3009,13 +3499,19 @@ BTRMGR_PerformLeOp (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    // Check if device is connected
-    /*BTRMGR_GetDeviceProperties(aui8AdapterIdx, ahBTRMgrDevHdl, lBtrLeDevProp)
+    /* Check whether the device is in the Connected list */ 
+    BTRMGR_GetConnectedDevices (aui8AdapterIdx, &listOfCDevices);
+    for ( ;ui16LoopIdx < listOfCDevices.m_numOfDevices; ui16LoopIdx++) {
+        if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle == ahBTRMgrDevHdl) {
+            isConnected = listOfCDevices.m_deviceProperty[ui16LoopIdx].m_isConnected;
+            break;
+        }
+    }
 
-    if (lBtrLeDevProp.m_isConnected) {
-       BTRMGRLOG_ERROR ("Device %lld not connected to perform LE Op!!!\n", ahBTRMgrDevHdl);
+    if (!isConnected) {
+       BTRMGRLOG_ERROR ("LE Device %lld is not connected to perform LE Op!!!\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_GENERIC_FAILURE;
-    }*/
+    }
 
     enBTRCoreLeOp aenBTRCoreLeOp =  enBTRCoreLeOpUnknown;
 
@@ -3198,6 +3694,27 @@ btrMgr_SIStatusCb (
 }
 
 
+static gboolean
+btrMgr_DiscoveryHoldOffTimerCb (
+    gpointer    gptr
+) {
+    unsigned char lui8AdapterIdx = 0;
+
+    BTRMGRLOG_DEBUG("CB context Invoked...\n");
+
+    if (gptr) {
+        lui8AdapterIdx = *(unsigned char*)gptr;
+    } else {
+        BTRMGRLOG_WARN ("CB context received NULL arg!");
+    }
+
+    gTimeOutRef = 0;
+
+    btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
+
+    return 0;
+}
+
 static enBTRCoreRet
 btrMgr_DeviceStatusCb (
     stBTRCoreDevStatusCBInfo*   p_StatusCB,
@@ -3239,8 +3756,10 @@ btrMgr_DeviceStatusCb (
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)) {
 
                     /* Update the flag as the Device is Connected */
-                    gIsDeviceConnected = 1;
-                    ghBTRMgrDevHdlLastConnected = lstEventMessage.m_pairedDevice.m_deviceHandle;
+                    if (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_TILE) {
+                        gIsDeviceConnected = 1;
+                        ghBTRMgrDevHdlLastConnected = lstEventMessage.m_pairedDevice.m_deviceHandle;
+                    }
 
 
                     if (gfpcBBTRMgrEventOut) {
@@ -3257,11 +3776,15 @@ btrMgr_DeviceStatusCb (
                     gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
                 }
 
-                if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
+                BTRMGRLOG_INFO ("lstEventMessage.m_pairedDevice.m_deviceType = %d\n", lstEventMessage.m_pairedDevice.m_deviceType);
+                if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TILE) {
+                    /* update the flags as the LE device is NOT Connected */
+                    gIsLeDeviceConnected = 0;
+                }
+                else if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
                     /* update the flags as the device is NOT Connected */
                     gIsDeviceConnected = 0;
 
-                    BTRMGRLOG_INFO ("lstEventMessage.m_pairedDevice.m_deviceType = %d\n", lstEventMessage.m_pairedDevice.m_deviceType);
                     if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
                         lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
                         /* Stop the playback which already stopped internally but to free up the memory */
@@ -3288,6 +3811,16 @@ btrMgr_DeviceStatusCb (
             break;
         case enBTRCoreDevStLost:
             if( !gIsUserInitiated ) {
+                unsigned char ui8doPostDiscCheck = 0;
+                if ((lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET ||
+                    lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_LOUDSPEAKER) &&
+                    !btrMgr_isTimeOutSet()) {
+                    gTimeOutRef = 1;
+                    btrMgr_PreCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+                    gTimeOutRef = 0;
+                    ui8doPostDiscCheck = 1;
+                }
+
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OUT_OF_RANGE);
 
                 if (gfpcBBTRMgrEventOut) {
@@ -3309,6 +3842,9 @@ btrMgr_DeviceStatusCb (
                         /* Stop the playback which already stopped internally but to free up the memory */
                         BTRMGR_StopAudioStreamingOut (0, ghBTRMgrDevHdlCurStreaming);
                     }
+                }
+                if (ui8doPostDiscCheck) {
+                    btrMgr_PostCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
                 }
             }
             gIsUserInitiated = 0;

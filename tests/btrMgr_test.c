@@ -85,7 +85,7 @@ static void printOptionsCli (void)
     printf (" 6. Set Discoverable\n Usage: btrMgrTest 6 <Discoverable> <TimeOut> \n 1 or 0 to Make it Discoverable ON or OFF\n");
     printf (" 7. Is it Discoverable\n Usage: btrMgrTest 7\n");
     printf (" 8. Start Discovering\n Usage: btrMgrTest 8 <ScanType> \n 0 - Normal(BR/EDR) | 1 - LE (BLE)\n");
-    printf (" 9. Stop Discovering\n Usage: btrMgrTest 9\n");
+    printf (" 9. Stop Discovering\n Usage: btrMgrTest 9 <ScanType> \n 0 - Normal(BR/EDR) | 1 - LE (BLE)\n");
     printf ("10. Get List of Discovered Devices\n Usage: btrMgrTest 10\n");
     printf ("11. Pair a Device\n Usage: btrMgrTest 11 <Handle>\n");
     printf ("12. UnPair a Device\n Usage: btrMgrTest 12 <Handle>\n");
@@ -203,6 +203,7 @@ const char* getEventAsString (BTRMGR_Events_t etype)
   switch(etype)
   {
     case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE               : event = "DEVICE_OUT_OF_RANGE_OR_LOST";       break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED          : event = "DEVICE_DISCOVERY_STARTED";          break;
     case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE           : event = "DEVICE_DISCOVERY_UPDATE";           break;
     case BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE         : event = "DEVICE_DISCOVERY_COMPLETE";         break;
     case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE           : event = "DEVICE_PAIRING_COMPLETE";           break; 
@@ -485,7 +486,7 @@ int main(int argc, char *argv[])
                     int ch = 0;
                     printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) ]\n");
                     ch = getDeviceSelection();
-                    rc = BTRMGR_StartDeviceDiscovery(0, (ch)?(1 << 2):0);
+                    rc = BTRMGR_StartDeviceDiscovery(0, (ch)? BTRMGR_DEVICE_OP_TYPE_LE : BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -494,7 +495,10 @@ int main(int argc, char *argv[])
                 break;
             case 9:
                 {
-                    rc = BTRMGR_StopDeviceDiscovery(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+                    int ch = 0;
+                    printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) ]\n");
+                    ch = getDeviceSelection();
+                    rc = BTRMGR_StopDeviceDiscovery(0, (ch)? BTRMGR_DEVICE_OP_TYPE_LE : BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else

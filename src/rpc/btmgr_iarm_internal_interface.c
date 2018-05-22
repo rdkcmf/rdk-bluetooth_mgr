@@ -1287,6 +1287,10 @@ btrMgr_EventCallback (
         BTRMGRLOG_WARN ("Post Device Out of Range event\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED) {
+        BTRMGRLOG_WARN ("Post Discovery Started event\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
     else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE) {
         BTRMGRLOG_WARN ("Post Discovery Status update\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, (void *)&lstEventMessage, sizeof(lstEventMessage));

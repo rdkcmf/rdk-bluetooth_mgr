@@ -17,7 +17,7 @@
  * limitations under the License.
 */
 /**
- * @file btrMgr_ctrl.c
+ * @file btrMgr_main.c
  *
  * @description This file defines bluetooth manager's Controller functionality
  *
@@ -100,7 +100,6 @@ main (
         lenBtrMgrResult = BTRMGR_StartAudioStreamingOut_StartUp(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
         printf ("BTRMGR_StartAudioStreamingOut_StartUp - %d\n", lenBtrMgrResult);
         fflush(stdout);
-
 
         while (gbExitBTRMgr == false) {
             time(&curr);

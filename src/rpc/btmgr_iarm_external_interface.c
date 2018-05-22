@@ -72,6 +72,7 @@ BTRMGR_Init (
         IARM_Bus_Connect();
 
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, btrMgrdeviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, btrMgrdeviceCallback);
@@ -1241,6 +1242,7 @@ btrMgrdeviceCallback (
         BTRMGR_EventMessage_t newEvent;
 
         if ((BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE                  == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED             == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE              == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE            == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE              == eventId) ||
