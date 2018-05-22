@@ -152,7 +152,7 @@ static BTRMgrDeviceHandle getDeviceSelection(void)
     {
         cliArgCounter++;
         if (cliArgCounter < gArgc){
-           mychoice = atoi(gArgv[cliArgCounter]);
+           mychoice = strtoll(gArgv[cliArgCounter],NULL, 0);
         }
         else{
            printf("\n No Value entered , Sending 0\n");
