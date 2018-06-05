@@ -335,6 +335,8 @@ printMenu (
     printf("44. Connect to the scanned LE Device\n");
     printf("45. Get LE Property\n");
     printf("46. Perform LE Operation\n");
+    printf("47. Connect to HID/Unknown\n");
+    printf("48. Disconnect to HID/Unknown\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -986,6 +988,29 @@ main (
                         printf("%d\t: %s - Obtained Value [%s]\n", __LINE__, __FUNCTION__, val  );
                     }
                 }
+            }
+            break;
+        case 47:
+            {
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                printf("Pick a Device to Connect...\n");
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreUnknown);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
+                printf("device connect process completed.\n");
+            }
+            break;
+        case 48:
+            {
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                printf("Pick a Device to Disconnect...\n");
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreUnknown);
+                printf("device disconnect process completed.\n");
             }
             break;
 

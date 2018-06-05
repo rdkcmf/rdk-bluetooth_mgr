@@ -657,13 +657,10 @@ btrMgr_ConnectToDevice (
         break;
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
+        lenBTRCoreDeviceType = enBTRCoreUnknown;
         break;
     } 
 
-    if (lenBTRCoreDeviceType == enBTRCoreUnknown) {
-       BTRMGRLOG_ERROR ("Unknown BTRMGR_DeviceConnect_Type_t : %d", lenBTRCoreDeviceType);
-       return eBTRMgrFailure;
-    }
 
     do {
         /* connectAs param is unused for now.. */
