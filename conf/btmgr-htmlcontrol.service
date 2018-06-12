@@ -23,10 +23,10 @@ Requires=btmgr.service
 
 [Service]
 Type=forking
-ExecStart=/usr/bin/spawn-fcgi -fcgi /usr/bin/btMgrHTMLControl -a 127.0.0.1 -p 9625 -P /tmp/btMgrHTMLControl.pid
+ExecStart=/usr/bin/spawn-fcgi -fcgi /usr/bin/btrMgrHTMLControl -a 127.0.0.1 -p 9625 -P /tmp/btrMgrHTMLControl.pid
 Restart=always
 RestartSec=10s
-PIDFILE=/tmp/btMgrHTMLControl.pid
+PIDFILE=/tmp/btrMgrHTMLControl.pid
 
 [Install]
 WantedBy=multi-user.target
