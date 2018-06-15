@@ -2635,7 +2635,7 @@ BTRMGR_StopAudioStreamingIn (
     }
 
 
-    if (ghBTRMgrDevHdlCurStreaming != ahBTRMgrDevHdl) {
+    if ((ghBTRMgrDevHdlCurStreaming != ahBTRMgrDevHdl) && (ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl)) {
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
