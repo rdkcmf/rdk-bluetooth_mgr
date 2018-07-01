@@ -54,8 +54,10 @@
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 
+#define ENABLE_MAIN_LOOP_CONTEXT 0
 
 
+/* Local Types & Typedefs */
 typedef struct _stBTRMgrSOGst {
     void*        pPipeline;
     void*        pSrc;
@@ -64,9 +66,17 @@ typedef struct _stBTRMgrSOGst {
     void*        pAudioEnc;
     void*        pAECapsFilter;
     void*        pRtpAudioPay;
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    void*        pContext;
+    GMutex       gMtxMainLoopRunLock;
+    GCond        gCndMainLoopRun;
+#endif
+
     void*        pLoop;
     void*        pLoopThread;
     guint        busWId;
+
     GstClockTime gstClkTStamp;
     guint64      inBufOffset;
     int          i32InBufMaxSize;
@@ -86,12 +96,15 @@ typedef struct _stBTRMgrSOGst {
 static GstState btrMgr_SO_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
 
 /* Local Op Threads Prototypes */
-static gpointer btrMgr_SO_g_main_loop_RunTask (gpointer user_data);
+static gpointer btrMgr_SO_g_main_loop_Task (gpointer apstBtrMgrSoGst);
 
 /* Incoming Callbacks Prototypes */
-static void btrMgr_SO_NeedDataCb (GstElement* appsrc, guint size, gpointer user_data);
-static void btrMgr_SO_EnoughDataCb (GstElement* appsrc, gpointer user_data);
-static gboolean btrMgr_SO_gstBusCallCb (GstBus* bus, GstMessage* msg, gpointer user_data);
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+static gboolean btrMgr_SO_g_main_loop_RunningCb (gpointer apstBtrMgrSoGst); 
+#endif
+static void btrMgr_SO_NeedDataCb (GstElement* appsrc, guint size, gpointer apstBtrMgrSoGst);
+static void btrMgr_SO_EnoughDataCb (GstElement* appsrc, gpointer apstBtrMgrSoGst);
+static gboolean btrMgr_SO_gstBusCallCb (GstBus* bus, GstMessage* msg, gpointer apstBtrMgrSoGst);
 
 
 /* Static Function Definition */
@@ -125,19 +138,123 @@ btrMgr_SO_validateStateWithTimeout (
 
 /* Local Op Threads */
 static gpointer
-btrMgr_SO_g_main_loop_RunTask (
-    gpointer user_data
+btrMgr_SO_g_main_loop_Task (
+    gpointer apstBtrMgrSoGst
 ) {
-    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)apstBtrMgrSoGst;
 
-    if (pstBtrMgrSoGst && pstBtrMgrSoGst->pLoop) {
-        BTRMGRLOG_INFO ("GMainLoop Running\n");
-        g_main_loop_run (pstBtrMgrSoGst->pLoop);
+    if (!pstBtrMgrSoGst || !pstBtrMgrSoGst->pLoop) {
+        BTRMGRLOG_ERROR ("GMainLoop Error - In arguments Exiting\n");
+        return NULL;
     }
 
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    GstElement*     appsrc      = NULL;
+    GstElement*     audresample = NULL;
+    GstElement*     audenc      = NULL;
+    GstElement*     aecapsfilter= NULL;
+    GstElement*     rtpaudpay   = NULL;
+    GstElement*     fdsink      = NULL;
+    GstElement*     pipeline    = NULL;
+    GstBus*         bus         = NULL;
+    GSource*        idleSource  = NULL;
+    GMainLoop*      loop        = NULL;    
+    GMainContext*   mainContext = NULL;
+    guint           busWatchId;
+
+
+    if (!pstBtrMgrSoGst->pContext) {
+        BTRMGRLOG_ERROR ("GMainLoop Error - No context\n");
+        return NULL;
+    }
+    
+    mainContext = pstBtrMgrSoGst->pContext;
+    g_main_context_push_thread_default (mainContext);
+
+    idleSource = g_idle_source_new ();
+    g_source_set_callback (idleSource, (GSourceFunc) btrMgr_SO_g_main_loop_RunningCb, pstBtrMgrSoGst, NULL);
+    g_source_attach (idleSource, mainContext);
+    g_source_unref (idleSource);
+
+
+    /* Create elements */
+    appsrc      = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
+#if defined(DISABLE_AUDIO_ENCODING)
+    audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
+    audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
+    aecapsfilter= gst_element_factory_make ("queue", "btmgr-so-aecapsfilter");
+    rtpaudpay   = gst_element_factory_make ("queue", "btmgr-so-rtpsbcpay");
+#else
+	/*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
+    audresample = gst_element_factory_make ("audioresample", "btmgr-so-aresample");
+    audenc      = gst_element_factory_make ("sbcenc", "btmgr-so-sbcenc");
+    aecapsfilter= gst_element_factory_make ("capsfilter", "btmgr-so-aecapsfilter");
+    rtpaudpay   = gst_element_factory_make ("rtpsbcpay", "btmgr-so-rtpsbcpay");
+#endif
+    fdsink      = gst_element_factory_make ("fdsink", "btmgr-so-fdsink");
+
+
+    /* Create a new pipeline to hold the elements */
+    pipeline    = gst_pipeline_new ("btmgr-so-pipeline");
+
+    loop =  pstBtrMgrSoGst->pLoop;
+
+    if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
+        BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamOut\n");
+        return NULL;
+    }
+
+    pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
+    pstBtrMgrSoGst->pSrc            = (void*)appsrc;
+    pstBtrMgrSoGst->pSink           = (void*)fdsink;
+    pstBtrMgrSoGst->pAudioResample  = (void*)audresample;
+    pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
+    pstBtrMgrSoGst->pAECapsFilter   = (void*)aecapsfilter;
+    pstBtrMgrSoGst->pRtpAudioPay    = (void*)rtpaudpay;
+    pstBtrMgrSoGst->gstClkTStamp    = 0;
+    pstBtrMgrSoGst->inBufOffset     = 0;
+    pstBtrMgrSoGst->bPipelineError  = FALSE;
+    g_mutex_init(&pstBtrMgrSoGst->pipelineDataMutex);
+
+
+    bus                     = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    busWatchId              = gst_bus_add_watch(bus, btrMgr_SO_gstBusCallCb, pstBtrMgrSoGst);
+    pstBtrMgrSoGst->busWId  = busWatchId;
+    g_object_unref(bus);
+
+    /* setup */
+    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+
+    g_signal_connect (appsrc, "need-data", G_CALLBACK(btrMgr_SO_NeedDataCb), pstBtrMgrSoGst);
+    g_signal_connect (appsrc, "enough-data", G_CALLBACK(btrMgr_SO_EnoughDataCb), pstBtrMgrSoGst);
+
+#endif
+
+
+    BTRMGRLOG_INFO ("GMainLoop Running\n");
+    g_main_loop_run (pstBtrMgrSoGst->pLoop);
+
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    if (busWatchId) {
+        GSource *busSource = g_main_context_find_source_by_id(mainContext, busWatchId);
+        if (busSource)
+            g_source_destroy(busSource);
+
+        busWatchId = 0;
+        pstBtrMgrSoGst->busWId = busWatchId;
+    }
+
+ 
+    g_main_context_pop_thread_default (mainContext);
+#endif
+
+
     BTRMGRLOG_INFO ("GMainLoop Exiting\n");
-    return NULL;
+    return pstBtrMgrSoGst;
 }
+
 
 /* Interfaces */
 eBTRMgrSOGstRet
@@ -146,19 +263,23 @@ BTRMgr_SO_GstInit (
     fPtr_BTRMgr_SO_GstStatusCb  afpcBSoGstStatus,
     void*                       apvUserData
 ) {
-    GstElement*     appsrc;
-    GstElement*     audresample;
-    GstElement*     audenc;
-    GstElement*     aecapsfilter;
-    GstElement*     rtpaudpay;
-    GstElement*     fdsink;
-    GstElement*     pipeline;
-    stBTRMgrSOGst*  pstBtrMgrSoGst = NULL;
-
-    GThread*        mainLoopThread;
-    GMainLoop*      loop;
-    GstBus*         bus;
+#if (ENABLE_MAIN_LOOP_CONTEXT)
+    GstElement*     appsrc          = NULL;
+    GstElement*     audresample     = NULL;
+    GstElement*     audenc          = NULL;
+    GstElement*     aecapsfilter    = NULL;
+    GstElement*     rtpaudpay       = NULL;
+    GstElement*     fdsink          = NULL;
+    GstElement*     pipeline        = NULL;
+    GstBus*         bus             = NULL;
     guint           busWatchId;
+#else
+    GMainContext*   mainContext     = NULL;
+#endif
+
+    stBTRMgrSOGst*  pstBtrMgrSoGst  = NULL;
+    GThread*        mainLoopThread  = NULL;
+    GMainLoop*      loop            = NULL;    
 
 
     if ((pstBtrMgrSoGst = (stBTRMgrSOGst*)malloc (sizeof(stBTRMgrSOGst))) == NULL) {
@@ -170,8 +291,9 @@ BTRMgr_SO_GstInit (
 
     gst_init (NULL, NULL);
 
+#if (ENABLE_MAIN_LOOP_CONTEXT)
     /* Create elements */
-    appsrc   = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
+    appsrc      = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
 #if defined(DISABLE_AUDIO_ENCODING)
     audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
@@ -188,16 +310,29 @@ BTRMgr_SO_GstInit (
 
     /* Create and event loop and feed gstreamer bus mesages to it */
     loop = g_main_loop_new (NULL, FALSE);
+#else
+    g_mutex_init (&pstBtrMgrSoGst->gMtxMainLoopRunLock);
+    g_cond_init (&pstBtrMgrSoGst->gCndMainLoopRun);
 
+    mainContext = g_main_context_new();
+
+    /* Create and event loop and feed gstreamer bus mesages to it */
+    if (mainContext) {
+        loop = g_main_loop_new (mainContext, FALSE);
+    }
+#endif
+
+
+#if (ENABLE_MAIN_LOOP_CONTEXT)
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-so-pipeline");
 
     if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamOut\n");
+        //TODO: Call BTRMgr_SO_GstDeInit((tBTRMgrSoGstHdl)pstBtrMgrSoGst);
         free((void*)pstBtrMgrSoGst);
         return eBTRMgrSOGstFailure;
     }
-
 
     pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
@@ -231,19 +366,46 @@ BTRMgr_SO_GstInit (
     gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
 
 
-    mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_RunTask", btrMgr_SO_g_main_loop_RunTask, pstBtrMgrSoGst);
+    mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_Task", btrMgr_SO_g_main_loop_Task, pstBtrMgrSoGst);
     pstBtrMgrSoGst->pLoopThread = (void*)mainLoopThread;
 
     g_signal_connect (appsrc, "need-data", G_CALLBACK(btrMgr_SO_NeedDataCb), pstBtrMgrSoGst);
     g_signal_connect (appsrc, "enough-data", G_CALLBACK(btrMgr_SO_EnoughDataCb), pstBtrMgrSoGst);
         
-    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
+#else
+    pstBtrMgrSoGst->pContext        = (void*)mainContext;
+    pstBtrMgrSoGst->pLoop           = (void*)loop;
+    pstBtrMgrSoGst->fpcBSoGstStatus = NULL;
+    pstBtrMgrSoGst->pvcBUserData    = NULL;
+
+    if (afpcBSoGstStatus) {
+        pstBtrMgrSoGst->fpcBSoGstStatus = afpcBSoGstStatus;
+        pstBtrMgrSoGst->pvcBUserData    = apvUserData;
+    }
+
+
+    g_mutex_lock (&pstBtrMgrSoGst->gMtxMainLoopRunLock);
+    {
+        mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_Task", btrMgr_SO_g_main_loop_Task, pstBtrMgrSoGst);
+        pstBtrMgrSoGst->pLoopThread = (void*)mainLoopThread;
+        
+        //TODO: Infinite loop, break out of it gracefully in case of failures
+        while (!loop || !g_main_loop_is_running (loop)) {
+            g_cond_wait (&pstBtrMgrSoGst->gCndMainLoopRun, &pstBtrMgrSoGst->gMtxMainLoopRunLock);
+        }
+    }
+    g_mutex_unlock (&pstBtrMgrSoGst->gMtxMainLoopRunLock);
+
+#endif
+        
+    gst_element_set_state(GST_ELEMENT(pstBtrMgrSoGst->pPipeline), GST_STATE_NULL);
+    if (btrMgr_SO_validateStateWithTimeout(pstBtrMgrSoGst->pPipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
         BTRMGRLOG_ERROR ("Unable to perform Operation\n");
         BTRMgr_SO_GstDeInit((tBTRMgrSoGstHdl)pstBtrMgrSoGst);
         return eBTRMgrSOGstFailure;
     }
 
+    
     *phBTRMgrSoGstHdl = (tBTRMgrSoGstHdl)pstBtrMgrSoGst;
 
     return eBTRMgrSOGstSuccess;
@@ -261,10 +423,14 @@ BTRMgr_SO_GstDeInit (
         return eBTRMgrSOGstFailInArg;
     }
 
-    GstElement* pipeline        = (GstElement*)pstBtrMgrSoGst->pPipeline;
-    GMainLoop*  loop            = (GMainLoop*)pstBtrMgrSoGst->pLoop;
-    GThread*    mainLoopThread  = (GThread*)pstBtrMgrSoGst->pLoopThread;
-    guint       busWatchId      = pstBtrMgrSoGst->busWId;
+    GstElement*     pipeline        = (GstElement*)pstBtrMgrSoGst->pPipeline;
+    GMainLoop*      loop            = (GMainLoop*)pstBtrMgrSoGst->pLoop;
+    GThread*        mainLoopThread  = (GThread*)pstBtrMgrSoGst->pLoopThread;
+#if (ENABLE_MAIN_LOOP_CONTEXT)
+    guint           busWatchId      = pstBtrMgrSoGst->busWId;
+#else
+    GMainContext*   mainContext     = (GMainContext*)pstBtrMgrSoGst->pContext;
+#endif
 
     /* cleanup */
     if (pipeline) {
@@ -272,6 +438,7 @@ BTRMgr_SO_GstDeInit (
         pipeline = NULL;
     }
 
+#if (ENABLE_MAIN_LOOP_CONTEXT)
     if (busWatchId) {
         GSource *busSource = g_main_context_find_source_by_id(g_main_context_get_thread_default(), busWatchId);
         if (busSource)
@@ -279,6 +446,7 @@ BTRMgr_SO_GstDeInit (
 
         busWatchId = 0;
     }
+#endif
 
     if (loop) {
         g_main_loop_quit(loop);
@@ -294,6 +462,13 @@ BTRMgr_SO_GstDeInit (
         loop = NULL;
     }
 
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    if (mainContext) {
+        g_main_context_unref(mainContext);
+        mainContext = NULL;
+    }
+#endif
+
     if (pstBtrMgrSoGst->fpcBSoGstStatus)
         pstBtrMgrSoGst->fpcBSoGstStatus = NULL;
 
@@ -303,6 +478,12 @@ BTRMgr_SO_GstDeInit (
     g_mutex_unlock(&pstBtrMgrSoGst->pipelineDataMutex);
 
     g_mutex_clear(&pstBtrMgrSoGst->pipelineDataMutex);
+
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    g_cond_clear(&pstBtrMgrSoGst->gCndMainLoopRun);
+    g_mutex_clear(&pstBtrMgrSoGst->gMtxMainLoopRunLock);
+#endif
 
 
     memset((void*)pstBtrMgrSoGst, 0, sizeof(stBTRMgrSOGst));
@@ -737,13 +918,36 @@ BTRMgr_SO_GstSendEOS (
 
 
 /*  Incoming Callbacks */
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+static gboolean
+btrMgr_SO_g_main_loop_RunningCb (
+    gpointer    apstBtrMgrSoGst
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)apstBtrMgrSoGst;
+
+    if (!pstBtrMgrSoGst) {
+        BTRMGRLOG_ERROR ("GMainLoop Error - In arguments Exiting\n");
+        return G_SOURCE_REMOVE;
+    }
+
+  BTRMGRLOG_INFO ("GMainLoop running now");
+
+  g_mutex_lock (&pstBtrMgrSoGst->gMtxMainLoopRunLock);
+  g_cond_signal (&pstBtrMgrSoGst->gCndMainLoopRun);
+  g_mutex_unlock (&pstBtrMgrSoGst->gMtxMainLoopRunLock);
+
+  return G_SOURCE_REMOVE;
+}
+#endif
+
+
 static void
 btrMgr_SO_NeedDataCb (
     GstElement* appsrc,
     guint       size,
-    gpointer    user_data
+    gpointer    apstBtrMgrSoGst
 ) {
-    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)apstBtrMgrSoGst;
     
     //BTRMGRLOG_INFO ("NEED DATA = %d\n", size);
     if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
@@ -755,9 +959,9 @@ btrMgr_SO_NeedDataCb (
 static void
 btrMgr_SO_EnoughDataCb (
     GstElement* appsrc,
-    gpointer    user_data
+    gpointer    apstBtrMgrSoGst
 ) {
-    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)apstBtrMgrSoGst;
     
     //BTRMGRLOG_INFO ("ENOUGH DATA\n");
     if (pstBtrMgrSoGst && pstBtrMgrSoGst->fpcBSoGstStatus) {
@@ -770,9 +974,9 @@ static gboolean
 btrMgr_SO_gstBusCallCb (
     GstBus*     bus,
     GstMessage* msg,
-    gpointer    user_data
+    gpointer    apstBtrMgrSoGst
 ) {
-    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)user_data;
+    stBTRMgrSOGst*  pstBtrMgrSoGst = (stBTRMgrSOGst*)apstBtrMgrSoGst;
 
     switch (GST_MESSAGE_TYPE (msg)) {
 

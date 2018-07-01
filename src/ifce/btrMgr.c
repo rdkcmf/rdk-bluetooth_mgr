@@ -78,13 +78,11 @@ static BTRMgrDeviceHandle           ghBTRMgrDevHdlCurStreaming  = 0;
 static BTRMGR_DiscoveryHandle_t     ghBTRMgrDiscoveryHdl;
 static BTRMGR_DiscoveryHandle_t     ghBTRMgrBgDiscoveryHdl;
 
-
 static stBTRCoreAdapter             gDefaultAdapterContext;
 static stBTRCoreListAdapters        gListOfAdapters;
 static stBTRCoreDevMediaInfo        gstBtrCoreDevMediaInfo;
 static BTRMGR_PairedDevicesList_t   gListOfPairedDevices;
 static stBTRMgrStreamingInfo        gstBTRMgrStreamingInfo;
-
 
 static unsigned char                gIsDeviceConnected          = 0;
 static unsigned char                gIsLeDeviceConnected        = 0;
@@ -94,9 +92,12 @@ static unsigned char                gAcceptConnection           = 0;
 static unsigned char                gIsUserInitiated            = 0;
 static unsigned char                gIsAudOutStartupInProgress  = 0;
 static unsigned char                gDiscHoldOffTimeOutCbData   = 0;
-static guint                        gTimeOutRef                 = 0;
+static volatile guint               gTimeOutRef                 = 0;
 
 static BTRMGR_DeviceOperationType_t gBgDiscoveryType            = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
+
+static void*                        gpvMainLoop                 = NULL;
+static void*                        gpvMainLoopThread           = NULL;
 
 static BTRMGR_EventCallback         gfpcBBTRMgrEventOut         = NULL;
 
@@ -126,7 +127,7 @@ static inline BTRMGR_DiscoveryState_t btrMgr_GetDiscoveryState (BTRMGR_Discovery
 static inline BTRMGR_DeviceOperationType_t btrMgr_GetDiscoveryDeviceType (BTRMGR_DiscoveryHandle_t*  ahdiscoveryHdl);
 //static inline BTRMGR_DiscoveryFilterHandle_t* btrMgr_GetDiscoveryFilter (BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl);
 
-static inline BOOLEAN btrMgr_isTimeOutSet (void);
+static inline gboolean btrMgr_isTimeOutSet (void);
 
 //static eBTRMgrRet btrMgr_SetDiscoveryFilter (BTRMGR_DiscoveryHandle_t* ahdiscoveryHdl, BTRMGR_ScanFilter_t aeScanFilterType, void* aFilterValue);
 //static eBTRMgrRet btrMgr_ClearDiscoveryFilter (BTRMGR_DiscoveryHandle_t*   ahdiscoveryHdl);
@@ -159,6 +160,7 @@ static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTR
 
 
 /*  Local Op Threads Prototypes */
+static gpointer btrMgr_g_main_loop_Task (gpointer appvMainLoop);
 
 
 /* Incoming Callbacks Prototypes */
@@ -341,11 +343,11 @@ btrMgr_GetDiscoveryFilter (
 }
 #endif
 
-static inline BOOLEAN
+static inline gboolean
 btrMgr_isTimeOutSet (
     void
 ) {
-    return (gTimeOutRef) ? TRUE : FALSE;
+    return (gTimeOutRef > 0) ? TRUE : FALSE;
 }
 
 #if 0
@@ -535,13 +537,26 @@ btrMgr_PreCheckDiscoveryStatus (
 
     if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
 
-        if ( btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl) == btrMgr_GetBgDiscoveryType()) {
-            BTRMGRLOG_WARN ("Calling btrMgr_PauseDeviceDiscovery");
-            btrMgr_PauseDeviceDiscovery (aui8AdapterIdx, ldiscoveryHdl);
-        }
-        else if (aDevOpType != btrMgr_GetBgDiscoveryType()) {
+        if (aDevOpType != btrMgr_GetBgDiscoveryType()) {
             BTRMGRLOG_WARN ("Calling btrMgr_StopDeviceDiscovery");
             btrMgr_StopDeviceDiscovery (aui8AdapterIdx, ldiscoveryHdl);
+
+            {
+                if (btrMgr_isTimeOutSet()) {
+                    BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
+                    g_source_remove (gTimeOutRef);
+                    gTimeOutRef = 0;
+                }
+
+                gDiscHoldOffTimeOutCbData = aui8AdapterIdx;
+                gTimeOutRef = g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
+                BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
+            }
+
+        }
+        else if ( btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl) == btrMgr_GetBgDiscoveryType()) {
+            BTRMGRLOG_WARN ("Calling btrMgr_PauseDeviceDiscovery");
+            btrMgr_PauseDeviceDiscovery (aui8AdapterIdx, ldiscoveryHdl);
         }
         else {
             BTRMGRLOG_WARN ("[%s] Scan in Progress.. Request for %s scan is rejected...\n"
@@ -565,12 +580,19 @@ btrMgr_PostCheckDiscoveryStatus (
     if (btrMgr_isTimeOutSet()) {
         BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
         g_source_remove (gTimeOutRef);
+        gTimeOutRef = 0;
+
+        gDiscHoldOffTimeOutCbData = aui8AdapterIdx;
         gTimeOutRef =  g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
-        BTRMGRLOG_DEBUG ("DiscoveryHoldOffTimeOut reset to  +%u  seconds\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME);
+        BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
     }
     else if (aDevOpType == BTRMGR_DEVICE_OP_TYPE_UNKNOWN) {
         if (btrMgr_GetDiscoveryState(&ghBTRMgrBgDiscoveryHdl) == BTRMGR_DISCOVERY_ST_PAUSED) {
             BTRMGRLOG_WARN ("Calling btrMgr_ResumeDeviceDiscovery");
+            lenBtrMgrRet = btrMgr_ResumeDeviceDiscovery (aui8AdapterIdx, &ghBTRMgrBgDiscoveryHdl);
+        }
+        else if (btrMgr_GetDiscoveryState(&ghBTRMgrBgDiscoveryHdl) == BTRMGR_DISCOVERY_ST_STOPPED) {
+            BTRMGRLOG_WARN ("Calling btrMgr_RestartDeviceDiscovery");
             lenBtrMgrRet = btrMgr_ResumeDeviceDiscovery (aui8AdapterIdx, &ghBTRMgrBgDiscoveryHdl);
         }
     }
@@ -1393,11 +1415,13 @@ BTRMGR_Result_t
 BTRMGR_Init (
     void
 ) {
-    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet 	lenBtrCoreRet   = enBTRCoreSuccess;
-    eBTRMgrRet      lenBtrMgrPiRet  = eBTRMgrFailure;
-    char            lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
+    BTRMGR_Result_t lenBtrMgrResult= BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet 	lenBtrCoreRet  = enBTRCoreSuccess;
+    eBTRMgrRet      lenBtrMgrPiRet = eBTRMgrFailure;
+    GMainLoop*      pMainLoop      = NULL;
+    GThread*        pMainLoopThread= NULL;
 
+    char            lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
 
     if (ghBTRCoreHdl) {
         BTRMGRLOG_WARN("Already Inited; Return Success\n");
@@ -1508,7 +1532,21 @@ BTRMGR_Init (
     if(lenBtrMgrPiRet != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
-    
+
+      
+    pMainLoop   = g_main_loop_new (NULL, FALSE);
+    gpvMainLoop = (void*)pMainLoop;
+
+
+    pMainLoopThread   = g_thread_new("btrMgr_g_main_loop_Task", btrMgr_g_main_loop_Task, gpvMainLoop);
+    gpvMainLoopThread = (void*)pMainLoopThread;
+    if ((pMainLoop == NULL) || (pMainLoopThread == NULL)) {
+        BTRMGRLOG_ERROR ("Could not initialize g_main module\n");
+        BTRMGR_DeInit();
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+
     return lenBtrMgrResult;
 }
 
@@ -1520,6 +1558,22 @@ BTRMGR_DeInit (
     eBTRMgrRet      lenBtrMgrPiResult = eBTRMgrSuccess;
     enBTRCoreRet 	lenBtrCoreRet     = enBTRCoreSuccess;
     BTRMGR_Result_t lenBtrMgrResult   = BTRMGR_RESULT_SUCCESS;
+
+
+    if (gpvMainLoop) {
+        g_main_loop_quit(gpvMainLoop);
+    }
+
+    if (gpvMainLoopThread) {
+        g_thread_join(gpvMainLoopThread);
+        gpvMainLoopThread = NULL;
+    }
+
+    if (gpvMainLoop) {
+        g_main_loop_unref(gpvMainLoop);
+        gpvMainLoop = NULL;
+    }
+
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -1536,7 +1590,7 @@ BTRMGR_DeInit (
         BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
         g_source_remove (gTimeOutRef);
         gTimeOutRef = 0;
-        gDiscHoldOffTimeOutCbData = 0;
+        gDiscHoldOffTimeOutCbData = 0; //TODO: Change to adapterIdx
     }
 
     if (ghBTRCoreHdl) {
@@ -1958,7 +2012,7 @@ BTRMGR_StartDeviceDiscovery (
         BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
         g_source_remove (gTimeOutRef);
         gTimeOutRef = 0;
-        gDiscHoldOffTimeOutCbData = 0;
+        gDiscHoldOffTimeOutCbData = aui8AdapterIdx;
     }
 
     /* Populate the currently Paired Devices. This will be used only for the callback DS update */
@@ -2071,15 +2125,15 @@ BTRMGR_StopDeviceDiscovery (
         }
 
         if (BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT == aenBTRMgrDevOpT) {
-
             if (btrMgr_isTimeOutSet()) {
                 BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
                 g_source_remove (gTimeOutRef);
+                gTimeOutRef = 0;
             }
 
             gDiscHoldOffTimeOutCbData = aui8AdapterIdx;
             gTimeOutRef = g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
-            BTRMGRLOG_ERROR ("Called g_timeout_add_seconds\n");
+            BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
         }
 
         {
@@ -3630,6 +3684,24 @@ BTRMGR_RegisterEventCallback (
 }
 
 
+/*  Local Op Threads Prototypes */
+static gpointer
+btrMgr_g_main_loop_Task (
+    gpointer appvMainLoop
+) {
+    GMainLoop* pMainLoop = (GMainLoop*)appvMainLoop;
+    if (!pMainLoop) {
+        BTRMGRLOG_INFO ("GMainLoop Error - In arguments Exiting\n");
+        return NULL;
+    }
+
+    BTRMGRLOG_INFO ("GMainLoop Running - %p - %p\n", pMainLoop, appvMainLoop);
+    g_main_loop_run (pMainLoop);
+
+    return appvMainLoop;
+}
+
+
 /*  Incoming Callbacks */
 static gboolean
 btrMgr_DiscoveryHoldOffTimerCb (
@@ -3646,10 +3718,11 @@ btrMgr_DiscoveryHoldOffTimerCb (
     }
 
     gTimeOutRef = 0;
+    BTRMGRLOG_ERROR ("btrMgr_DiscoveryHoldOffTimerCb || TimeOutReference - %u\n", gTimeOutRef);
 
     btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
 
-    return 0;
+    return FALSE;
 }
 
 static eBTRMgrRet
@@ -3877,7 +3950,7 @@ btrMgr_DeviceStatusCb (
                         BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
                         g_source_remove (gTimeOutRef);
                         gTimeOutRef = 0;
-                        gDiscHoldOffTimeOutCbData = 0;
+                        gDiscHoldOffTimeOutCbData = 0; //TODO: Change to adapterIdx
                     }
 
                     btrMgr_PostCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);

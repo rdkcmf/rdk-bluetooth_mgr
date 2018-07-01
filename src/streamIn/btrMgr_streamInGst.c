@@ -54,8 +54,10 @@
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 
+#define ENABLE_MAIN_LOOP_CONTEXT 0
 
 
+/* Local Types & Typedefs */
 typedef struct _stBTRMgrSIGst {
     void*        pPipeline;
     void*        pSrc;
@@ -65,9 +67,17 @@ typedef struct _stBTRMgrSIGst {
     void*        psbcdecCapsFilter;
     void*        pRtpAudioDePay;
     void*        pSink;
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    void*        pContext;
+    GMutex       gMtxMainLoopRunLock;
+    GCond        gCndMainLoopRun;
+#endif
+
     void*        pLoop;
     void*        pLoopThread;
     guint        busWId;
+
     GstClockTime gstClkTStamp;
     guint64      inBufOffset;
 
@@ -81,10 +91,13 @@ typedef struct _stBTRMgrSIGst {
 static GstState btrMgr_SI_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
 
 /* Local Op Threads Prototypes */
-static gpointer btrMgr_SI_g_main_loop_RunTask (gpointer user_data);
+static gpointer btrMgr_SI_g_main_loop_Task (gpointer apstBtrMgrSiGst);
 
- /* Incoming Callbacks Prototypes */
-static gboolean btrMgr_SI_gstBusCallCb (GstBus* bus, GstMessage* msg, gpointer data);
+/* Incoming Callbacks Prototypes */
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+static gboolean btrMgr_SI_g_main_loop_RunningCb (gpointer apstBtrMgrSiGst);
+#endif
+static gboolean btrMgr_SI_gstBusCallCb (GstBus* bus, GstMessage* msg, gpointer apstBtrMgrSiGst);
 
 
 /* Static Function Definition */
@@ -118,20 +131,113 @@ btrMgr_SI_validateStateWithTimeout (
 
 /* Local Op Threads */
 static gpointer
-btrMgr_SI_g_main_loop_RunTask (
-    gpointer user_data
+btrMgr_SI_g_main_loop_Task (
+    gpointer apstBtrMgrSiGst
 ) {
-    GMainLoop*  loop = (GMainLoop*)user_data;
+    stBTRMgrSIGst*  pstBtrMgrSiGst = (stBTRMgrSIGst*)apstBtrMgrSiGst;
 
-    if (loop) {
-        BTRMGRLOG_INFO ("GMainLoop Running\n");
-        g_main_loop_run (loop);
+    if (!pstBtrMgrSiGst || !pstBtrMgrSiGst->pLoop) {
+        BTRMGRLOG_ERROR ("GMainLoop Error - In arguments Exiting\n");
+        return NULL;
     }
 
-    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
-    return NULL;
-}
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    GstElement*     fdsrc           = NULL;
+    GstElement*     rtpcapsfilter   = NULL;
+    GstElement*     rtpauddepay     = NULL;
+    GstElement*     audparse        = NULL;
+    GstElement*     auddec          = NULL;
+    GstElement*     fdsink          = NULL;
+    GstElement*     pipeline        = NULL;
+    GstBus*         bus             = NULL;
+    GSource*        idleSource      = NULL;
+    GMainLoop*      loop            = NULL;
+    GMainContext*   mainContext     = NULL;
+    guint           busWatchId;
 
+
+    if (!pstBtrMgrSiGst->pContext) {
+        BTRMGRLOG_ERROR ("GMainLoop Error - No context\n");
+        return NULL;
+    }
+
+
+    mainContext = pstBtrMgrSiGst->pContext;
+    g_main_context_push_thread_default (mainContext);
+
+    idleSource = g_idle_source_new ();
+    g_source_set_callback (idleSource, (GSourceFunc) btrMgr_SI_g_main_loop_RunningCb, pstBtrMgrSiGst, NULL);
+    g_source_attach (idleSource, mainContext);
+    g_source_unref (idleSource);
+
+
+    /* Create elements */
+    fdsrc           = gst_element_factory_make ("fdsrc",        "btmgr-si-fdsrc");
+
+    /*TODO: Select the Audio Codec and RTP Audio DePayloader based on input format*/
+    rtpcapsfilter   = gst_element_factory_make ("capsfilter",   "btmgr-si-rtpcapsfilter");
+    rtpauddepay     = gst_element_factory_make ("rtpsbcdepay",  "btmgr-si-rtpsbcdepay");
+    audparse        = gst_element_factory_make ("sbcparse",     "btmgr-si-rtpsbcparse");
+    auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
+
+    // make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
+    fdsink          = gst_element_factory_make ("brcmpcmsink",  "btmgr-si-pcmsink");
+
+    /* Create a new pipeline to hold the elements */
+    pipeline        = gst_pipeline_new ("btmgr-si-pipeline");
+
+    loop =  pstBtrMgrSiGst->pLoop;
+
+    if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !fdsink || !loop || !pipeline) {
+        BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamIn\n");
+        return NULL;
+    }
+
+    pstBtrMgrSiGst->pPipeline       = (void*)pipeline;
+    pstBtrMgrSiGst->pSrc            = (void*)fdsrc;
+    pstBtrMgrSiGst->pSrcCapsFilter  = (void*)rtpcapsfilter;
+    pstBtrMgrSiGst->pRtpAudioDePay  = (void*)rtpauddepay;
+    pstBtrMgrSiGst->pAudioParse     = (void*)audparse;
+    pstBtrMgrSiGst->pAudioDec       = (void*)auddec;
+    pstBtrMgrSiGst->pSink           = (void*)fdsink;
+    pstBtrMgrSiGst->pLoop           = (void*)loop;
+    pstBtrMgrSiGst->gstClkTStamp    = 0;
+    pstBtrMgrSiGst->inBufOffset     = 0;
+
+
+    bus                     = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    busWatchId              = gst_bus_add_watch (bus, btrMgr_SI_gstBusCallCb, pstBtrMgrSiGst);
+    pstBtrMgrSiGst->busWId  = busWatchId;
+    g_object_unref (bus);
+
+    /* setup */
+    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+
+#endif
+
+
+    BTRMGRLOG_INFO ("GMainLoop Running\n");
+    g_main_loop_run (pstBtrMgrSiGst->pLoop);
+
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    if (busWatchId) {
+        GSource *busSource = g_main_context_find_source_by_id(mainContext, busWatchId);
+        if (busSource)
+            g_source_destroy(busSource);
+
+        busWatchId = 0;
+        pstBtrMgrSiGst->busWId = busWatchId;
+    }
+
+
+    g_main_context_pop_thread_default (mainContext);
+#endif
+
+    BTRMGRLOG_INFO ("GMainLoop Exiting\n");
+    return pstBtrMgrSiGst;
+}
 
 
 /* Interfaces */
@@ -141,19 +247,23 @@ BTRMgr_SI_GstInit (
     fPtr_BTRMgr_SI_GstStatusCb  afpcBSiGstStatus,
     void*                       apvUserData
 ) {
-    GstElement*     fdsrc;
-    GstElement*     rtpcapsfilter;
-    GstElement*     rtpauddepay;
-    GstElement*     audparse;
-    GstElement*     auddec;
-    GstElement*     fdsink;
-    GstElement*     pipeline;
-    stBTRMgrSIGst*  pstBtrMgrSiGst = NULL;
+#if (ENABLE_MAIN_LOOP_CONTEXT)
+    GstElement*     fdsrc           = NULL;
+    GstElement*     rtpcapsfilter   = NULL;
+    GstElement*     rtpauddepay     = NULL;
+    GstElement*     audparse        = NULL;
+    GstElement*     auddec          = NULL;
+    GstElement*     fdsink          = NULL;
+    GstElement*     pipeline        = NULL;
+    GstBus*         bus             = NULL;
+    guint           busWatchId;
+#else
+    GMainContext*   mainContext     = NULL;
+#endif
 
-    GThread*      mainLoopThread;
-    GMainLoop*    loop;
-    GstBus*       bus;
-    guint         busWatchId;
+    stBTRMgrSIGst*  pstBtrMgrSiGst  = NULL;
+    GThread*        mainLoopThread  = NULL;
+    GMainLoop*      loop            = NULL;
 
 
     if ((pstBtrMgrSiGst = (stBTRMgrSIGst*)malloc (sizeof(stBTRMgrSIGst))) == NULL) {
@@ -165,6 +275,7 @@ BTRMgr_SI_GstInit (
 
     gst_init (NULL, NULL);
 
+#if (ENABLE_MAIN_LOOP_CONTEXT)
     /* Create elements */
     fdsrc           = gst_element_factory_make ("fdsrc",        "btmgr-si-fdsrc");
 
@@ -179,39 +290,28 @@ BTRMgr_SI_GstInit (
 
     /* Create an event loop and feed gstreamer bus mesages to it */
     loop = g_main_loop_new (NULL, FALSE);
+#else
+    g_mutex_init (&pstBtrMgrSiGst->gMtxMainLoopRunLock);
+    g_cond_init (&pstBtrMgrSiGst->gCndMainLoopRun);
 
+    mainContext = g_main_context_new();
+
+    /* Create and event loop and feed gstreamer bus mesages to it */
+    if (mainContext) {
+        loop = g_main_loop_new (mainContext, FALSE);
+    }
+#endif
+
+
+#if (ENABLE_MAIN_LOOP_CONTEXT)
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-si-pipeline");
 
     if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !fdsink || !loop || !pipeline) {
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamIn\n");
+        //TODO: Call BTRMgr_SI_GstDeInit((tBTRMgrSiGstHdl)pstBtrMgrSiGst);
         return eBTRMgrSIGstFailure;
     }
-
-
-    if (afpcBSiGstStatus) {
-        pstBtrMgrSiGst->fpcBSiGstStatus = afpcBSiGstStatus;
-        pstBtrMgrSiGst->pvcBUserData    = apvUserData;
-    }
-
-
-    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    busWatchId = gst_bus_add_watch (bus, btrMgr_SI_gstBusCallCb, loop);
-    g_object_unref (bus);
-
-    /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
-    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
-
-    mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_RunTask", btrMgr_SI_g_main_loop_RunTask, loop);
-
-        
-    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-    if (btrMgr_SI_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
-        BTRMGRLOG_ERROR ("Unable to perform Operation\n");
-        return eBTRMgrSIGstFailure;
-    }
-
 
     pstBtrMgrSiGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSiGst->pSrc            = (void*)fdsrc;
@@ -221,11 +321,65 @@ BTRMgr_SI_GstInit (
     pstBtrMgrSiGst->pAudioDec       = (void*)auddec;
     pstBtrMgrSiGst->pSink           = (void*)fdsink;
     pstBtrMgrSiGst->pLoop           = (void*)loop;
-    pstBtrMgrSiGst->pLoopThread     = (void*)mainLoopThread;
-    pstBtrMgrSiGst->busWId          = busWatchId;
     pstBtrMgrSiGst->gstClkTStamp    = 0;
     pstBtrMgrSiGst->inBufOffset     = 0;
+    pstBtrMgrSiGst->fpcBSiGstStatus = NULL;
+    pstBtrMgrSiGst->pvcBUserData    = NULL;
 
+
+    if (afpcBSiGstStatus) {
+        pstBtrMgrSiGst->fpcBSiGstStatus = afpcBSiGstStatus;
+        pstBtrMgrSiGst->pvcBUserData    = apvUserData;
+    }
+
+
+    bus                     = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    busWatchId              = gst_bus_add_watch (bus, btrMgr_SI_gstBusCallCb, pstBtrMgrSiGst);
+    pstBtrMgrSiGst->busWId  = busWatchId;
+    g_object_unref (bus);
+
+    /* setup */
+    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+
+
+    mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_Task", btrMgr_SI_g_main_loop_Task, pstBtrMgrSiGst);
+    pstBtrMgrSiGst->pLoopThread = (void*)mainLoopThread;
+
+#else
+    pstBtrMgrSiGst->pContext        = (void*)mainContext;
+    pstBtrMgrSiGst->pLoop           = (void*)loop;
+    pstBtrMgrSiGst->fpcBSiGstStatus = NULL;
+    pstBtrMgrSiGst->pvcBUserData    = NULL;
+
+    if (afpcBSiGstStatus) {
+        pstBtrMgrSiGst->fpcBSiGstStatus = afpcBSiGstStatus;
+        pstBtrMgrSiGst->pvcBUserData    = apvUserData;
+    }
+
+
+    g_mutex_lock (&pstBtrMgrSiGst->gMtxMainLoopRunLock);
+    {
+        mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_Task", btrMgr_SI_g_main_loop_Task, pstBtrMgrSiGst);
+        pstBtrMgrSiGst->pLoopThread = (void*)mainLoopThread;
+
+        //TODO: Infinite loop, break out of it gracefully in case of failures
+        while (!loop || !g_main_loop_is_running (loop)) {
+            g_cond_wait (&pstBtrMgrSiGst->gCndMainLoopRun, &pstBtrMgrSiGst->gMtxMainLoopRunLock);
+        }
+    }
+    g_mutex_unlock (&pstBtrMgrSiGst->gMtxMainLoopRunLock);
+
+#endif
+        
+    gst_element_set_state(GST_ELEMENT(pstBtrMgrSiGst->pPipeline), GST_STATE_NULL);
+    if (btrMgr_SI_validateStateWithTimeout(pstBtrMgrSiGst->pPipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS)!= GST_STATE_NULL) {
+        BTRMGRLOG_ERROR ("Unable to perform Operation\n");
+        BTRMgr_SI_GstDeInit((tBTRMgrSiGstHdl)pstBtrMgrSiGst);
+        return eBTRMgrSIGstFailure;
+    }
+
+    
     *phBTRMgrSiGstHdl = (tBTRMgrSiGstHdl)pstBtrMgrSiGst;
 
     return eBTRMgrSIGstSuccess;
@@ -243,23 +397,22 @@ BTRMgr_SI_GstDeInit (
         return eBTRMgrSIGstFailInArg;
     }
 
-    GstElement* pipeline        = (GstElement*)pstBtrMgrSiGst->pPipeline;
-    GstElement* fdsrc           = (GstElement*)pstBtrMgrSiGst->pSrc;
-    GMainLoop*  loop            = (GMainLoop*)pstBtrMgrSiGst->pLoop;
-    GThread*    mainLoopThread  = (GThread*)pstBtrMgrSiGst->pLoopThread;
-    guint       busWatchId      = pstBtrMgrSiGst->busWId;
-
-    (void)pipeline;
-    (void)fdsrc;
-    (void)loop;
-    (void)busWatchId;
+    GstElement*     pipeline        = (GstElement*)pstBtrMgrSiGst->pPipeline;
+    GMainLoop*      loop            = (GMainLoop*)pstBtrMgrSiGst->pLoop;
+    GThread*        mainLoopThread  = (GThread*)pstBtrMgrSiGst->pLoopThread;
+#if (ENABLE_MAIN_LOOP_CONTEXT)
+    guint           busWatchId      = pstBtrMgrSiGst->busWId;
+#else
+    GMainContext*   mainContext     = (GMainContext*)pstBtrMgrSiGst->pContext;
+#endif
 
     /* cleanup */
     if (pipeline) {
-        gst_object_unref (GST_OBJECT(pipeline));
+        gst_object_unref(GST_OBJECT(pipeline));
         pipeline = NULL;
     }
 
+#if (ENABLE_MAIN_LOOP_CONTEXT)
     if (busWatchId) {
         GSource *busSource = g_main_context_find_source_by_id(g_main_context_get_thread_default(), busWatchId);
         if (busSource)
@@ -267,24 +420,37 @@ BTRMgr_SI_GstDeInit (
 
         busWatchId = 0;
     }
+#endif
 
     if (loop) {
-        g_main_loop_quit (loop);
+        g_main_loop_quit(loop);
     }
 
     if (mainLoopThread) {
-        g_thread_join (mainLoopThread);
+        g_thread_join(mainLoopThread);
         mainLoopThread = NULL;
     }
 
     if (loop) {
-        g_main_loop_unref (loop);
+        g_main_loop_unref(loop);
         loop = NULL;
     }
 
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    if (mainContext) {
+        g_main_context_unref(mainContext);
+        mainContext = NULL;
+    }
+#endif
 
     if (pstBtrMgrSiGst->fpcBSiGstStatus)
         pstBtrMgrSiGst->fpcBSiGstStatus = NULL;
+
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    g_cond_clear(&pstBtrMgrSiGst->gCndMainLoopRun);
+    g_mutex_clear(&pstBtrMgrSiGst->gMtxMainLoopRunLock);
+#endif
 
 
     memset((void*)pstBtrMgrSiGst, 0, sizeof(stBTRMgrSIGst));
@@ -555,24 +721,61 @@ BTRMgr_SI_GstSendEOS (
 
 
 /*  Incoming Callbacks */
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+static gboolean
+btrMgr_SI_g_main_loop_RunningCb (
+    gpointer    apstBtrMgrSiGst
+) {
+    stBTRMgrSIGst*  pstBtrMgrSiGst = (stBTRMgrSIGst*)apstBtrMgrSiGst;
+
+    if (!pstBtrMgrSiGst) {
+        BTRMGRLOG_ERROR ("GMainLoop Error - In arguments Exiting\n");
+        return G_SOURCE_REMOVE;
+    }
+
+  BTRMGRLOG_INFO ("GMainLoop running now");
+
+  g_mutex_lock (&pstBtrMgrSiGst->gMtxMainLoopRunLock);
+  g_cond_signal (&pstBtrMgrSiGst->gCndMainLoopRun);
+  g_mutex_unlock (&pstBtrMgrSiGst->gMtxMainLoopRunLock);
+
+  return G_SOURCE_REMOVE;
+}
+#endif
+
 static gboolean
 btrMgr_SI_gstBusCallCb (
     GstBus*     bus,
     GstMessage* msg,
-    gpointer    data
+    gpointer    apstBtrMgrSiGst
 ) {
-    GMainLoop*  loop = (GMainLoop*)data;
+    stBTRMgrSIGst*  pstBtrMgrSiGst = (stBTRMgrSIGst*)apstBtrMgrSiGst;
 
     switch (GST_MESSAGE_TYPE (msg)) {
 
     case GST_MESSAGE_EOS: {
 
         BTRMGRLOG_INFO ("End-of-stream\n");
-        if (loop) {
-            g_main_loop_quit(loop);
+        if (pstBtrMgrSiGst) {
+            if (pstBtrMgrSiGst->pLoop) {
+                g_main_loop_quit(pstBtrMgrSiGst->pLoop);
+            }
         }
         break;
     }   
+
+
+    case GST_MESSAGE_STATE_CHANGED: {
+        if (pstBtrMgrSiGst && (pstBtrMgrSiGst->pPipeline) && (GST_MESSAGE_SRC (msg) == GST_OBJECT (pstBtrMgrSiGst->pPipeline))) {
+            GstState prevState, currentState;
+
+            gst_message_parse_state_changed (msg, &prevState, &currentState, NULL);
+            BTRMGRLOG_INFO ("From: %s -> To: %s\n",
+                        gst_element_state_get_name (prevState), gst_element_state_get_name (currentState));
+        }
+        break;
+    }
+
 
     case GST_MESSAGE_ERROR: {
         gchar*  debug;
@@ -585,8 +788,10 @@ btrMgr_SI_gstBusCallCb (
         BTRMGRLOG_ERROR ("Error: %s\n", err->message);
         g_error_free (err);
 
-        if (loop) {
-            g_main_loop_quit(loop);
+        if (pstBtrMgrSiGst) {
+            if (pstBtrMgrSiGst->pLoop) {
+                g_main_loop_quit(pstBtrMgrSiGst->pLoop);
+            }
         }
         break;
     }   
