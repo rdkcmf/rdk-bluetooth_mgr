@@ -94,6 +94,7 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED,
     BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED,
+    BTRMGR_EVENT_DEVICE_OP_INFORMATION,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
@@ -164,6 +165,15 @@ typedef enum _BTRMGR_RSSIValue_type_t {
     BTRMGR_RSSI_GOOD,          //!< Good (3 bars)
     BTRMGR_RSSI_EXCELLENT      //!< Excellent (4 bars)
 } BTRMGR_RSSIValue_t;
+
+/**
+ * @brief Represents the bluetooth Discovery Status
+ */
+typedef enum _BTRMGR_DiscoveryStatus_t {
+    BTRMGR_DISCOVERY_STATUS_OFF,
+    BTRMGR_DISCOVERY_STATUS_IN_PROGRESS,
+} BTRMGR_DiscoveryStatus_t;
+
 
 /**
  * @brief Represents the commands to control the media files.
@@ -393,6 +403,22 @@ typedef struct _BTRMGR_MediaInfo_t {
 } BTRMGR_MediaInfo_t;
 
 /**
+ * @brief Represents the notification data
+ */
+typedef struct _BTRMGR_DeviceOpInfo_t {
+    BTRMgrDeviceHandle     m_deviceHandle;
+    BTRMGR_DeviceType_t    m_deviceType;
+    char                   m_name [BTRMGR_NAME_LEN_MAX];
+    BTRMGR_LeOp_t          m_leOpType;
+
+    union {
+        char               m_readData[BTRMGR_MAX_STR_LEN];
+        char               m_writeData[BTRMGR_MAX_STR_LEN];
+        char               m_notifyData[BTRMGR_MAX_STR_LEN];
+    };
+} BTRMGR_DeviceOpInfo_t;
+
+/**
  * @brief Represents the event message info.
  */
 typedef struct _BTRMGR_EventMessage_t {
@@ -403,6 +429,7 @@ typedef struct _BTRMGR_EventMessage_t {
         BTRMGR_ExternalDevice_t     m_externalDevice;
         BTRMGR_PairedDevices_t      m_pairedDevice;
         BTRMGR_MediaInfo_t          m_mediaInfo;
+        BTRMGR_DeviceOpInfo_t       m_deviceOpInfo;
         unsigned short              m_numOfDevices;
     };
 } BTRMGR_EventMessage_t;
@@ -430,7 +457,6 @@ typedef struct _BTRMGR_DiscoveryFilterHandle_t {
     int                         m_pathloss;
     //BTRMGR_DeviceScanType_t     m_scanType;
 } BTRMGR_DiscoveryFilterHandle_t;
-
 
 /* Fptr Callbacks types */
 typedef BTRMGR_Result_t (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t astEventMessage);
@@ -579,6 +605,17 @@ BTRMGR_Result_t BTRMGR_StartDeviceDiscovery(unsigned char aui8AdapterIdx, BTRMGR
  */
 BTRMGR_Result_t BTRMGR_StopDeviceDiscovery(unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT);
 
+/**
+ * @brief  This API gives the discovery status.
+ *
+ * @param[in]   aui8AdapterIdx  Index of bluetooth adapter.
+ * @param[out]  aeDiscoveryStatus Device discovery status.
+ * @param[out]  aenBTRMgrDevOpT  Device operation type.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_GetDiscoveryStatus (unsigned char aui8AdapterIdx, BTRMGR_DiscoveryStatus_t *aeDiscoveryStatus, BTRMGR_DeviceOperationType_t *aenBTRMgrDevOpT);
 /**
  * @brief  This API fetches the list of devices scanned.
  *
@@ -847,7 +884,7 @@ BTRMGR_Result_t BTRMGR_GetLeCharacteristicUUID (unsigned char aui8AdapterIdx, BT
  * @return Returns the status of the operation.
  * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
  */
-BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, void* rOpResult);
+BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, char* aLeOpArg, char* rOpResult);
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);

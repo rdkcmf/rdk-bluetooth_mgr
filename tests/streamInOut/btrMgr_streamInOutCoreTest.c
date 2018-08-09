@@ -970,6 +970,7 @@ main (
         case 46:
             {
                 char leUuidString[BTRCORE_UUID_LEN] = "\0";
+                char leWriteArg[BTRCORE_STRINGS_MAX_LEN] = "\0";
                 printf("%d\t: %s - Pick a connected LE Device to Perform Operation.\n", __LINE__, __FUNCTION__);
                 printf("Pick a Device to Connect...\n");
                 devnum = getChoice();
@@ -981,9 +982,14 @@ main (
 
                 enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
 
+                if (aenBTRCoreLeOp == enBTRCoreLeOpGWriteValue) { 
+                    printf("\tEnter the value to write : ");
+                    scanf("%s", leWriteArg);
+                }
+
                 if (leUuidString[0]) {
                     char val[BTRCORE_MAX_STR_LEN] = "\0";
-                    BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, (void*)&val);
+                    BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, (void*)&leWriteArg, (void*)&val);
                     if (aenBTRCoreLeOp == 0) {
                         printf("%d\t: %s - Obtained Value [%s]\n", __LINE__, __FUNCTION__, val  );
                     }

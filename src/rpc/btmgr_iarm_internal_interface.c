@@ -34,6 +34,7 @@ static IARM_Result_t btrMgr_GetAdapterPowerStatus (void* arg);
 static IARM_Result_t btrMgr_SetAdapterDiscoverable (void* arg); 
 static IARM_Result_t btrMgr_IsAdapterDiscoverable (void* arg);
 static IARM_Result_t btrMgr_ChangeDeviceDiscoveryStatus (void* arg);
+static IARM_Result_t btrMgr_GetDeviceDiscoveryStatus (void* arg);
 static IARM_Result_t btrMgr_GetDiscoveredDevices (void* arg);
 static IARM_Result_t btrMgr_PairDevice (void* arg); 
 static IARM_Result_t btrMgr_UnpairDevice (void* arg); 
@@ -356,6 +357,39 @@ btrMgr_ChangeDeviceDiscoveryStatus (
     }
 
 
+    return retCode;
+}
+
+static IARM_Result_t
+btrMgr_GetDeviceDiscoveryStatus (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMDiscoveryStatus_t* pDiscoverStatus = (BTRMGR_IARMDiscoveryStatus_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pDiscoverStatus) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_GetDiscoveryStatus(pDiscoverStatus->m_adapterIndex, &pDiscoverStatus->m_discoveryInProgress, &pDiscoverStatus->m_discoveryType);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
     return retCode;
 }
 
@@ -1131,7 +1165,7 @@ btrMgr_PerformLeOp (
         return retCode;
     }
 
-    rc = BTRMGR_PerformLeOp (leOp->m_adapterIndex, leOp->m_deviceHandle, leOp->m_uuid, leOp->m_leOpType, (void*)leOp->m_opRes);
+    rc = BTRMGR_PerformLeOp (leOp->m_adapterIndex, leOp->m_deviceHandle, leOp->m_uuid, leOp->m_leOpType, leOp->m_opArg, leOp->m_opRes);
     if (BTRMGR_RESULT_SUCCESS == rc) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -1215,6 +1249,7 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE, btrMgr_SetAdapterDiscoverable);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE, btrMgr_IsAdapterDiscoverable);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, btrMgr_ChangeDeviceDiscoveryStatus);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_DISCOVERY_STATUS, btrMgr_GetDeviceDiscoveryStatus);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES, btrMgr_GetDiscoveredDevices);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_PAIR_DEVICE, btrMgr_PairDevice);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_UNPAIR_DEVICE, btrMgr_UnpairDevice);
@@ -1374,7 +1409,11 @@ btrMgr_EventCallback (
     else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED) {
         BTRMGRLOG_WARN ("Post Media Playback Ended event\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, (void *)&lstEventMessage, sizeof(lstEventMessage));
-    }    
+    }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_OP_INFORMATION) {
+        BTRMGRLOG_WARN ("Post External Device Op Information\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
 
 
     if (lenIarmResult != IARM_RESULT_SUCCESS) {

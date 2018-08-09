@@ -22,13 +22,33 @@
 #include <unistd.h>
 #include "btmgr.h"
 
-volatile int wait = 1;
-int uselection = 0;
+/* Tile Specific TOA msg feilds */
+# define _1_BYTE_TOA_CID                 "00"
+# define _4_BYTE_TOA_SESSION_TOKEN       "00000000"
+# define _14_BYTE_TOA_RAND_A             "0000000000000000000000000000"
+# define _14_BYTE_TOA_MSG_PAYLOAD        "0000000000000000000000000000"
+# define _14_BYTE_TOA_SONG_PAYLOAD       "020103"
+# define _4_BYTE_TOA_MIC                 "00000000"
+
+# define _1_BYTE_TOA_CMD_OPEN_CHANNEL    "10"
+# define _1_BYTE_TOA_CMD_READY           "12"
+# define _1_BYTE_TOA_CMD_SONG_PLAY       "05"
+
+# define _1_BYTE_TOA_RSP_OPEN_CHANNEL    "12"
+# define _1_BYTE_TOA_RSP_READY           "01"
+
+
+volatile int           wait                  = 1;
+volatile unsigned char gIsTileConnected      = 0;
+volatile unsigned char gReceivedNotification = 0;
+char gNotificationData[BTRMGR_MAX_STR_LEN]   = "\0";
+int     uselection    = 0;
+int     cliDisabled   = 0;
+int     cliArgCounter = 0;
+char**  gArgv;
+int     gArgc;
 BTRMgrDeviceHandle gDeviceHandle = 0;
-int cliDisabled = 0;
-int cliArgCounter = 0;
-char **gArgv;
-int gArgc;
+
 
 static void printOptions (void)
 {
@@ -68,6 +88,8 @@ static void printOptions (void)
     printf ("33. Get LE Property\n");
     printf ("34. Perform LE Operation\n");
     printf ("35. Reset Bluetooth Adapter\n");
+    printf ("36. Get Discovery State \n");
+    printf ("40. Ring A Tile (Just for POC)\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -113,6 +135,8 @@ static void printOptionsCli (void)
     printf ("33. Get LE Property\n Usage: btrMgrTest 33 <Handle> <UUID> <Property>\n property to query: [0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value | 5 - Notifying | 6 - Flags | 7 -Character]\n");
     printf ("34. Perform LE Operation\n Usage: btrMgrTest 34 <Handle> <UUID> <Option> \nEnter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
     printf ("35. Reset Bluetooth Adapter\n Usage: btrMgrTest 35\n");
+    printf ("36. Get Discovery State \n");
+    printf ("40. Ring A Tile (Just for POC)\n");
     printf ("55. Quit\n");
     printf ("\n\n");
 
@@ -226,6 +250,7 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_MEDIA_TRACK_POSITION              : event = "MEDIA_TRACK_POSITION";              break;
     case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";               break;
     case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_TRACK_ENDED";                 break;
+    case BTRMGR_EVENT_DEVICE_OP_INFORMATION             : event = "DEVICE_OP_INFORMATION";             break;
     default                                            : event = "##INVALID##";
   }
   return event;
@@ -296,13 +321,23 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
         break;
     case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE:
     case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE:
-    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE:
-    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE:
     case BTRMGR_EVENT_DEVICE_PAIRING_FAILED:
     case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED:
     case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED:
     case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED:
         printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
+        break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE:
+        printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
+        if (event.m_discoveredDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TILE) {
+            gIsTileConnected = 1;
+        }
+        break;
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE:
+        printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
+        if (event.m_discoveredDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TILE) {
+            gIsTileConnected = 0;
+        }
         break;
     case BTRMGR_EVENT_MEDIA_TRACK_STARTED:
     case BTRMGR_EVENT_MEDIA_TRACK_PLAYING:
@@ -338,6 +373,11 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED:
         printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
         printf("\tDevice %s ended streaming successfully\n", event.m_mediaInfo.m_name);
+        break;
+    case BTRMGR_EVENT_DEVICE_OP_INFORMATION:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s Op Information\n", event.m_deviceOpInfo.m_name);
+        printf("\t%s\n", event.m_deviceOpInfo.m_notifyData);
         break;
      default:
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
@@ -966,6 +1006,7 @@ int main(int argc, char *argv[])
                 {
                     char luuid[BTRMGR_MAX_STR_LEN] = "\0";
                     char res[BTRMGR_MAX_STR_LEN] = "\0";
+                    char arg[BTRMGR_MAX_STR_LEN] = "\0";
                     unsigned char opt = 0;
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device\t: ");
@@ -975,7 +1016,12 @@ int main(int argc, char *argv[])
                     printf ("Enter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
                     opt = getDeviceSelection();
 
-                    rc = BTRMGR_PerformLeOp (0, handle, luuid, opt, res);
+                    if (opt == 1) {
+                        printf ("Enter the Value to be Written : ");
+                        getString (arg);
+                    }
+
+                    rc = BTRMGR_PerformLeOp (0, handle, luuid, opt, arg, res);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else {
@@ -994,6 +1040,87 @@ int main(int argc, char *argv[])
                         printf ("failed\n");
                     else
                         printf ("\nSuccess....; Reset status = %u\n", index);
+                }
+                break;
+            case 36:
+                {
+                	BTRMGR_DiscoveryStatus_t aeDiscoveryStatus;
+                	BTRMGR_DeviceOperationType_t aenBTRMgrDevOpType;
+
+                	rc = BTRMGR_GetDiscoveryStatus (0, &aeDiscoveryStatus, &aenBTRMgrDevOpType);
+
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess....; Device Discovery Status = %u and Device Type = %u \n", aeDiscoveryStatus, aenBTRMgrDevOpType);
+
+                }
+                break;
+            case 40:
+                {
+                  /*Connect to Device */
+                  /*Notify to Tile Device in char: 9d410019-35d6-f4dd-ba60-e7bd8dc491c0 */
+                  /*Wrire to Tile Device in char: 9d410018-35d6-f4dd-ba60-e7bd8dc491c0 */
+                    handle = 0;
+                    printf ("Please Enter the Tile device Handle number of the device that you want to Connect \t: ");
+                    handle = getDeviceSelection();
+
+                    rc = BTRMGR_ConnectToDevice(0, handle, BTRMGR_DEVICE_OP_TYPE_LE);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                    {
+                        sleep(3);
+                        printf ("\nSuccessfully connected to Tile device.\n");
+                        /*Notify to Tile Device in char: 9d410019-35d6-f4dd-ba60-e7bd8dc491c0 */
+                        {
+                            char res[BTRMGR_MAX_STR_LEN] = "\0";
+                            char notifyUuid[] = "9d410019-35d6-f4dd-ba60-e7bd8dc491c0";
+                            char arg[BTRMGR_MAX_STR_LEN] = "\0";
+                            rc = BTRMGR_PerformLeOp (0, handle, notifyUuid, BTRMGR_LE_OP_START_NOTIFY, arg, res);
+                            if (BTRMGR_RESULT_SUCCESS != rc)
+                                printf ("[%d]Failed to set notify.\n", __LINE__);
+                            else
+                            {
+                                printf ("\nSuccessfully set notification. \n" );
+                                sleep(3);
+                                /*Wrire to Tile Device in char: 9d410018-35d6-f4dd-ba60-e7bd8dc491c0 */
+                                char writeCharUuid[] = "9d410018-35d6-f4dd-ba60-e7bd8dc491c0";
+                                char wValue_TOA_CMD_OPEN_CHANNEL[] = "0000000000100000000000000000000000000000";
+                                char wValue_TOA_CMD_READY[] = "0212000000000000000000000000000000000000";
+                                char wValue_TOA_CMD_SONG[] = "020502010300000000";
+
+                                rc = BTRMGR_PerformLeOp (0, handle, writeCharUuid, BTRMGR_LE_OP_WRITE_VALUE, wValue_TOA_CMD_OPEN_CHANNEL, res);
+                                if (BTRMGR_RESULT_SUCCESS != rc) {
+                                    printf ("[%d]Failed to set TOA_CMD_OPEN_CHANNEL.\n", __LINE__);
+                                }
+                                else {
+                                    printf ("\nSuccessfully set TOA_CMD_OPEN_CHANNEL. \n" );
+                                    sleep(3);
+                                    /* @TODO: On write, need to listen notify response and parse the message to get CID */
+                                    rc = BTRMGR_PerformLeOp (0, handle, writeCharUuid, BTRMGR_LE_OP_WRITE_VALUE, wValue_TOA_CMD_READY, res);
+                                    if (BTRMGR_RESULT_SUCCESS != rc) {
+                                        printf ("[%d]Failed to set TOA_CMD_READY.\n", __LINE__);
+                                    }
+                                    else
+                                    {
+                                        printf ("\nSuccessfully set TOA_CMD_OPEN_READY. \n" );
+                                        sleep(3);
+                                        /* @TODO: On write, need to listen notify response and parse the message to get CID */
+                                        rc = BTRMGR_PerformLeOp (0, handle, writeCharUuid, BTRMGR_LE_OP_WRITE_VALUE, wValue_TOA_CMD_SONG, res);
+                                        if (BTRMGR_RESULT_SUCCESS != rc) {
+                                            printf ("[%d]Failed to set TOA_CMD_SONG.\n", __LINE__);
+                                        }
+                                        else
+                                        {
+                                            printf ("\nSuccessfully set TOA_CMD_SONG. \n" );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    BTRMGR_DisconnectFromDevice(0, handle);
                 }
                 break;
             case 55:

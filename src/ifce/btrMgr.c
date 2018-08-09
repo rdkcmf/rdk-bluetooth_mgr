@@ -93,6 +93,7 @@ static unsigned char                gIsUserInitiated            = 0;
 static unsigned char                gIsAudOutStartupInProgress  = 0;
 static unsigned char                gDiscHoldOffTimeOutCbData   = 0;
 static volatile guint               gTimeOutRef                 = 0;
+static volatile unsigned int        gIsAdapterDiscovering       = 0;
 
 static BTRMGR_DeviceOperationType_t gBgDiscoveryType            = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
 
@@ -171,7 +172,7 @@ static eBTRMgrRet btrMgr_SOStatusCb (stBTRMgrMediaStatus* apstBtrMgrSoStatus, vo
 static eBTRMgrRet btrMgr_SIStatusCb (stBTRMgrMediaStatus* apstBtrMgrSiStatus, void* apvUserData);
 
 static enBTRCoreRet btrMgr_DeviceStatusCb (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
-static enBTRCoreRet btrMgr_DeviceDiscoveryCb (stBTRCoreBTDevice devicefound, void* apvUserData);
+static enBTRCoreRet btrMgr_DeviceDiscoveryCb (stBTRCoreDiscoveryCBInfo* astBTRCoreDiscoveryCbInfo, void* apvUserData);
 static enBTRCoreRet btrMgr_ConnectionInIntimationCb (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
 static enBTRCoreRet btrMgr_ConnectionInAuthenticationCb (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
 static enBTRCoreRet btrMgr_MediaStatusCb (stBTRCoreMediaStatusCBInfo* mediaStatusCB, void* apvUserData);
@@ -2082,24 +2083,24 @@ BTRMGR_StartDeviceDiscovery (
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     else {
-        BTRMGRLOG_INFO ("Discovery started Successfully\n");
 
-        {
-            BTRMGR_EventMessage_t lstEventMessage;
-            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+        {   /* Max 3 sec timeout - Polled at 500ms second interval */
+            unsigned int ui32sleepIdx = 6;
 
-            lstEventMessage.m_adapterIndex = aui8AdapterIdx;
-            lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED;
-            lstEventMessage.m_numOfDevices = 0;
-
-
-            if (gfpcBBTRMgrEventOut) {
-                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
-            }
+            do {
+                usleep(500000);
+            } while ((!gIsAdapterDiscovering) && (--ui32sleepIdx));
         }
-    }
 
-    btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, aenBTRMgrDevOpT);
+        if (!gIsAdapterDiscovering) {
+            BTRMGRLOG_WARN ("Discovery is not yet Started !!!\n");
+        }
+        else {
+            BTRMGRLOG_INFO ("Discovery started Successfully\n");
+        }
+
+        btrMgr_PostCheckDiscoveryStatus(aui8AdapterIdx, aenBTRMgrDevOpT);
+    }
 
     return lenBtrMgrResult;
 }
@@ -2161,6 +2162,26 @@ BTRMGR_StopDeviceDiscovery (
     else {
         BTRMGRLOG_INFO ("Discovery Stopped Successfully\n");
 
+#if 0
+        Let we not make the OutTask Context of BTRCore Layer wait here
+        TODO: Confirm Discovery Stop
+
+        {   /* Max 3 sec timeout - Polled at 500ms second interval */
+            unsigned int ui32sleepIdx = 6;
+
+            while ((gIsAdapterDiscovering) && (ui32sleepIdx--)) {
+                usleep(500000);
+            }
+        }
+
+        if (gIsAdapterDiscovering) {
+            BTRMGRLOG_WARN ("Discovery is not yet Stopped !!!\n");
+        }
+        else {
+            BTRMGRLOG_INFO ("Discovery Stopped Successfully\n");
+        }
+#endif 
+
         if (ahdiscoveryHdl) {
             btrMgr_SetDiscoveryState (ahdiscoveryHdl, BTRMGR_DISCOVERY_ST_STOPPED);
         }
@@ -2176,23 +2197,40 @@ BTRMGR_StopDeviceDiscovery (
             gTimeOutRef = g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
             BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
         }
-
-        {
-            BTRMGR_EventMessage_t lstEventMessage;
-            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-            lstEventMessage.m_adapterIndex = aui8AdapterIdx;
-            lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE;
-            lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-
-            
-            if (gfpcBBTRMgrEventOut) {
-                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
-            }
-        }
     }
 
     return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_GetDiscoveryStatus (
+        unsigned char                aui8AdapterIdx, 
+        BTRMGR_DiscoveryStatus_t     *isDiscoveryInProgress,
+        BTRMGR_DeviceOperationType_t *aenBTRMgrDevOpT
+) {
+    BTRMGR_Result_t result = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_DiscoveryHandle_t* ldiscoveryHdl  = NULL;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+    else if ((aui8AdapterIdx > btrMgr_GetAdapterCnt()) || (!isDiscoveryInProgress) || (!aenBTRMgrDevOpT)) {
+            BTRMGRLOG_ERROR ("Input is invalid\n");
+            return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
+        *isDiscoveryInProgress = BTRMGR_DISCOVERY_STATUS_IN_PROGRESS;
+        *aenBTRMgrDevOpT = btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl);
+        BTRMGRLOG_WARN ("[%s] Scan already in Progress. "
+                               , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)));
+    }
+    else {
+         *isDiscoveryInProgress = BTRMGR_DISCOVERY_STATUS_OFF;
+         *aenBTRMgrDevOpT = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
+    }
+    return result;
 }
 
 BTRMGR_Result_t
@@ -2202,7 +2240,8 @@ BTRMGR_GetDiscoveredDevices (
 ) {
     BTRMGR_Result_t                 lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet                    lenBtrCoreRet   = enBTRCoreSuccess;
-    stBTRCoreScannedDevicesCount    listOfDevices;
+    stBTRCoreScannedDevicesCount    lstBtrCoreListOfSDevices;
+    int i = 0;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2215,32 +2254,35 @@ BTRMGR_GetDiscoveredDevices (
     }
 
 
-    memset (&listOfDevices, 0, sizeof(listOfDevices));
-    lenBtrCoreRet = BTRCore_GetListOfScannedDevices(ghBTRCoreHdl, &listOfDevices);
+    memset (&lstBtrCoreListOfSDevices, 0, sizeof(lstBtrCoreListOfSDevices));
+
+    lenBtrCoreRet = BTRCore_GetListOfScannedDevices(ghBTRCoreHdl, &lstBtrCoreListOfSDevices);
     if (lenBtrCoreRet != enBTRCoreSuccess) {
         BTRMGRLOG_ERROR ("Failed to get list of discovered devices\n");
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     else {
-        /* Reset the values to 0 */
         memset (pDiscoveredDevices, 0, sizeof(BTRMGR_DiscoveredDevicesList_t));
-        if (listOfDevices.numberOfDevices) {
-            int i = 0;
-            BTRMGR_DiscoveredDevices_t *ptr = NULL;
-            pDiscoveredDevices->m_numOfDevices = listOfDevices.numberOfDevices;
+        if (lstBtrCoreListOfSDevices.numberOfDevices) {
+            BTRMGR_DiscoveredDevices_t *lpstBtrMgrSDevice = NULL;
 
-            for (i = 0; i < listOfDevices.numberOfDevices; i++) {
-                ptr = &pDiscoveredDevices->m_deviceProperty[i];
-                strncpy(ptr->m_name, listOfDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
-                ptr->m_signalLevel = listOfDevices.devices[i].i32RSSI;
-                ptr->m_rssi = btrMgr_MapSignalStrengthToRSSI (listOfDevices.devices[i].i32RSSI);
-                ptr->m_deviceHandle = listOfDevices.devices[i].tDeviceId;
-                ptr->m_deviceType = btrMgr_MapDeviceTypeFromCore(listOfDevices.devices[i].enDeviceType);
-                ptr->m_isPairedDevice = btrMgr_GetDevPaired(listOfDevices.devices[i].tDeviceId);
+            pDiscoveredDevices->m_numOfDevices = (lstBtrCoreListOfSDevices.numberOfDevices < BTRMGR_DEVICE_COUNT_MAX) ? 
+                                                    lstBtrCoreListOfSDevices.numberOfDevices : BTRMGR_DEVICE_COUNT_MAX;
 
-                if (listOfDevices.devices[i].bDeviceConnected) {
-                    ptr->m_isConnected = 1;
+            for (i = 0; i < pDiscoveredDevices->m_numOfDevices; i++) {
+                lpstBtrMgrSDevice = &pDiscoveredDevices->m_deviceProperty[i];
+
+                lpstBtrMgrSDevice->m_deviceHandle   = lstBtrCoreListOfSDevices.devices[i].tDeviceId;
+                lpstBtrMgrSDevice->m_signalLevel    = lstBtrCoreListOfSDevices.devices[i].i32RSSI;
+                lpstBtrMgrSDevice->m_rssi           = btrMgr_MapSignalStrengthToRSSI (lstBtrCoreListOfSDevices.devices[i].i32RSSI);
+                lpstBtrMgrSDevice->m_deviceType     = btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfSDevices.devices[i].enDeviceType);
+                lpstBtrMgrSDevice->m_isPairedDevice = btrMgr_GetDevPaired(lstBtrCoreListOfSDevices.devices[i].tDeviceId);
+
+                strncpy(lpstBtrMgrSDevice->m_name,          lstBtrCoreListOfSDevices.devices[i].pcDeviceName,   (BTRMGR_NAME_LEN_MAX - 1));
+                strncpy(lpstBtrMgrSDevice->m_deviceAddress, lstBtrCoreListOfSDevices.devices[i].pcDeviceAddress,(BTRMGR_NAME_LEN_MAX - 1));
+
+                if (lstBtrCoreListOfSDevices.devices[i].bDeviceConnected) {
+                    lpstBtrMgrSDevice->m_isConnected = 1;
                 }
             }
             /*  Success */
@@ -2461,7 +2503,9 @@ BTRMGR_GetPairedDevices (
 ) {
     BTRMGR_Result_t             lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet                lenBtrCoreRet   = enBTRCoreSuccess;
-    stBTRCorePairedDevicesCount listOfDevices;
+    stBTRCorePairedDevicesCount lstBtrCoreListOfPDevices;
+    int i = 0;
+    int j = 0;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2474,39 +2518,42 @@ BTRMGR_GetPairedDevices (
     }
 
 
-    memset (&listOfDevices, 0, sizeof(listOfDevices));
+    memset (&lstBtrCoreListOfPDevices, 0, sizeof(lstBtrCoreListOfPDevices));
 
-    lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &listOfDevices);
+    lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &lstBtrCoreListOfPDevices);
     if (lenBtrCoreRet != enBTRCoreSuccess) {
         BTRMGRLOG_ERROR ("Failed to get list of paired devices\n");
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     else {
         memset (pPairedDevices, 0, sizeof(BTRMGR_PairedDevicesList_t));     /* Reset the values to 0 */
-        if (listOfDevices.numberOfDevices) {
-            int i = 0;
-            int j = 0;
-            BTRMGR_PairedDevices_t*  ptr = NULL;
+        if (lstBtrCoreListOfPDevices.numberOfDevices) {
+            BTRMGR_PairedDevices_t* lpstBtrMgrPDevice = NULL;
 
-            pPairedDevices->m_numOfDevices = listOfDevices.numberOfDevices;
+            pPairedDevices->m_numOfDevices = (lstBtrCoreListOfPDevices.numberOfDevices < BTRMGR_DEVICE_COUNT_MAX) ? 
+                                                lstBtrCoreListOfPDevices.numberOfDevices : BTRMGR_DEVICE_COUNT_MAX;
 
-            for (i = 0; i < listOfDevices.numberOfDevices; i++) {
-                ptr = &pPairedDevices->m_deviceProperty[i];
-                strncpy(ptr->m_name, listOfDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                strncpy(ptr->m_deviceAddress, listOfDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
-                ptr->m_deviceHandle = listOfDevices.devices[i].tDeviceId;
-                ptr->m_deviceType = btrMgr_MapDeviceTypeFromCore (listOfDevices.devices[i].enDeviceType);
-                ptr->m_serviceInfo.m_numOfService = listOfDevices.devices[i].stDeviceProfile.numberOfService;
-                BTRMGRLOG_INFO ("Paired Device ID = %lld\n", listOfDevices.devices[i].tDeviceId);
-                for (j = 0; j < listOfDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                    BTRMGRLOG_INFO ("Profile ID = %u; Profile Name = %s\n", listOfDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
-                                                                            listOfDevices.devices[i].stDeviceProfile.profile[j].profile_name);
-                    ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                    strcpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfDevices.devices[i].stDeviceProfile.profile[j].profile_name);
+            for (i = 0; i < pPairedDevices->m_numOfDevices; i++) {
+                lpstBtrMgrPDevice = &pPairedDevices->m_deviceProperty[i];
+
+                lpstBtrMgrPDevice->m_deviceHandle = lstBtrCoreListOfPDevices.devices[i].tDeviceId;
+                lpstBtrMgrPDevice->m_deviceType   = btrMgr_MapDeviceTypeFromCore (lstBtrCoreListOfPDevices.devices[i].enDeviceType);
+
+                strncpy(lpstBtrMgrPDevice->m_name,          lstBtrCoreListOfPDevices.devices[i].pcDeviceName,   (BTRMGR_NAME_LEN_MAX - 1));
+                strncpy(lpstBtrMgrPDevice->m_deviceAddress, lstBtrCoreListOfPDevices.devices[i].pcDeviceAddress,(BTRMGR_NAME_LEN_MAX - 1));
+
+                BTRMGRLOG_INFO ("Paired Device ID = %lld\n", lstBtrCoreListOfPDevices.devices[i].tDeviceId);
+
+                lpstBtrMgrPDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService;
+                for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
+                    BTRMGRLOG_INFO ("Profile ID = %u; Profile Name = %s\n", lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
+                                                                            lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
+                    lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                    strcpy (lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
                 }
 
-                if (listOfDevices.devices[i].bDeviceConnected) {
-                    ptr->m_isConnected = 1;
+                if (lstBtrCoreListOfPDevices.devices[i].bDeviceConnected) {
+                    lpstBtrMgrPDevice->m_isConnected = 1;
                 }
             }
             /*  Success */
@@ -2688,8 +2735,8 @@ BTRMGR_GetConnectedDevices (
 ) {
     BTRMGR_Result_t              lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet                 lenBtrCoreRet   = enBTRCoreSuccess;
-    stBTRCorePairedDevicesCount  listOfPDevices;
-    stBTRCoreScannedDevicesCount listOfSDevices;
+    stBTRCorePairedDevicesCount  lstBtrCoreListOfPDevices;
+    stBTRCoreScannedDevicesCount lstBtrCoreListOfSDevices;
     unsigned char i = 0;
     unsigned char j = 0;
 
@@ -2705,27 +2752,32 @@ BTRMGR_GetConnectedDevices (
 
 
     memset (pConnectedDevices, 0, sizeof(BTRMGR_ConnectedDevicesList_t));
-    memset (&listOfPDevices,   0, sizeof(listOfPDevices));
-    memset (&listOfSDevices,   0, sizeof(listOfSDevices));
+    memset (&lstBtrCoreListOfPDevices,   0, sizeof(lstBtrCoreListOfPDevices));
+    memset (&lstBtrCoreListOfSDevices,   0, sizeof(lstBtrCoreListOfSDevices));
 
-    lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &listOfPDevices);
+    lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &lstBtrCoreListOfPDevices);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if (listOfPDevices.numberOfDevices) {
-            for (i = 0; i < listOfPDevices.numberOfDevices; i++) {
-                if (listOfPDevices.devices[i].bDeviceConnected) {
-                   BTRMGR_ConnectedDevice_t* ptr = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
-                   ptr->m_deviceHandle = listOfPDevices.devices[i].tDeviceId;
-                   ptr->m_deviceType   = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
-                   ptr->m_vendorID     = listOfPDevices.devices[i].ui32VendorId;
-                   ptr->m_isConnected  = 1;
-                   strncpy (ptr->m_name, listOfPDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                   strncpy (ptr->m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+        if (lstBtrCoreListOfPDevices.numberOfDevices) {
+            BTRMGR_ConnectedDevice_t* lpstBtrMgrPDevice = NULL;
 
-                   ptr->m_serviceInfo.m_numOfService = listOfPDevices.devices[i].stDeviceProfile.numberOfService;
-                   for (j = 0; j < listOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                       ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                       strncpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+            for (i = 0; i < lstBtrCoreListOfPDevices.numberOfDevices; i++) {
+                if ((lstBtrCoreListOfPDevices.devices[i].bDeviceConnected) && (pConnectedDevices->m_numOfDevices < BTRMGR_DEVICE_COUNT_MAX)) {
+                   lpstBtrMgrPDevice = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
+
+                   lpstBtrMgrPDevice->m_isConnected  = 1;
+                   lpstBtrMgrPDevice->m_deviceHandle = lstBtrCoreListOfPDevices.devices[i].tDeviceId;
+                   lpstBtrMgrPDevice->m_vendorID     = lstBtrCoreListOfPDevices.devices[i].ui32VendorId;
+                   lpstBtrMgrPDevice->m_deviceType   = btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfPDevices.devices[i].enDeviceType);
+
+                   strncpy (lpstBtrMgrPDevice->m_name,          lstBtrCoreListOfPDevices.devices[i].pcDeviceName,   (BTRMGR_NAME_LEN_MAX - 1));
+                   strncpy (lpstBtrMgrPDevice->m_deviceAddress, lstBtrCoreListOfPDevices.devices[i].pcDeviceAddress,(BTRMGR_NAME_LEN_MAX - 1));
+
+                   lpstBtrMgrPDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService;
+                   for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
+                       lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                       strncpy (lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                    }
+
                    pConnectedDevices->m_numOfDevices++;
                    BTRMGRLOG_INFO ("Successfully obtained the connected device information from paried list\n");
                    break; // can be eliminated later
@@ -2737,24 +2789,29 @@ BTRMGR_GetConnectedDevices (
         }
     }
 
-    lenBtrCoreRet  = BTRCore_GetListOfScannedDevices (ghBTRCoreHdl, &listOfSDevices);
+    lenBtrCoreRet  = BTRCore_GetListOfScannedDevices (ghBTRCoreHdl, &lstBtrCoreListOfSDevices);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if (listOfSDevices.numberOfDevices) {
-            for (i = 0; i < listOfSDevices.numberOfDevices; i++) {
-                if (listOfSDevices.devices[i].bDeviceConnected) {
-                    BTRMGR_ConnectedDevice_t* ptr = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
-                    ptr->m_deviceHandle = listOfSDevices.devices[i].tDeviceId;
-                    ptr->m_deviceType   = btrMgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].enDeviceType);
-                    ptr->m_vendorID     = listOfSDevices.devices[i].ui32VendorId;
-                    ptr->m_isConnected  = 1;
-                    strncpy (ptr->m_name, listOfSDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                    strncpy (ptr->m_deviceAddress, listOfSDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+        if (lstBtrCoreListOfSDevices.numberOfDevices) {
+            BTRMGR_ConnectedDevice_t* lpstBtrMgrSDevice =  NULL;
 
-                    ptr->m_serviceInfo.m_numOfService = listOfSDevices.devices[i].stDeviceProfile.numberOfService;
-                    for (j = 0; j < listOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                        ptr->m_serviceInfo.m_profileInfo[j].m_uuid = listOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                        strncpy (ptr->m_serviceInfo.m_profileInfo[j].m_profile, listOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+            for (i = 0; i < lstBtrCoreListOfSDevices.numberOfDevices; i++) {
+                if ((lstBtrCoreListOfSDevices.devices[i].bDeviceConnected) && (pConnectedDevices->m_numOfDevices < BTRMGR_DEVICE_COUNT_MAX)) {
+                    lpstBtrMgrSDevice = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
+
+                    lpstBtrMgrSDevice->m_isConnected  = 1;
+                    lpstBtrMgrSDevice->m_deviceHandle = lstBtrCoreListOfSDevices.devices[i].tDeviceId;
+                    lpstBtrMgrSDevice->m_vendorID     = lstBtrCoreListOfSDevices.devices[i].ui32VendorId;
+                    lpstBtrMgrSDevice->m_deviceType   = btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfSDevices.devices[i].enDeviceType);
+
+                    strncpy (lpstBtrMgrSDevice->m_name,          lstBtrCoreListOfSDevices.devices[i].pcDeviceName,   (BTRMGR_NAME_LEN_MAX - 1));
+                    strncpy (lpstBtrMgrSDevice->m_deviceAddress, lstBtrCoreListOfSDevices.devices[i].pcDeviceAddress,(BTRMGR_NAME_LEN_MAX - 1));
+
+                    lpstBtrMgrSDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService;
+                    for (j = 0; j < lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
+                        lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                        strncpy (lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                     }
+
                     pConnectedDevices->m_numOfDevices++;
                     BTRMGRLOG_INFO ("Successfully obtained the connected device information from scanned list\n");
                     break; // can be eliminated later
@@ -2782,8 +2839,8 @@ BTRMGR_GetDeviceProperties (
 ) {
     BTRMGR_Result_t                 lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet                    lenBtrCoreRet   = enBTRCoreSuccess;
-    stBTRCorePairedDevicesCount     listOfPDevices;
-    stBTRCoreScannedDevicesCount    listOfSDevices;
+    stBTRCorePairedDevicesCount     lstBtrCoreListOfPDevices;
+    stBTRCoreScannedDevicesCount    lstBtrCoreListOfSDevices;
     unsigned char                   isFound = 0;
     int                             i = 0;
     int                             j = 0;
@@ -2800,32 +2857,34 @@ BTRMGR_GetDeviceProperties (
 
 
     /* Reset the values to 0 */
-    memset (&listOfPDevices, 0, sizeof(listOfPDevices));
-    memset (&listOfSDevices, 0, sizeof(listOfSDevices));
+    memset (&lstBtrCoreListOfPDevices, 0, sizeof(lstBtrCoreListOfPDevices));
+    memset (&lstBtrCoreListOfSDevices, 0, sizeof(lstBtrCoreListOfSDevices));
     memset (pDeviceProperty, 0, sizeof(BTRMGR_DevicesProperty_t));
 
-    lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &listOfPDevices);
+    lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &lstBtrCoreListOfPDevices);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if (listOfPDevices.numberOfDevices) {
-            for (i = 0; i < listOfPDevices.numberOfDevices; i++) {
-                if (ahBTRMgrDevHdl == listOfPDevices.devices[i].tDeviceId) {
-                    pDeviceProperty->m_deviceHandle      = listOfPDevices.devices[i].tDeviceId;
-                    pDeviceProperty->m_deviceType        = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
-                    pDeviceProperty->m_isLowEnergyDevice = (pDeviceProperty->m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0; //We shall make it generic later
-                    pDeviceProperty->m_vendorID          = listOfPDevices.devices[i].ui32VendorId;
-                    pDeviceProperty->m_isPaired          = 1;
-                    strncpy(pDeviceProperty->m_name, listOfPDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                    strncpy(pDeviceProperty->m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+        if (lstBtrCoreListOfPDevices.numberOfDevices) {
 
-                    pDeviceProperty->m_serviceInfo.m_numOfService = listOfPDevices.devices[i].stDeviceProfile.numberOfService;
-                    for (j = 0; j < listOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                        BTRMGRLOG_TRACE ("Profile ID = %d; Profile Name = %s \n", listOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
-                                                                                                   listOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
-                        pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = listOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                        strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+            for (i = 0; i < lstBtrCoreListOfPDevices.numberOfDevices; i++) {
+                if (ahBTRMgrDevHdl == lstBtrCoreListOfPDevices.devices[i].tDeviceId) {
+                    pDeviceProperty->m_deviceHandle      = lstBtrCoreListOfPDevices.devices[i].tDeviceId;
+                    pDeviceProperty->m_deviceType        = btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfPDevices.devices[i].enDeviceType);
+                    pDeviceProperty->m_vendorID          = lstBtrCoreListOfPDevices.devices[i].ui32VendorId;
+                    pDeviceProperty->m_isLowEnergyDevice = (pDeviceProperty->m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0; //We shall make it generic later
+                    pDeviceProperty->m_isPaired          = 1;
+
+                    strncpy(pDeviceProperty->m_name,          lstBtrCoreListOfPDevices.devices[i].pcDeviceName,    (BTRMGR_NAME_LEN_MAX - 1));
+                    strncpy(pDeviceProperty->m_deviceAddress, lstBtrCoreListOfPDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+
+                    pDeviceProperty->m_serviceInfo.m_numOfService = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService;
+                    for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
+                        BTRMGRLOG_TRACE ("Profile ID = %d; Profile Name = %s \n", lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
+                                                                                                   lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
+                        pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                        strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                     }
 
-                  if (listOfPDevices.devices[i].bDeviceConnected) {
+                  if (lstBtrCoreListOfPDevices.devices[i].bDeviceConnected) {
                      pDeviceProperty->m_isConnected = 1;
                   }
 
@@ -2846,30 +2905,33 @@ BTRMGR_GetDeviceProperties (
     }
 
 
-    lenBtrCoreRet  = BTRCore_GetListOfScannedDevices (ghBTRCoreHdl, &listOfSDevices);
+    lenBtrCoreRet  = BTRCore_GetListOfScannedDevices (ghBTRCoreHdl, &lstBtrCoreListOfSDevices);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if (listOfSDevices.numberOfDevices) {
-            for (i = 0; i < listOfSDevices.numberOfDevices; i++) {
-                if (ahBTRMgrDevHdl == listOfSDevices.devices[i].tDeviceId) {
-                    if (!isFound) {
-                        pDeviceProperty->m_deviceHandle      = listOfSDevices.devices[i].tDeviceId;
-                        pDeviceProperty->m_deviceType        = btrMgr_MapDeviceTypeFromCore(listOfSDevices.devices[i].enDeviceType);
-                        pDeviceProperty->m_vendorID          = listOfSDevices.devices[i].ui32VendorId;
-                        pDeviceProperty->m_isLowEnergyDevice = (pDeviceProperty->m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0; //We shall make it generic later
-                        strncpy(pDeviceProperty->m_name, listOfSDevices.devices[i].pcDeviceName, (BTRMGR_NAME_LEN_MAX - 1));
-                        strncpy(pDeviceProperty->m_deviceAddress, listOfSDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+        if (lstBtrCoreListOfSDevices.numberOfDevices) {
 
-                        pDeviceProperty->m_serviceInfo.m_numOfService = listOfSDevices.devices[i].stDeviceProfile.numberOfService;
-                        for (j = 0; j < listOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                            BTRMGRLOG_TRACE ("Profile ID = %d; Profile Name = %s \n", listOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
-                                                                                                       listOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name);
-                            pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = listOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                            strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, listOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+            for (i = 0; i < lstBtrCoreListOfSDevices.numberOfDevices; i++) {
+                if (ahBTRMgrDevHdl == lstBtrCoreListOfSDevices.devices[i].tDeviceId) {
+                    if (!isFound) {
+                        pDeviceProperty->m_deviceHandle      = lstBtrCoreListOfSDevices.devices[i].tDeviceId;
+                        pDeviceProperty->m_deviceType        = btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfSDevices.devices[i].enDeviceType);
+                        pDeviceProperty->m_vendorID          = lstBtrCoreListOfSDevices.devices[i].ui32VendorId;
+                        pDeviceProperty->m_isLowEnergyDevice = (pDeviceProperty->m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0; //We shall make it generic later
+
+                        strncpy(pDeviceProperty->m_name,          lstBtrCoreListOfSDevices.devices[i].pcDeviceName,    (BTRMGR_NAME_LEN_MAX - 1));
+                        strncpy(pDeviceProperty->m_deviceAddress, lstBtrCoreListOfSDevices.devices[i].pcDeviceAddress, (BTRMGR_NAME_LEN_MAX - 1));
+
+                        pDeviceProperty->m_serviceInfo.m_numOfService = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService;
+                        for (j = 0; j < lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
+                            BTRMGRLOG_TRACE ("Profile ID = %d; Profile Name = %s \n", lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
+                                                                                                       lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name);
+                            pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
+                            strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
                         }
                     }
-                    pDeviceProperty->m_signalLevel = listOfSDevices.devices[i].i32RSSI;
 
-                    if (listOfPDevices.devices[i].bDeviceConnected) {
+                    pDeviceProperty->m_signalLevel = lstBtrCoreListOfSDevices.devices[i].i32RSSI;
+
+                    if (lstBtrCoreListOfSDevices.devices[i].bDeviceConnected) {
                        pDeviceProperty->m_isConnected = 1;
                     }
 
@@ -3610,7 +3672,8 @@ BTRMGR_PerformLeOp (
     BTRMgrDeviceHandle           ahBTRMgrDevHdl,
     const char*                  aBtrLeUuid,
     BTRMGR_LeOp_t                aLeOpType,
-    void*                        rOpResult
+    char*                        aLeOpArg,
+    char*                        rOpResult
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     BTRMGR_ConnectedDevicesList_t listOfCDevices;
@@ -3659,7 +3722,7 @@ BTRMGR_PerformLeOp (
         break;
     }
 
-    if (enBTRCoreSuccess != BTRCore_PerformLEOp (ghBTRCoreHdl, ahBTRMgrDevHdl, aBtrLeUuid, aenBTRCoreLeOp, rOpResult)) {
+    if (enBTRCoreSuccess != BTRCore_PerformLEOp (ghBTRCoreHdl, ahBTRMgrDevHdl, aBtrLeUuid, aenBTRCoreLeOp, aLeOpArg, rOpResult)) {
        BTRMGRLOG_ERROR ("Perform LE Op %d for device  %llu Failed!!!\n", aLeOpType, ahBTRMgrDevHdl);
        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -3888,7 +3951,30 @@ btrMgr_DeviceStatusCb (
         case enBTRCoreDevStConnected:               /*  notify user device back   */
             if (enBTRCoreDevStLost == p_StatusCB->eDevicePrevState || enBTRCoreDevStPaired == p_StatusCB->eDevicePrevState) {
                 if (!gIsAudOutStartupInProgress) {
-                    btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_FOUND);  
+                    btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_FOUND);
+
+                    if ((lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET)  ||
+                        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HANDSFREE)         ||
+                        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_LOUDSPEAKER)       ||
+                        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HEADPHONES)        ||
+                        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO)    ||
+                        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_CAR_AUDIO)         ||
+                        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE) ){
+
+                        if (lstEventMessage.m_pairedDevice.m_isLastConnectedDevice) {
+                            btrMgr_PreCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+
+                            if (btrMgr_isTimeOutSet()) {
+                                BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
+                                g_source_remove (gTimeOutRef);
+                                gTimeOutRef = 0;
+                            }
+
+                            gDiscHoldOffTimeOutCbData = 0;  //TODO: Change to adapterIdx
+                            gTimeOutRef = g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
+                            BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
+                        }
+                    }
 
                     if (gfpcBBTRMgrEventOut) {
                         gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
@@ -3974,6 +4060,15 @@ btrMgr_DeviceStatusCb (
 
                     btrMgr_PreCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
 
+                    if (btrMgr_isTimeOutSet()) {
+                        BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
+                        g_source_remove (gTimeOutRef);
+                        gTimeOutRef = 0;
+                    }
+
+                    gDiscHoldOffTimeOutCbData = 0;  //TODO: Change to adapterIdx
+                    gTimeOutRef = g_timeout_add_seconds (BTRMGR_DISCOVERY_HOLD_OFF_TIME, btrMgr_DiscoveryHoldOffTimerCb, (gpointer)&gDiscHoldOffTimeOutCbData);
+                    BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
 
                     if (gfpcBBTRMgrEventOut) {
                         gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
@@ -3995,16 +4090,6 @@ btrMgr_DeviceStatusCb (
                             BTRMGR_StopAudioStreamingOut (0, ghBTRMgrDevHdlCurStreaming);
                         }
                     }
-
-                    // When there is a scheduled scan eliminate any scheduled scans and start one immediately
-                    if (btrMgr_isTimeOutSet()) {
-                        BTRMGRLOG_DEBUG ("Cancelling previous Discovery hold off TimeOut Session..\n");
-                        g_source_remove (gTimeOutRef);
-                        gTimeOutRef = 0;
-                        gDiscHoldOffTimeOutCbData = 0; //TODO: Change to adapterIdx
-                    }
-
-                    btrMgr_PostCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_UNKNOWN);
                 }
             }
             gIsUserInitiated = 0;
@@ -4013,6 +4098,17 @@ btrMgr_DeviceStatusCb (
             if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
                 btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TABLET) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST);
+
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+                }
+            }
+            break;
+        case enBTRCoreDevStOpInfo:
+            if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TILE) {
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_INFORMATION);
+                //Not a big fan of devOpResponse. We should think of a better way to do this
+                strncpy(lstEventMessage.m_deviceOpInfo.m_notifyData, p_StatusCB->devOpResponse, BTRMGR_MAX_STR_LEN-1);
 
                 if (gfpcBBTRMgrEventOut) {
                     gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
@@ -4030,18 +4126,50 @@ btrMgr_DeviceStatusCb (
 
 static enBTRCoreRet
 btrMgr_DeviceDiscoveryCb (
-    stBTRCoreBTDevice   devicefound,
-    void*               apvUserData
+    stBTRCoreDiscoveryCBInfo*   astBTRCoreDiscoveryCbInfo,
+    void*                       apvUserData
 ) {
     enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
 
-    if (btrMgr_GetDiscoveryInProgress() || (devicefound.bFound == FALSE)) { /* Not a big fan of this */
-        BTRMGR_EventMessage_t lstEventMessage;
-        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+    BTRMGRLOG_TRACE ("callback type = %d\n", astBTRCoreDiscoveryCbInfo->type);
 
-        btrMgr_MapDevstatusInfoToEventInfo ((void*)&devicefound, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
+    if (astBTRCoreDiscoveryCbInfo->type == enBTRCoreOpTypeDevice) {
+        if (btrMgr_GetDiscoveryInProgress() || (astBTRCoreDiscoveryCbInfo->device.bFound == FALSE)) { /* Not a big fan of this */
+            BTRMGR_EventMessage_t lstEventMessage;
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)&astBTRCoreDiscoveryCbInfo->device, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
+
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            }
+        }
+    }
+    else if (astBTRCoreDiscoveryCbInfo->type == enBTRCoreOpTypeAdapter)
+    {
+        BTRMGRLOG_INFO ("adapter number = %d, discoverable = %d, discovering = %d\n",
+                astBTRCoreDiscoveryCbInfo->adapter.adapter_number,
+                astBTRCoreDiscoveryCbInfo->adapter.discoverable,
+                astBTRCoreDiscoveryCbInfo->adapter.bDiscovering);
+
+        gIsAdapterDiscovering = astBTRCoreDiscoveryCbInfo->adapter.bDiscovering;
 
         if (gfpcBBTRMgrEventOut) {
+            BTRMGR_EventMessage_t lstEventMessage;
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+            lstEventMessage.m_adapterIndex = astBTRCoreDiscoveryCbInfo->adapter.adapter_number;
+            if (astBTRCoreDiscoveryCbInfo->adapter.bDiscovering)
+            {
+                lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED;
+                lstEventMessage.m_numOfDevices = 0;
+            }
+            else
+            {
+                lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE;
+                lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+            }
+
             gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
         }
     }

@@ -47,6 +47,7 @@
 #define BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE         "SetAdapterDiscoverable"
 #define BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE          "IsAdapterDiscoverable"
 #define BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS   "SetDeviceDiscoveryStatus"
+#define BTRMGR_IARM_METHOD_GET_DISCOVERY_STATUS             "GetDeviceDiscoveryStatus"
 #define BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES           "GetDiscoveredDevices"
 #define BTRMGR_IARM_METHOD_PAIR_DEVICE                      "PairDevice"
 #define BTRMGR_IARM_METHOD_UNPAIR_DEVICE                    "UnpairDevice"
@@ -70,6 +71,7 @@
 #define BTRMGR_IARM_METHOD_PERFORM_LE_OP                    "PerformLeOperation"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
+
 
 /**
  * @brief Represents the events supported by bluetooth manager.
@@ -98,6 +100,7 @@ typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED,
     BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED,
+    BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION,
     BTRMGR_IARM_EVENT_MAX
 } BTRMGR_IARM_Events_t;
 
@@ -212,8 +215,15 @@ typedef struct _BTRMGR_IARMLeOp_t {
     BTRMgrDeviceHandle      m_deviceHandle;
     char                    m_uuid[BTRMGR_MAX_STR_LEN];
     BTRMGR_LeOp_t           m_leOpType;
+    char                    m_opArg[BTRMGR_MAX_STR_LEN];
     char                    m_opRes[BTRMGR_MAX_STR_LEN];
 } BTRMGR_IARMLeOp_t;    
+
+typedef struct _BTRMGR_IARMDiscoveryStatus_t {
+    unsigned char                m_adapterIndex;
+    BTRMGR_DiscoveryStatus_t     m_discoveryInProgress;
+    BTRMGR_DeviceOperationType_t m_discoveryType;
+} BTRMGR_IARMDiscoveryStatus_t;
 
 /** @} */
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

@@ -94,6 +94,7 @@ BTRMGR_Init (
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION, btrMgrMediaCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, btrMgrMediaCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION, btrMgrdeviceCallback);
         BTRMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
     else
@@ -429,6 +430,34 @@ BTRMGR_StopDeviceDiscovery (
     retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS, (void *)&deviceDiscovery, sizeof(deviceDiscovery), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t
+BTRMGR_GetDiscoveryStatus (
+        unsigned char                aui8AdapterIdx,
+        BTRMGR_DiscoveryStatus_t     *isDiscoveryInProgress,
+        BTRMGR_DeviceOperationType_t *aenBTRMgrDevOpT
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMDiscoveryStatus_t discoveryStatus;
+
+    memset (&discoveryStatus, 0, sizeof(BTRMGR_IARMDiscoveryStatus_t));
+    discoveryStatus.m_adapterIndex = aui8AdapterIdx;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_DISCOVERY_STATUS, (void *)&discoveryStatus, sizeof(discoveryStatus), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+    	*isDiscoveryInProgress = discoveryStatus.m_discoveryInProgress;
+        *aenBTRMgrDevOpT       = discoveryStatus.m_discoveryType;
+        BTRMGRLOG_INFO ("Success; Discovery State = %d\n", discoveryStatus.m_discoveryInProgress);
     }
     else {
         rc = BTRMGR_RESULT_GENERIC_FAILURE;
@@ -1125,7 +1154,8 @@ BTRMGR_PerformLeOp (
     BTRMgrDeviceHandle           handle,
     const char*                  aBtrLeUuid,
     BTRMGR_LeOp_t                aLeOpType,
-    void*                        rOpResult
+    char*                        aLeOpArg,
+    char*                        rOpResult
 ) {
     BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
@@ -1141,7 +1171,8 @@ BTRMGR_PerformLeOp (
     leOp.m_adapterIndex = index_of_adapter;
     leOp.m_deviceHandle = handle;
     leOp.m_leOpType     = aLeOpType;
-    strncpy(leOp.m_uuid, aBtrLeUuid, BTRMGR_MAX_STR_LEN-1);
+    strncpy(leOp.m_opArg, aLeOpArg,   BTRMGR_MAX_STR_LEN-1);
+    strncpy(leOp.m_uuid,  aBtrLeUuid, BTRMGR_MAX_STR_LEN-1);
 
     retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_PERFORM_LE_OP, (void*)&leOp, sizeof(BTRMGR_IARMLeOp_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     
@@ -1258,6 +1289,7 @@ btrMgrdeviceCallback (
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST       == eventId) ||
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST    == eventId) ||
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST   == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION                == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_FOUND                         == eventId) ){
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));
