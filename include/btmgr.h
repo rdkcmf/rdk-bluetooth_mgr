@@ -122,6 +122,7 @@ typedef enum _BTRMGR_DeviceType_t {
     BTRMGR_DEVICE_TYPE_TABLET,
     // LE
     BTRMGR_DEVICE_TYPE_TILE,
+    BTRMGR_DEVICE_TYPE_HID,
     BTRMGR_DEVICE_TYPE_END
 } BTRMGR_DeviceType_t;
 
@@ -140,7 +141,8 @@ typedef enum _BTRMGR_DeviceOperationType_t {
     BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT  = 1 << 0,
     BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT   = 1 << 1,
     BTRMGR_DEVICE_OP_TYPE_LE            = 1 << 2,
-    BTRMGR_DEVICE_OP_TYPE_UNKNOWN       = 1 << 3
+    BTRMGR_DEVICE_OP_TYPE_HID           = 1 << 3,
+    BTRMGR_DEVICE_OP_TYPE_UNKNOWN       = 1 << 4
 } BTRMGR_DeviceOperationType_t;
 
 /**

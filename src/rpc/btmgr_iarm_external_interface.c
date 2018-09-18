@@ -1199,6 +1199,8 @@ BTRMGR_GetDeviceTypeAsString (
         return "TABLET";
     else if (type == BTRMGR_DEVICE_TYPE_TILE)
         return "LE TILE";
+    else if (type == BTRMGR_DEVICE_TYPE_HID)
+        return "HUMAN INTERFACE DEVICE";
     else
         return "UNKNOWN DEVICE";
 }

@@ -231,6 +231,7 @@ btrMgr_GetDiscoveryDeviceTypeAsString (
     case BTRMGR_DEVICE_OP_TYPE_LE:
         opType = "LE";
         break;
+    case BTRMGR_DEVICE_OP_TYPE_HID:
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
         opType = "UNKNOWN";
     }
@@ -690,6 +691,9 @@ btrMgr_MapDeviceTypeFromCore (
     case enBTRCore_DC_Tile:
         type = BTRMGR_DEVICE_TYPE_TILE;
         break;
+    case enBTRCore_DC_HID:
+        type = BTRMGR_DEVICE_TYPE_HID;
+        break;
     case enBTRCore_DC_Reserved:
     case enBTRCore_DC_Unknown:
         type = BTRMGR_DEVICE_TYPE_UNKNOWN;
@@ -1084,6 +1088,7 @@ btrMgr_ConnectToDevice (
     case BTRMGR_DEVICE_OP_TYPE_LE:
         lenBTRCoreDeviceType = enBTRCoreLE;
         break;
+    case BTRMGR_DEVICE_OP_TYPE_HID:
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
         lenBTRCoreDeviceType = enBTRCoreUnknown;
@@ -1124,7 +1129,7 @@ btrMgr_ConnectToDevice (
             else {
                 BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
 
-                if (lenBTRCoreDeviceType != enBTRCoreLE) { 
+                if ((lenBTRCoreDeviceType != enBTRCoreLE) && (connectAs != BTRMGR_DEVICE_OP_TYPE_HID)) {
                     if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
                        BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
                        btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected);
@@ -2063,6 +2068,7 @@ BTRMGR_StartDeviceDiscovery (
     case BTRMGR_DEVICE_OP_TYPE_LE:
         lenBTRCoreDeviceType = enBTRCoreLE;
         break;
+    case BTRMGR_DEVICE_OP_TYPE_HID:
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
         lenBTRCoreDeviceType = enBTRCoreUnknown;
@@ -2139,6 +2145,7 @@ BTRMGR_StopDeviceDiscovery (
     case BTRMGR_DEVICE_OP_TYPE_LE:
         lenBTRCoreDeviceType = enBTRCoreLE;
         break;
+    case BTRMGR_DEVICE_OP_TYPE_HID:
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
         lenBTRCoreDeviceType = enBTRCoreUnknown;
@@ -3702,6 +3709,8 @@ BTRMGR_GetDeviceTypeAsString (
         return "TABLET";
     else if (type == BTRMGR_DEVICE_TYPE_TILE)
         return "LE TILE";
+    else if (type == BTRMGR_DEVICE_TYPE_HID)
+        return "HUMAN INTERFACE DEVICE";
     else
         return "UNKNOWN DEVICE";
 }

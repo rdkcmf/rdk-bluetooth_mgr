@@ -370,7 +370,6 @@ int main(int argc, char *argv[])
     if(argc==1){
 	    printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
 	    cliDisabled = 1;
-            printOptions();
     }
     else
     {
@@ -391,6 +390,7 @@ int main(int argc, char *argv[])
     }
     do
     {
+        printOptions();
         i = getUserSelection();
         switch (i)
         {
@@ -589,7 +589,7 @@ int main(int argc, char *argv[])
                     int ch = 0;
                     printf ("Please Enter the device Handle number of the device that you want to Connect \t: ");
                     handle = getDeviceSelection();
-                    printf ("Enter Device ConnectAs  Type : [0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE | 3 - UNKNOWN]\n");
+                    printf ("Enter Device ConnectAs  Type : [0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE | 3 - HID | 4 - UNKNOWN]\n");
                     ch = getDeviceSelection();
 
                     rc = BTRMGR_ConnectToDevice(0, handle, (1 << ch));
