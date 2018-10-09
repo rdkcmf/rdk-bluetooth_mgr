@@ -26,7 +26,7 @@ Type=forking
 ExecStart=/usr/bin/spawn-fcgi -fcgi /usr/bin/btrMgrHTMLControl -a 127.0.0.1 -p 9625 -P /tmp/btrMgrHTMLControl.pid
 Restart=always
 RestartSec=10s
-PIDFILE=/tmp/btrMgrHTMLControl.pid
+PIDFile=/tmp/btrMgrHTMLControl.pid
 
 [Install]
 WantedBy=multi-user.target
