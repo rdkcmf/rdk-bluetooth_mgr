@@ -27,6 +27,25 @@
 
 typedef void* tBTRMgrSiGstHdl;
 
+
+#define BTRMGR_AUDIO_INPUT_TYPE_SBC         "SBC"
+#define BTRMGR_AUDIO_INPUT_TYPE_AAC         "MP4A-LATM"
+#define BTRMGR_AUDIO_INPUT_TYPE_PCM         "PCM"
+// Add additional support Audio input types
+
+#define BTRMGR_AUDIO_SFMT_SIGNED_8BIT       "S8"
+#define BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT   "S16LE"
+#define BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT   "S24LE"
+#define BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT   "S32LE"
+// Add additional sampling formats as supported by Gst SO layer
+
+#define BTRMGR_AUDIO_CHANNELMODE_MONO       "mono"
+#define BTRMGR_AUDIO_CHANNELMODE_DUAL       "dual"
+#define BTRMGR_AUDIO_CHANNELMODE_STEREO     "stereo"
+#define BTRMGR_AUDIO_CHANNELMODE_JSTEREO    "joint"
+// Add additional chennel modes as supported by Gst SO layer
+
+
 /**
  * @addtogroup  Stream_In
  * @{
@@ -97,7 +116,7 @@ eBTRMgrSIGstRet BTRMgr_SI_GstDeInit (tBTRMgrSiGstHdl hBTRMgrSoGstHdl);
  * @return Returns the status of the operation.
  * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
  */
-eBTRMgrSIGstRet BTRMgr_SI_GstStart (tBTRMgrSiGstHdl hBTRMgrSoGstHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU, unsigned int aiBTDevSFreq);
+eBTRMgrSIGstRet BTRMgr_SI_GstStart (tBTRMgrSiGstHdl hBTRMgrSoGstHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU, unsigned int aiBTDevSFreq, const char* apcAudioInType);
 
 /**
  * @brief This API stops the current  playback and sets the state as NULL.

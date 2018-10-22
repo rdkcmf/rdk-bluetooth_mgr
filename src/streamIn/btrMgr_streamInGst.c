@@ -467,11 +467,12 @@ BTRMgr_SI_GstStart (
     int             aiInBufMaxSize,
     int             aiBTDevFd,
     int             aiBTDevMTU,
-    unsigned int    aiBTDevSFreq
+    unsigned int    aiBTDevSFreq,
+    const char*     apcAudioInType
 ) {
     stBTRMgrSIGst* pstBtrMgrSiGst = (stBTRMgrSIGst*)hBTRMgrSiGstHdl;
 
-    if (!pstBtrMgrSiGst) {
+    if (!pstBtrMgrSiGst || !apcAudioInType) {
         BTRMGRLOG_ERROR ("Invalid input argument\n");
         return eBTRMgrSIGstFailInArg;
     }
@@ -482,6 +483,7 @@ BTRMgr_SI_GstStart (
     GstElement* auddec          = (GstElement*)pstBtrMgrSiGst->pAudioDec;
 
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
+    gint        rtpPaylodVal= 0;
 
     GstCaps* fdsrcSrcCaps  = NULL;
 
@@ -499,11 +501,20 @@ BTRMgr_SI_GstStart (
     pstBtrMgrSiGst->gstClkTStamp = 0;
     pstBtrMgrSiGst->inBufOffset  = 0;
 
-   fdsrcSrcCaps = gst_caps_new_simple ("application/x-rtp",
+
+    if (!strncmp(apcAudioInType, BTRMGR_AUDIO_INPUT_TYPE_SBC, strlen(BTRMGR_AUDIO_INPUT_TYPE_SBC))) {
+        rtpPaylodVal = 96;
+    }
+    else if (!strncmp(apcAudioInType, BTRMGR_AUDIO_INPUT_TYPE_AAC, strlen(BTRMGR_AUDIO_INPUT_TYPE_AAC))) {
+        rtpPaylodVal = 96;
+    }
+
+
+    fdsrcSrcCaps = gst_caps_new_simple ("application/x-rtp",
                                          "media", G_TYPE_STRING, "audio",
-                                         "encoding-name", G_TYPE_STRING, "SBC",
+                                         "encoding-name", G_TYPE_STRING, apcAudioInType,
                                          "clock-rate", G_TYPE_INT, aiBTDevSFreq,
-                                         "payload", G_TYPE_INT, 96,
+                                         "payload", G_TYPE_INT, rtpPaylodVal,
                                           NULL);
 
     g_object_set (fdsrc, "fd",          aiBTDevFd,  NULL);

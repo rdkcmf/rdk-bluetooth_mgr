@@ -143,6 +143,8 @@ typedef struct _stBTRMgrInASettings {
     eBTRMgrAType    eBtrMgrInAType;
     void*           pstBtrMgrInCodecInfo;
     int             i32BtrMgrInBufMaxSize;
+    int             i32BtrMgrDevFd;
+    int             i32BtrMgrDevMtu;
 } stBTRMgrInASettings;
 
 /**

@@ -106,7 +106,7 @@ eBTRMgrRet BTRMgr_SI_GetStatus (tBTRMgrSiHdl hBTRMgrSiHdl, stBTRMgrMediaStatus* 
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
  */
-eBTRMgrRet BTRMgr_SI_Start (tBTRMgrSiHdl hBTRMgrSiHdl, int aiInBufMaxSize, int aiBTDevFd, int aiBTDevMTU, unsigned int aiBTDevSFreq);
+eBTRMgrRet BTRMgr_SI_Start (tBTRMgrSiHdl hBTRMgrSiHdl, int aiInBufMaxSize, stBTRMgrInASettings* apstBtrMgrSiInASettings);
 
 /**
  * @brief This API uses BTRMgr_SI_GstStop() for closing the pipeline.
