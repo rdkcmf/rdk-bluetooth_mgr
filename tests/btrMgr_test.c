@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "btmgr.h"
+#include "rfcapi.h"
 
 /* Tile Specific TOA msg feilds */
 # define _1_BYTE_TOA_CID                 "00"
@@ -39,7 +40,6 @@
 
 
 volatile int           wait                  = 1;
-volatile unsigned char gIsTileConnected      = 0;
 volatile unsigned char gReceivedNotification = 0;
 char gNotificationData[BTRMGR_MAX_STR_LEN]   = "\0";
 int     uselection    = 0;
@@ -90,6 +90,8 @@ static void printOptions (void)
     printf ("35. Reset Bluetooth Adapter\n");
     printf ("36. Get Discovery State \n");
     printf ("40. Ring A Tile (Just for POC)\n");
+    printf ("41. (RFC)Set AudioIn - Enabled/Disabled\n");
+    printf ("42. Set AudioIn - Enabled/Disabled\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -249,7 +251,7 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_MEDIA_TRACK_STOPPED               : event = "MEDIA_TRACK_STOPPED";               break;
     case BTRMGR_EVENT_MEDIA_TRACK_POSITION              : event = "MEDIA_TRACK_POSITION";              break;
     case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";               break;
-    case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_TRACK_ENDED";                 break;
+    case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_PLAYBACK_ENDED";              break;
     case BTRMGR_EVENT_DEVICE_OP_INFORMATION             : event = "DEVICE_OP_INFORMATION";             break;
     default                                            : event = "##INVALID##";
   }
@@ -259,9 +261,11 @@ const char* getEventAsString (BTRMGR_Events_t etype)
 
 BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
 {
+#if 0
     printf ("\n\t@@@@@@@@ %s : %s eventCallback ::::  Event ID %d @@@@@@@@\n", BTRMGR_GetDeviceTypeAsString(event.m_pairedDevice.m_deviceType)
                                                                              , event.m_pairedDevice.m_name
                                                                              , event.m_eventType);
+#endif
     switch(event.m_eventType) {
     case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE: 
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
@@ -296,10 +300,17 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
         printf ("\t DevHandle =  %lld\n", event.m_externalDevice.m_deviceHandle);
         printf ("\t DevName   = %s\n", event.m_externalDevice.m_name);
         printf ("\t DevAddr   = %s\n", event.m_externalDevice.m_deviceAddress);
-        printf ("\t PassCode  = %d\n", event.m_externalDevice.m_externalDevicePIN);
-        printf ("\t Enter Option 21 to Accept Pairing Request\n");
-        printf ("\t Enter Option 22 to Deny Pairing Request\n");
-        gDeviceHandle = event.m_externalDevice.m_deviceHandle;
+        printf ("\t PassCode  = %06d\n", event.m_externalDevice.m_externalDevicePIN);
+        if (event.m_externalDevice.m_requestConfirmation) {
+            printf ("\t Enter Option 21 to Accept Pairing Request\n");
+            printf ("\t Enter Option 22 to Deny Pairing Request\n");
+            gDeviceHandle = event.m_externalDevice.m_deviceHandle;
+        }
+        else {
+            printf("\n\n\t@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+            printf("\tEnter PIN: %06d in Your \"%s\" to make them paired\n", event.m_externalDevice.m_externalDevicePIN, event.m_externalDevice.m_name);
+            printf("\t@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n");
+        }
         break;
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST:
         printf ("\tReceiver External Connect Request\n");
@@ -320,24 +331,22 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
         gDeviceHandle = event.m_externalDevice.m_deviceHandle;
         break;
     case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE:
-    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE:
     case BTRMGR_EVENT_DEVICE_PAIRING_FAILED:
+        printf("\tReceived %s %s Event from BTRMgr\n", event.m_discoveredDevice.m_name, getEventAsString(event.m_eventType));
+        printf("\t DevHandle = %lld\n", event.m_discoveredDevice.m_deviceHandle);
+        printf("\t DevType   = %s\n", BTRMGR_GetDeviceTypeAsString(event.m_discoveredDevice.m_deviceType));
+        printf("\t DevAddr   = %s\n", event.m_discoveredDevice.m_deviceAddress);
+        break;
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE:
     case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED:
     case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED:
     case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED:
-        printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
-        break;
     case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE:
-        printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
-        if (event.m_discoveredDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TILE) {
-            gIsTileConnected = 1;
-        }
-        break;
     case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE:
         printf("\tReceived %s %s Event from BTRMgr\n", event.m_pairedDevice.m_name, getEventAsString(event.m_eventType));
-        if (event.m_discoveredDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TILE) {
-            gIsTileConnected = 0;
-        }
+        printf("\t DevHandle = %lld\n", event.m_pairedDevice.m_deviceHandle);
+        printf("\t DevType   = %s\n", BTRMGR_GetDeviceTypeAsString(event.m_pairedDevice.m_deviceType));
+        printf("\t DevAddr   = %s\n", event.m_pairedDevice.m_deviceAddress);
         break;
     case BTRMGR_EVENT_MEDIA_TRACK_STARTED:
     case BTRMGR_EVENT_MEDIA_TRACK_PLAYING:
@@ -378,6 +387,9 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
         printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
         printf("\tDevice %s Op Information\n", event.m_deviceOpInfo.m_name);
         printf("\t%s\n", event.m_deviceOpInfo.m_notifyData);
+        break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE:
+        printf ("\n\tDiscovered %s device of type %s\n", event.m_discoveredDevice.m_name, BTRMGR_GetDeviceTypeAsString(event.m_discoveredDevice.m_deviceType));
         break;
      default:
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
@@ -1137,6 +1149,54 @@ int main(int argc, char *argv[])
                         }
                     }
                     BTRMGR_DisconnectFromDevice(0, handle);
+                }
+                break;
+            case 41:
+                {
+                    int choice = 0;
+                    WDMP_STATUS status = WDMP_FAILURE;
+
+                    printf ("\n\nATTENTION! Disconnect all existing AudioIn connection before flipping the AudioIn Service state.\n\n");
+                    printf ("Press 1 to Enable and 0 to Disable AudioIn Service.\n");
+                    scanf("%d", &choice);
+
+                    status = setRFCParameter("btrMgrTest", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.AudioIn.Enable",
+                                                           (choice)? "true" : "false", WDMP_BOOLEAN);
+
+                    if (status != WDMP_SUCCESS) {
+                        printf("\nsetRFCParameter Failed : %s\n", getRFCErrorString(status));
+                    }
+                    else {
+                        if (choice) {
+                            printf("\nSuccessfully Enabled AudioIn.\n");
+                        }
+                        else {
+                            printf("\nSuccessfully Disabled AudioIn.\n");
+                        }
+                    }
+                }
+                break;
+            case 42:
+                {
+                    int choice = 0;
+
+                    printf ("\n\nATTENTION! Disconnect all existing AudioIn connection before flipping the AudioIn Service state.\n\n");
+                    printf ("Press 1 to Enable and 0 to Disable AudioIn Service.\n");
+                    scanf("%d", &choice);
+
+                    rc = BTRMGR_SetAudioInServiceState (0, choice);
+
+                    if (BTRMGR_RESULT_SUCCESS == rc) {
+                        if (choice) {
+                            printf("\nSuccessfully Enabled AudioIn.\n");
+                        }
+                        else {
+                            printf("\nSuccessfully Disabled AudioIn.\n");
+                        }
+                    }
+                    else {
+                        printf("\nCall Failed : %d\n", rc);
+                    }
                 }
                 break;
             case 55:

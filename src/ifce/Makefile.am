@@ -18,12 +18,12 @@
 ##########################################################################
 SUBDIRS =
 if !USE_RPC
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/common -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/logger -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS}
-AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -lrdkloggers 
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/common -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/logger -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/wdmp-c  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}
+AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -lrdkloggers -lrfcapi
 
 lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btrMgr.c
-libBTMgr_la_LIBADD = $(top_builddir)/src/audioCap/libbtrMgrAudioCapture.la $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(top_builddir)/src/streamIn/libbtrMgrStreamIn.la
+libBTMgr_la_LIBADD = $(top_builddir)/src/audioCap/libbtrMgrAudioCapture.la $(top_builddir)/src/persistIf/libbtrMgrPersistInterface.la $(top_builddir)/src/streamOut/libbtrMgrStreamOut.la $(top_builddir)/src/streamIn/libbtrMgrStreamIn.la
 libBTMgr_la_includedir = $(includedir)
 libBTMgr_la_include_HEADERS = ${top_srcdir}/include/btmgr.h
 endif

@@ -57,6 +57,7 @@ static IARM_Result_t btrMgr_GetMediaTrackInfo (void* arg);
 static IARM_Result_t btrMgr_GetMediaCurrentPosition (void* arg);
 static IARM_Result_t btrMgr_GetLeProperty (void* arg);
 static IARM_Result_t btrMgr_PerformLeOp (void* arg);
+static IARM_Result_t btrMgr_SetAudioInServiceState (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
 
 /* Callbacks Prototypes */
@@ -1177,6 +1178,39 @@ btrMgr_PerformLeOp (
     return retCode;
 }
  
+static IARM_Result_t
+btrMgr_SetAudioInServiceState (
+    void* arg
+) {
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMAudioInServiceState_t* audioInSerivceState = (BTRMGR_IARMAudioInServiceState_t*)arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!audioInSerivceState) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_SetAudioInServiceState (audioInSerivceState->m_adapterIndex, audioInSerivceState->m_serviceState);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
 
 
 static IARM_Result_t
@@ -1272,6 +1306,7 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, btrMgr_GetMediaCurrentPosition);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LE_PROPERTY, btrMgr_GetLeProperty);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_PERFORM_LE_OP, btrMgr_PerformLeOp);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE, btrMgr_SetAudioInServiceState);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
 
         IARM_Bus_RegisterEvent(BTRMGR_IARM_EVENT_MAX);
@@ -1410,11 +1445,14 @@ btrMgr_EventCallback (
         BTRMGRLOG_WARN ("Post Media Playback Ended event\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_OP_READY) {
+        BTRMGRLOG_WARN ("Post External Device Op Ready\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OP_READY, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
     else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_OP_INFORMATION) {
         BTRMGRLOG_WARN ("Post External Device Op Information\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
-
 
     if (lenIarmResult != IARM_RESULT_SUCCESS) {
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;

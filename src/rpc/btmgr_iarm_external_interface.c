@@ -94,6 +94,7 @@ BTRMGR_Init (
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION, btrMgrMediaCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED, btrMgrMediaCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_READY, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION, btrMgrdeviceCallback);
         BTRMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
@@ -997,6 +998,7 @@ BTRMGR_MediaControl (
         return rc;
     }
 
+    memset (&mediaProperty, 0, sizeof(BTRMGR_IARMMediaProperty_t));
     mediaProperty.m_adapterIndex    = index_of_adapter;
     mediaProperty.m_deviceHandle    = handle;
     mediaProperty.m_mediaControlCmd = mediaCtrlCmd;
@@ -1030,6 +1032,7 @@ BTRMGR_GetMediaTrackInfo (
         return rc;
     }
 
+    memset (&mediaProperty, 0, sizeof(BTRMGR_IARMMediaProperty_t));
     mediaProperty.m_adapterIndex    = index_of_adapter;
     mediaProperty.m_deviceHandle    = handle;
 
@@ -1064,6 +1067,7 @@ BTRMGR_GetMediaCurrentPosition (
         return rc;
     }
 
+    memset (&mediaProperty, 0, sizeof(BTRMGR_IARMMediaProperty_t));
     mediaProperty.m_adapterIndex         = index_of_adapter;
     mediaProperty.m_deviceHandle         = handle;
 
@@ -1189,6 +1193,38 @@ BTRMGR_PerformLeOp (
 }
 
 
+BTRMGR_Result_t
+BTRMGR_SetAudioInServiceState (
+    unsigned char                index_of_adapter,
+    unsigned char                aui8ServiceState
+) {
+    BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMAudioInServiceState_t audioInServiceState;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    memset (&audioInServiceState, 0, sizeof(BTRMGR_IARMAudioInServiceState_t));
+    audioInServiceState.m_adapterIndex = index_of_adapter;
+    audioInServiceState.m_serviceState = aui8ServiceState;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE, (void*)&audioInServiceState, sizeof(BTRMGR_IARMAudioInServiceState_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
 
 const char*
 BTRMGR_GetDeviceTypeAsString (
@@ -1289,6 +1325,7 @@ btrMgrdeviceCallback (
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST       == eventId) ||
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST    == eventId) ||
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST   == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_OP_READY                      == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION                == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_FOUND                         == eventId) ){
 

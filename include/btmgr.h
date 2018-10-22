@@ -94,6 +94,7 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED,
     BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED,
+    BTRMGR_EVENT_DEVICE_OP_READY,
     BTRMGR_EVENT_DEVICE_OP_INFORMATION,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
@@ -205,10 +206,12 @@ typedef enum _BTRMGR_LeProperty_t {  // looking for a better enum name
  * @brief Represents the Low energy operations.
  */
 typedef enum _BTRMGR_LeOp_t {
+    BTRMGR_LE_OP_READY,
     BTRMGR_LE_OP_READ_VALUE,
     BTRMGR_LE_OP_WRITE_VALUE,
     BTRMGR_LE_OP_START_NOTIFY,
-    BTRMGR_LE_OP_STOP_NOTIFY
+    BTRMGR_LE_OP_STOP_NOTIFY,
+    BTRMGR_LE_OP_UNKNOWN
 } BTRMGR_LeOp_t;
 
 typedef enum _BTRMGR_GattCharFlags_t {
@@ -387,6 +390,7 @@ typedef struct _BTRMGR_ExternalDevice_t {
     unsigned short              m_vendorID;
     unsigned char               m_isLowEnergyDevice;
     unsigned int                m_externalDevicePIN;
+    unsigned char               m_requestConfirmation;
 } BTRMGR_ExternalDevice_t;
 
 /**
@@ -430,7 +434,6 @@ typedef struct _BTRMGR_EventMessage_t {
         BTRMGR_PairedDevices_t      m_pairedDevice;
         BTRMGR_MediaInfo_t          m_mediaInfo;
         BTRMGR_DeviceOpInfo_t       m_deviceOpInfo;
-        unsigned short              m_numOfDevices;
     };
 } BTRMGR_EventMessage_t;
 
@@ -885,6 +888,17 @@ BTRMGR_Result_t BTRMGR_GetLeCharacteristicUUID (unsigned char aui8AdapterIdx, BT
  * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
  */
 BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, char* aLeOpArg, char* rOpResult);
+
+/**
+ * @brief  This API performs LE operations on the specified bluetooth adapter.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  aui8State            0/1- Enable or Disable AudioIn service.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success.
+ */
+BTRMGR_Result_t BTRMGR_SetAudioInServiceState (unsigned char aui8AdapterIdx, unsigned char aui8State);
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);

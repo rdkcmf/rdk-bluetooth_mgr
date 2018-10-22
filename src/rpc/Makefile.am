@@ -19,7 +19,7 @@
 SUBDIRS =
 if USE_RPC
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/logger -I${top_srcdir}/include/rpc ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
-AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) -ldbus-1  -lIARMBus -lrdkloggers
+AM_LDFLAGS = -ldbus-1  -lIARMBus -lrdkloggers
 
 lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btmgr_iarm_external_interface.c

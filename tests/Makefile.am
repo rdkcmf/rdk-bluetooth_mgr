@@ -20,7 +20,7 @@ SUBDIRS = streamInOut
 INCLUDE_FILES =
 
 
-AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/src/main -I${top_srcdir}/include ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/src/main -I${top_srcdir}/include ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/wdmp-c -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}
 
 bin_PROGRAMS = btrMgrTest btrMgrHTMLControl
 btrMgrTest_SOURCES = btrMgr_test.c
@@ -28,11 +28,11 @@ btrMgrHTMLControl_SOURCES = btrMgr_testFcgi.c
 btrMgrHTMLControl_LDFLAGS = -lfcgi
 
 if USE_RPC
-AM_LDFLAGS = -ldbus-1  -lIARMBus
+AM_LDFLAGS = -ldbus-1  -lIARMBus -lrfcapi
 btrMgrTest_LDADD     = $(top_builddir)/src/rpc/libBTMgr.la
 btrMgrHTMLControl_LDADD = $(top_builddir)/src/rpc/libBTMgr.la
 else
-btrMgrTest_LDADD     = $(top_builddir)/src/main/libBTMgr.la
-btrMgrHTMLControl_LDADD = $(top_builddir)/src/main/libBTMgr.la
+btrMgrTest_LDADD     = $(top_builddir)/src/ifce/libBTMgr.la
+btrMgrHTMLControl_LDADD = $(top_builddir)/src/ifce/libBTMgr.la
 endif
 

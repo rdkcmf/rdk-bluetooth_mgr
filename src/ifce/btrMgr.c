@@ -26,6 +26,7 @@
 
 #include "btmgr.h"
 #include "btrMgr_logger.h"
+#include "rfcapi.h"
 
 #include "btrMgr_Types.h"
 #include "btrMgr_mediaTypes.h"
@@ -78,11 +79,12 @@ static BTRMgrDeviceHandle           ghBTRMgrDevHdlCurStreaming  = 0;
 static BTRMGR_DiscoveryHandle_t     ghBTRMgrDiscoveryHdl;
 static BTRMGR_DiscoveryHandle_t     ghBTRMgrBgDiscoveryHdl;
 
-static stBTRCoreAdapter             gDefaultAdapterContext;
-static stBTRCoreListAdapters        gListOfAdapters;
-static stBTRCoreDevMediaInfo        gstBtrCoreDevMediaInfo;
-static BTRMGR_PairedDevicesList_t   gListOfPairedDevices;
-static stBTRMgrStreamingInfo        gstBTRMgrStreamingInfo;
+static stBTRCoreAdapter                 gDefaultAdapterContext;
+static stBTRCoreListAdapters            gListOfAdapters;
+static stBTRCoreDevMediaInfo            gstBtrCoreDevMediaInfo;
+static BTRMGR_DiscoveredDevicesList_t   gListOfDiscoveredDevices;
+static BTRMGR_PairedDevicesList_t       gListOfPairedDevices;
+static stBTRMgrStreamingInfo            gstBTRMgrStreamingInfo;
 
 static unsigned char                gIsLeDeviceConnected        = 0;
 static unsigned char                gIsAgentActivated           = 0;
@@ -91,10 +93,12 @@ static unsigned char                gAcceptConnection           = 0;
 static unsigned char                gIsUserInitiated            = 0;
 static unsigned char                gIsAudOutStartupInProgress  = 0;
 static unsigned char                gDiscHoldOffTimeOutCbData   = 0;
+static unsigned char                gIsAudioInEnabled           = 0;
 static volatile guint               gTimeOutRef                 = 0;
 static volatile unsigned int        gIsAdapterDiscovering       = 0;
 
 static BTRMGR_DeviceOperationType_t gBgDiscoveryType            = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
+static BTRMGR_Events_t              gMediaPlaybackStPrev        = BTRMGR_EVENT_MAX;
 
 static void*                        gpvMainLoop                 = NULL;
 static void*                        gpvMainLoopThread           = NULL;
@@ -113,6 +117,7 @@ static const char* btrMgr_GetAdapterPath (unsigned char aui8AdapterIdx);
 
 static inline void btrMgr_SetAgentActivated (unsigned char aui8AgentActivated);
 static inline unsigned char btrMgr_GetAgentActivated (void);
+static void btrMgr_CheckAudioInServiceAvailability (void);
 
 static const char* btrMgr_GetDiscoveryDeviceTypeAsString (BTRMGR_DeviceOperationType_t adevOpType);
 //static const char* btrMgr_GetDiscoveryFilterAsString (BTRMGR_ScanFilter_t ascanFlt);
@@ -141,6 +146,9 @@ static eBTRMgrRet btrMgr_StopDeviceDiscovery (unsigned char aui8AdapterIdx, BTRM
 static eBTRMgrRet btrMgr_PreCheckDiscoveryStatus (unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aDevOpType);
 static eBTRMgrRet btrMgr_PostCheckDiscoveryStatus (unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aDevOpType);
 
+static void btrMgr_GetPairedDevInfo (BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_PairedDevices_t* apBtMgrPairedDevInfo);
+static void btrMgr_GetDiscoveredDevInfo (BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DiscoveredDevices_t* apBtMgrDiscoveredDevInfo);
+
 static unsigned char btrMgr_GetDevPaired (BTRMgrDeviceHandle ahBTRMgrDevHdl);
 
 static void btrMgr_SetDevConnected (BTRMgrDeviceHandle ahBTRMgrDevHdl, unsigned char aui8isDeviceConnected);
@@ -150,9 +158,9 @@ static BTRMGR_DeviceType_t btrMgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass de
 static BTRMGR_RSSIValue_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
 static eBTRMgrRet btrMgr_MapDevstatusInfoToEventInfo (void* p_StatusCB, BTRMGR_EventMessage_t* apstEventMessage, BTRMGR_Events_t type);
 
-static eBTRMgrRet btrMgr_StartCastingAudio (int outFileFd, int outMTUSize);
+static eBTRMgrRet btrMgr_StartCastingAudio (int outFileFd, int outMTUSize, eBTRCoreDevMediaType aenBtrCoreDevOutMType, void* apstBtrCoreDevOutMCodecInfo);
 static eBTRMgrRet btrMgr_StopCastingAudio (void);
-static eBTRMgrRet btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize, unsigned int ui32InSampFreq);
+static eBTRMgrRet btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize, eBTRCoreDevMediaType aenBtrCoreDevInMType, void* apstBtrCoreDevInMCodecInfo);
 static eBTRMgrRet btrMgr_StopReceivingAudio (void);
 
 static eBTRMgrRet btrMgr_ConnectToDevice (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t connectAs, unsigned int aui32ConnectRetryIdx, unsigned int aui32ConfirmIdx);
@@ -217,6 +225,30 @@ btrMgr_GetAgentActivated (
     void
 ) {
     return gIsAgentActivated;
+}
+
+static void
+btrMgr_CheckAudioInServiceAvailability (
+    void
+) {
+    RFC_ParamData_t param = {0};
+    /* We shall make this api generic and macro defined tr181 params as we start to enable diff services based on RFC */
+    WDMP_STATUS status = getRFCParameter("BTRMGR", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.AudioIn.Enable", &param);
+
+    if (status == WDMP_SUCCESS) {
+        BTRMGRLOG_DEBUG ("name = %s, type = %d, value = %s\n", param.name, param.type, param.value);
+
+        if (!strncmp(param.value, "true", strlen("true"))) {
+            gIsAudioInEnabled = 1;
+            BTRMGRLOG_INFO ("BTR AudioIn Serivce will be available.\n");
+        }
+        else {
+            BTRMGRLOG_INFO ("BTR AudioIn Serivce will not be available.\n");
+        }
+    }
+    else {
+        BTRMGRLOG_ERROR ("getRFCParameter Failed : %s\n", getRFCErrorString(status));
+    }
 }
 
 static const char*
@@ -622,6 +654,37 @@ btrMgr_PostCheckDiscoveryStatus (
 }
 
 
+static void
+btrMgr_GetDiscoveredDevInfo (
+    BTRMgrDeviceHandle          ahBTRMgrDevHdl,
+    BTRMGR_DiscoveredDevices_t* apBtMgrDiscDevInfo
+) {
+    int j = 0;
+
+    for (j = 0; j < gListOfDiscoveredDevices.m_numOfDevices; j++) {
+        if (ahBTRMgrDevHdl == gListOfDiscoveredDevices.m_deviceProperty[j].m_deviceHandle) {
+            memcpy(apBtMgrDiscDevInfo, &gListOfDiscoveredDevices.m_deviceProperty[j], sizeof(BTRMGR_DiscoveredDevices_t));;
+        }
+    }
+}
+
+
+static void
+btrMgr_GetPairedDevInfo (
+    BTRMgrDeviceHandle      ahBTRMgrDevHdl,
+    BTRMGR_PairedDevices_t* apBtMgrPairedDevInfo
+) {
+    int j = 0;
+
+    for (j = 0; j < gListOfPairedDevices.m_numOfDevices; j++) {
+        if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[j].m_deviceHandle) {
+            memcpy(apBtMgrPairedDevInfo, &gListOfPairedDevices.m_deviceProperty[j], sizeof(BTRMGR_PairedDevices_t));
+            break;
+        }
+    }
+}
+
+
 static unsigned char
 btrMgr_GetDevPaired (
     BTRMgrDeviceHandle  ahBTRMgrDevHdl
@@ -649,6 +712,7 @@ btrMgr_SetDevConnected (
         if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[i].m_deviceHandle) {
             gListOfPairedDevices.m_deviceProperty[i].m_isConnected = aui8isDeviceConnected; 
             BTRMGRLOG_WARN ("Setting = %lld - \tConnected = %d\n", ahBTRMgrDevHdl, aui8isDeviceConnected);
+            break;
         }
     }
 }
@@ -781,7 +845,6 @@ btrMgr_MapDevstatusInfoToEventInfo (
 
     apstEventMessage->m_adapterIndex = 0;
     apstEventMessage->m_eventType    = type;
-    apstEventMessage->m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;/* Application will have to get the list explicitly for list;Lets return the max value */
 
     if (!p_StatusCB)
         return eBTRMgrFailure;
@@ -808,6 +871,7 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_externalDevice.m_vendorID            = ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.ui32VendorId;
         apstEventMessage->m_externalDevice.m_isLowEnergyDevice   = 0;
         apstEventMessage->m_externalDevice.m_externalDevicePIN   = ((stBTRCoreConnCBInfo*)p_StatusCB)->ui32devPassKey;
+        apstEventMessage->m_externalDevice.m_requestConfirmation = ((stBTRCoreConnCBInfo*)p_StatusCB)->ucIsReqConfirmation;
         strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.pcDeviceName, BTRMGR_NAME_LEN_MAX - 1);
         strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, ((stBTRCoreConnCBInfo*)p_StatusCB)->stFoundDevice.pcDeviceAddress, BTRMGR_NAME_LEN_MAX - 1);
     }
@@ -826,6 +890,7 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_externalDevice.m_isLowEnergyDevice   = 0;
         strncpy(apstEventMessage->m_externalDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
         strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, "TO BE FILLED", BTRMGR_NAME_LEN_MAX - 1);
+        // Need to check for devAddress, if possible ?
     }
     else {
         apstEventMessage->m_pairedDevice.m_deviceHandle          = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
@@ -834,6 +899,8 @@ btrMgr_MapDevstatusInfoToEventInfo (
         apstEventMessage->m_pairedDevice.m_isLowEnergyDevice     = (apstEventMessage->m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//We shall make it generic later
         apstEventMessage->m_pairedDevice.m_ui32DevClassBtSpec    = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->ui32DevClassBtSpec;
         strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
+        strncpy(apstEventMessage->m_pairedDevice.m_deviceAddress, "TO BE FILLED", BTRMGR_NAME_LEN_MAX - 1);
+        // Need to add devAddress in stBTRCoreDevStatusCBInfo ?
     }
 
 
@@ -842,8 +909,10 @@ btrMgr_MapDevstatusInfoToEventInfo (
 
 static eBTRMgrRet
 btrMgr_StartCastingAudio (
-    int     outFileFd, 
-    int     outMTUSize
+    int                     outFileFd, 
+    int                     outMTUSize,
+    eBTRCoreDevMediaType    aenBtrCoreDevOutMType,
+    void*                   apstBtrCoreDevOutMCodecInfo
 ) {
     stBTRMgrOutASettings    lstBtrMgrAcOutASettings;
     stBTRMgrInASettings     lstBtrMgrSoInASettings;
@@ -886,8 +955,8 @@ btrMgr_StartCastingAudio (
                                                                     (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
     lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo   = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ?
                                                                     (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
-    lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
-                                                                    (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
+    lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ?
+                                                                    (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
 
 
     if (!(lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo) || !(lstBtrMgrSoInASettings.pstBtrMgrInCodecInfo) || !(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo)) {
@@ -911,9 +980,9 @@ btrMgr_StartCastingAudio (
     }
 
 
-    if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+    if (aenBtrCoreDevOutMType == eBTRCoreDevMediaTypeSBC) {
         stBTRMgrSBCInfo*            pstBtrMgrSoOutSbcInfo       = ((stBTRMgrSBCInfo*)(lstBtrMgrSoOutASettings.pstBtrMgrOutCodecInfo));
-        stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo   = ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo));
+        stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo   = (stBTRCoreDevMediaSbcInfo*)apstBtrCoreDevOutMCodecInfo;
 
         lstBtrMgrSoOutASettings.eBtrMgrOutAType   = eBTRMgrATypeSBC;
         if (pstBtrMgrSoOutSbcInfo && pstBtrCoreDevMediaSbcInfo) {
@@ -1052,16 +1121,23 @@ btrMgr_StopCastingAudio (
 
 static eBTRMgrRet
 btrMgr_StartReceivingAudio (
-    int             inFileFd,
-    int             inMTUSize,
-    unsigned int    ui32InSampFreq
+    int                  inFileFd,
+    int                  inMTUSize,
+    eBTRCoreDevMediaType aenBtrCoreDevInMType,
+    void*                apstBtrCoreDevInMCodecInfo
 ) {
-    eBTRMgrRet      lenBtrMgrRet = eBTRMgrSuccess;
-    int             inBytesToEncode = 3072;
+    eBTRMgrRet          lenBtrMgrRet = eBTRMgrSuccess;
+    int                 inBytesToEncode = 3072;
+    stBTRMgrInASettings lstBtrMgrSiInASettings;
+
 
     if ((ghBTRMgrDevHdlCurStreaming != 0) || (inMTUSize == 0)) {
         return eBTRMgrFailInArg;
     }
+
+
+    /* Reset the buffer */
+    memset(&lstBtrMgrSiInASettings, 0, sizeof(lstBtrMgrSiInASettings));
 
 
     /* Init StreamIn module - Create Pipeline */
@@ -1070,9 +1146,144 @@ btrMgr_StartReceivingAudio (
         return eBTRMgrInitFailure;
     }
 
-    if ((lenBtrMgrRet = BTRMgr_SI_Start(gstBTRMgrStreamingInfo.hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize, ui32InSampFreq)) != eBTRMgrSuccess) {
+
+    lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ?
+                                                                (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
+
+    if (aenBtrCoreDevInMType == eBTRCoreDevMediaTypeSBC) {
+        stBTRMgrSBCInfo*            pstBtrMgrSiInSbcInfo       = ((stBTRMgrSBCInfo*)(lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo));
+        stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo  = (stBTRCoreDevMediaSbcInfo*)apstBtrCoreDevInMCodecInfo;
+
+        lstBtrMgrSiInASettings.eBtrMgrInAType   = eBTRMgrATypeSBC;
+        if (pstBtrMgrSiInSbcInfo && pstBtrCoreDevMediaSbcInfo) {
+
+            if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq8K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq16K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq32K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq44_1K;
+            }
+            else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq48K;
+            }
+            else {
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreqUnknown;
+            }
+
+
+            switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
+            case eBTRCoreDevMediaAChanMono:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanMono;
+                break;
+            case eBTRCoreDevMediaAChanDualChannel:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanDualChannel;
+                break;
+            case eBTRCoreDevMediaAChanStereo:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanStereo;
+                break;
+            case eBTRCoreDevMediaAChanJointStereo:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanJStereo;
+                break;
+            case eBTRCoreDevMediaAChan5_1:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan5_1;
+                break;
+            case eBTRCoreDevMediaAChan7_1:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan7_1;
+                break;
+            case eBTRCoreDevMediaAChanUnknown:
+            default:
+                pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanUnknown;
+                break;
+            }
+
+            pstBtrMgrSiInSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
+            pstBtrMgrSiInSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
+            pstBtrMgrSiInSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
+            pstBtrMgrSiInSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
+            pstBtrMgrSiInSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
+            pstBtrMgrSiInSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
+            pstBtrMgrSiInSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
+        }
+    }
+    else if (aenBtrCoreDevInMType == eBTRCoreDevMediaTypeAAC) {
+        stBTRMgrMPEGInfo*           pstBtrMgrSiInAacInfo       = ((stBTRMgrMPEGInfo*)(lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo));
+        stBTRCoreDevMediaMpegInfo*  pstBtrCoreDevMediaAacInfo  = (stBTRCoreDevMediaMpegInfo*)apstBtrCoreDevInMCodecInfo;
+
+        lstBtrMgrSiInASettings.eBtrMgrInAType   = eBTRMgrATypeAAC;
+        if (pstBtrMgrSiInAacInfo && pstBtrCoreDevMediaAacInfo) {
+
+            if (pstBtrCoreDevMediaAacInfo->ui32DevMSFreq == 8000) {
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq  = eBTRMgrSFreq8K;
+            }
+            else if (pstBtrCoreDevMediaAacInfo->ui32DevMSFreq == 16000) {
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq  = eBTRMgrSFreq16K;
+            }
+            else if (pstBtrCoreDevMediaAacInfo->ui32DevMSFreq == 32000) {
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq  = eBTRMgrSFreq32K;
+            }
+            else if (pstBtrCoreDevMediaAacInfo->ui32DevMSFreq == 44100) {
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq  = eBTRMgrSFreq44_1K;
+            }
+            else if (pstBtrCoreDevMediaAacInfo->ui32DevMSFreq == 48000) {
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq  = eBTRMgrSFreq48K;
+            }
+            else {
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq  = eBTRMgrSFreqUnknown;
+            }
+
+
+            switch (pstBtrCoreDevMediaAacInfo->eDevMAChan) {
+            case eBTRCoreDevMediaAChanMono:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChanMono;
+                break;
+            case eBTRCoreDevMediaAChanDualChannel:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChanDualChannel;
+                break;
+            case eBTRCoreDevMediaAChanStereo:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChanStereo;
+                break;
+            case eBTRCoreDevMediaAChanJointStereo:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChanJStereo;
+                break;
+            case eBTRCoreDevMediaAChan5_1:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChan5_1;
+                break;
+            case eBTRCoreDevMediaAChan7_1:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChan7_1;
+                break;
+            case eBTRCoreDevMediaAChanUnknown:
+            default:
+                pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan  = eBTRMgrAChanUnknown;
+                break;
+            }
+            
+            pstBtrMgrSiInAacInfo->ui8MpegCrc       = pstBtrCoreDevMediaAacInfo->ui8DevMMpegCrc;
+            pstBtrMgrSiInAacInfo->ui8MpegLayer     = pstBtrCoreDevMediaAacInfo->ui8DevMMpegLayer;
+            pstBtrMgrSiInAacInfo->ui8MpegMpf       = pstBtrCoreDevMediaAacInfo->ui8DevMMpegMpf;
+            pstBtrMgrSiInAacInfo->ui8MpegRfa       = pstBtrCoreDevMediaAacInfo->ui8DevMMpegRfa;
+            pstBtrMgrSiInAacInfo->ui16MpegBitrate  = pstBtrCoreDevMediaAacInfo->ui16DevMMpegBitrate;
+        }
+    }
+    
+
+
+    lstBtrMgrSiInASettings.i32BtrMgrDevFd   = inFileFd;
+    lstBtrMgrSiInASettings.i32BtrMgrDevMtu  = inMTUSize;
+
+
+    if ((lenBtrMgrRet = BTRMgr_SI_Start(gstBTRMgrStreamingInfo.hBTRMgrSiHdl, inBytesToEncode, &lstBtrMgrSiInASettings)) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("BTRMgr_SI_Start FAILED\n");
     }
+
+
+    if (lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo)
+        free(lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo);
 
     return lenBtrMgrRet;
 }
@@ -1152,11 +1363,11 @@ btrMgr_ConnectToDevice (
         /* connectAs param is unused for now.. */
         lenBtrCoreRet = BTRCore_ConnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDeviceType);
         if (lenBtrCoreRet != enBTRCoreSuccess) {
-            BTRMGRLOG_ERROR ("Failed to Connect to this device\n");
+            BTRMGRLOG_ERROR ("Failed to Connect to this device - %llu\n", ahBTRMgrDevHdl);
             lenBtrMgrRet = eBTRMgrFailure;
         }
         else {
-            BTRMGRLOG_INFO ("Connected Successfully\n");
+            BTRMGRLOG_INFO ("Connected Successfully - %llu\n", ahBTRMgrDevHdl);
             lenBtrMgrRet = eBTRMgrSuccess;
         }
 
@@ -1175,17 +1386,22 @@ btrMgr_ConnectToDevice (
             } while (--ui32confirmIdx);
 
             if (lenBtrCoreRet != enBTRCoreSuccess) {
-                BTRMGRLOG_ERROR ("Failed to Connect to this device - Confirmed\n");
+                BTRMGRLOG_ERROR ("Failed to Connect to this device - Confirmed - %llu\n", ahBTRMgrDevHdl);
                 lenBtrMgrRet = eBTRMgrFailure;
+
+                if (BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDeviceType) != enBTRCoreSuccess) {
+                    BTRMGRLOG_ERROR ("Failed to Disconnect - %llu\n", ahBTRMgrDevHdl);
+                }
             }
             else {
-                BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
+                BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed - %llu\n", ahBTRMgrDevHdl);
 
                 if (lenBTRCoreDeviceType == enBTRCoreLE) {
                     lenDevOpType = connectAs;
                     gIsLeDeviceConnected = 1;
                 }
-                else if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn)) {
+                else if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet) ||
+                         (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
                     if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
                        BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
                        btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected);
@@ -1232,6 +1448,8 @@ btrMgr_StartAudioStreamingOut (
     int                         deviceWriteMTU = 0;
     unsigned int                ui32retryIdx = aui32ConnectRetryIdx + 1;
     stBTRCorePairedDevicesCount listOfPDevices;
+    eBTRCoreDevMediaType        lenBtrCoreDevOutMType = eBTRCoreDevMediaTypeUnknown;
+    void*                       lpstBtrCoreDevOutMCodecInfo = NULL;
 
 
     if (ghBTRMgrDevHdlCurStreaming == ahBTRMgrDevHdl) {
@@ -1241,10 +1459,29 @@ btrMgr_StartAudioStreamingOut (
 
 
     if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming != ahBTRMgrDevHdl)) {
-        BTRMGRLOG_ERROR ("Its already streaming out. lets stop this and start on other device \n");
-        if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
-            BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
-            return eBTRMgrFailure;
+        enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreUnknown;
+        enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
+
+        BTRMGRLOG_WARN ("Its already streaming out. lets stop this and start on other device \n");
+
+        lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+        BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+            /* Streaming-Out is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-Out\n");
+                BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
+                return lenBtrMgrResult;
+            }
+        }
+        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+            /* Streaming-In is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-In\n");
+                BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
+                return lenBtrMgrResult;
+            }
         }
     }
 
@@ -1311,22 +1548,29 @@ btrMgr_StartAudioStreamingOut (
                 gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
             }
 
-            gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+            gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+                                                                           (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
 
             lenBtrCoreRet = BTRCore_GetDeviceMediaInfo(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers, &gstBtrCoreDevMediaInfo);
             if (lenBtrCoreRet == enBTRCoreSuccess) {
-                if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
-                    ui16DevMediaBitrate = ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate;
+                lenBtrCoreDevOutMType      = gstBtrCoreDevMediaInfo.eBtrCoreDevMType;
+                lpstBtrCoreDevOutMCodecInfo= gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo;
 
-                    BTRMGRLOG_INFO ("DevMedInfo SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
-                    BTRMGRLOG_INFO ("DevMedInfo AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
-                    BTRMGRLOG_INFO ("DevMedInfo SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
-                    BTRMGRLOG_INFO ("DevMedInfo SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
-                    BTRMGRLOG_INFO ("DevMedInfo SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
-                    BTRMGRLOG_INFO ("DevMedInfo SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
-                    BTRMGRLOG_INFO ("DevMedInfo SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
-                    BTRMGRLOG_INFO ("DevMedInfo SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
-                    BTRMGRLOG_DEBUG("DevMedInfo SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+                if (lenBtrCoreDevOutMType == eBTRCoreDevMediaTypeSBC) {
+                    stBTRCoreDevMediaSbcInfo*   lpstBtrCoreDevMSbcInfo = (stBTRCoreDevMediaSbcInfo*)lpstBtrCoreDevOutMCodecInfo;
+
+                    ui16DevMediaBitrate = lpstBtrCoreDevMSbcInfo->ui16DevMSbcBitrate;
+
+                    BTRMGRLOG_INFO ("DevMedInfo SFreq         = %d\n", lpstBtrCoreDevMSbcInfo->ui32DevMSFreq);
+                    BTRMGRLOG_INFO ("DevMedInfo AChan         = %d\n", lpstBtrCoreDevMSbcInfo->eDevMAChan);
+                    BTRMGRLOG_INFO ("DevMedInfo SbcAllocMethod= %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcAllocMethod);
+                    BTRMGRLOG_INFO ("DevMedInfo SbcSubbands   = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcSubbands);
+                    BTRMGRLOG_INFO ("DevMedInfo SbcBlockLength= %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcBlockLength);
+                    BTRMGRLOG_INFO ("DevMedInfo SbcMinBitpool = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcMinBitpool);
+                    BTRMGRLOG_INFO ("DevMedInfo SbcMaxBitpool = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcMaxBitpool);
+                    BTRMGRLOG_INFO ("DevMedInfo SbcFrameLen   = %d\n", lpstBtrCoreDevMSbcInfo->ui16DevMSbcFrameLen);
+                    BTRMGRLOG_DEBUG("DevMedInfo SbcBitrate    = %d\n", lpstBtrCoreDevMSbcInfo->ui16DevMSbcBitrate);
                 }
             }
 
@@ -1335,7 +1579,7 @@ btrMgr_StartAudioStreamingOut (
                 lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
                 if ((lenBtrCoreRet == enBTRCoreSuccess) && deviceWriteMTU) {
                     /* Now that you got the FD & Read/Write MTU, start casting the audio */
-                    if ((lenBtrMgrRet = btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU)) == eBTRMgrSuccess) {
+                    if ((lenBtrMgrRet = btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU, lenBtrCoreDevOutMType, lpstBtrCoreDevOutMCodecInfo)) == eBTRMgrSuccess) {
                         ghBTRMgrDevHdlCurStreaming = listOfPDevices.devices[i].tDeviceId;
                         BTRMGRLOG_INFO("Streaming Started.. Enjoy the show..! :)\n");
                     }
@@ -1369,11 +1613,11 @@ btrMgr_StartAudioStreamingOut (
                 } while (--ui32confirmIdx);
 
                 if (lenBtrCoreRet != enBTRCoreSuccess) {
-                    BTRMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
+                    BTRMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed - %llu\n", listOfPDevices.devices[i].tDeviceId);
                     lenBtrMgrRet = eBTRMgrFailure; 
                 }
                 else
-                    BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
+                    BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed - %llu\n", listOfPDevices.devices[i].tDeviceId);
             }
 
             lenBtrMgrRet = eBTRMgrFailure; 
@@ -1392,7 +1636,7 @@ btrMgr_StartAudioStreamingOut (
         lstEventMessage.m_pairedDevice.m_deviceType    = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
         lstEventMessage.m_pairedDevice.m_isLowEnergyDevice = (lstEventMessage.m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//will make it generic later
         strncpy(lstEventMessage.m_pairedDevice.m_name, listOfPDevices.devices[i].pcDeviceName, BTRMGR_NAME_LEN_MAX);
-        lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
+        strncpy(lstEventMessage.m_pairedDevice.m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, BTRMGR_NAME_LEN_MAX);
 
         if (lenBtrMgrRet == eBTRMgrSuccess) {
             lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE;
@@ -1599,6 +1843,7 @@ BTRMGR_Init (
         BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
 
+    btrMgr_CheckAudioInServiceAvailability();
       
     pMainLoop   = g_main_loop_new (NULL, FALSE);
     gpvMainLoop = (void*)pMainLoop;
@@ -2327,6 +2572,7 @@ BTRMGR_GetDiscoveredDevices (
     }
     else {
         memset (pDiscoveredDevices, 0, sizeof(BTRMGR_DiscoveredDevicesList_t));
+        memset (&gListOfDiscoveredDevices, 0, sizeof(gListOfDiscoveredDevices));
         if (lstBtrCoreListOfSDevices.numberOfDevices) {
             BTRMGR_DiscoveredDevices_t *lpstBtrMgrSDevice = NULL;
 
@@ -2351,6 +2597,8 @@ BTRMGR_GetDiscoveredDevices (
             }
             /*  Success */
             BTRMGRLOG_INFO ("Successful\n");
+            /* Update BTRMgr DiscoveredDev List cache */
+            memcpy (&gListOfDiscoveredDevices, pDiscoveredDevices, sizeof(BTRMGR_DiscoveredDevicesList_t));
         }
         else {
             BTRMGRLOG_WARN("No Device is found yet\n");
@@ -2365,11 +2613,12 @@ BTRMGR_PairDevice (
     unsigned char       aui8AdapterIdx,
     BTRMgrDeviceHandle  ahBTRMgrDevHdl
 ) {
-    BTRMGR_Result_t     lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    enBTRCoreRet        lenBtrCoreRet   = enBTRCoreSuccess;
-    BTRMGR_Events_t     lBtMgrOutEvent  = -1;
-    unsigned char       ui8reActivateAgent = 0;
-
+    BTRMGR_Result_t         lenBtrMgrResult     = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet            lenBtrCoreRet       = enBTRCoreSuccess;
+    BTRMGR_Events_t         lBtMgrOutEvent      = -1;
+    unsigned char           ui8reActivateAgent  = 0;
+    enBTRCoreDeviceType     lenBTRCoreDevTy     = enBTRCoreSpeakers;
+    enBTRCoreDeviceClass    lenBTRCoreDevCl     = enBTRCore_DC_Unknown;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -2390,18 +2639,32 @@ BTRMGR_PairDevice (
         return BTRMGR_RESULT_SUCCESS;
     }
 
-    if (btrMgr_GetAgentActivated()) {
-        BTRMGRLOG_INFO ("De-Activate agent\n");
-        if ((lenBtrCoreRet = BTRCore_UnregisterAgent(ghBTRCoreHdl)) != enBTRCoreSuccess) {
-            BTRMGRLOG_ERROR ("Failed to Deactivate Agent\n");
-            lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
-        }
-        else {
-            btrMgr_SetAgentActivated(0);
-            ui8reActivateAgent = 1;
+    BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+    /* We always need a agent to get the pairing done.. if no agent registered, default agent will be used.
+     * But we will not able able to get the PIN and other stuff received at our level. We have to have agent
+     * for pairing process..
+     *
+     * We are using the default-agent for the audio devices and we have it deployed to field already.
+     *
+     * Since HID is new device and to not to break the Audio devices, BTMGR specific Agent is registered only for HID devices.
+     */
+    if (lenBTRCoreDevTy != enBTRCoreHID) {
+        if (btrMgr_GetAgentActivated()) {
+            BTRMGRLOG_INFO ("De-Activate agent\n");
+            if ((lenBtrCoreRet = BTRCore_UnregisterAgent(ghBTRCoreHdl)) != enBTRCoreSuccess) {
+                BTRMGRLOG_ERROR ("Failed to Deactivate Agent\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+            else {
+                btrMgr_SetAgentActivated(0);
+                ui8reActivateAgent = 1;
+            }
         }
     }
-
+    else
+        BTRMGRLOG_DEBUG ("For HID Devices, let us use the agent\n");
 
     if (enBTRCoreSuccess != BTRCore_PairDevice(ghBTRCoreHdl, ahBTRMgrDevHdl)) {
         BTRMGRLOG_ERROR ("Failed to pair a device\n");
@@ -2414,24 +2677,22 @@ BTRMGR_PairDevice (
         lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE;
     }
 
-
-    {
-        BTRMGR_EventMessage_t lstEventMessage;
+    /* The Paring is not a blocking call for HID. So we can sent the pairing complete msg when paring actually completed and gets a notification.
+     * But the pairing failed, we must send it right here. */
+    if ((lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) || ((lenBtrMgrResult == BTRMGR_RESULT_SUCCESS) && (lenBTRCoreDevTy != enBTRCoreHID))) {
+        BTRMGR_EventMessage_t  lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
+        btrMgr_GetDiscoveredDevInfo (ahBTRMgrDevHdl, &lstEventMessage.m_discoveredDevice);
         lstEventMessage.m_adapterIndex = aui8AdapterIdx;
         lstEventMessage.m_eventType    = lBtMgrOutEvent;
-        lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
-
         
         if (gfpcBBTRMgrEventOut) {
-            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+            gfpcBBTRMgrEventOut(lstEventMessage);
         }
     }
 
     /* Update the Paired Device List */
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
-
 
     if (ui8reActivateAgent) {
         BTRMGRLOG_INFO ("Activate agent\n");
@@ -2460,6 +2721,7 @@ BTRMGR_UnpairDevice (
     enBTRCoreDeviceClass    lenBTRCoreDevCl     = enBTRCore_DC_Unknown;
     BTRMGR_Events_t         lBtMgrOutEvent      = -1;
     unsigned char           ui8reActivateAgent  = 0;
+    BTRMGR_EventMessage_t   lstEventMessage;
 
 
     if (!ghBTRCoreHdl) {
@@ -2476,7 +2738,10 @@ BTRMGR_UnpairDevice (
 
     /* Get the latest Paired Device List; This is added as the developer could add a device thro test application and try unpair thro' UI */
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
-    if (0 == btrMgr_GetDevPaired(ahBTRMgrDevHdl)) {
+    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+    btrMgr_GetPairedDevInfo (ahBTRMgrDevHdl, &lstEventMessage.m_pairedDevice);
+
+    if (!lstEventMessage.m_pairedDevice.m_deviceHandle) {
         BTRMGRLOG_ERROR ("Not a Paired device...\n");
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2528,12 +2793,8 @@ BTRMGR_UnpairDevice (
 
 
     {
-        BTRMGR_EventMessage_t lstEventMessage;
-        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
         lstEventMessage.m_adapterIndex = aui8AdapterIdx;
         lstEventMessage.m_eventType    = lBtMgrOutEvent;
-        lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX; /* Application will have to get the list explicitly for list; Lets return the max value */
 
         if (gfpcBBTRMgrEventOut) {
             gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
@@ -2542,7 +2803,6 @@ BTRMGR_UnpairDevice (
 
     /* Update the Paired Device List */
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
-
 
     if (ui8reActivateAgent) {
         BTRMGRLOG_INFO ("Activate agent\n");
@@ -2733,16 +2993,17 @@ BTRMGR_DisconnectFromDevice (
     /* connectAs param is unused for now.. */
     lenBtrCoreRet = BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDevTy);
     if (lenBtrCoreRet != enBTRCoreSuccess) {
-        BTRMGRLOG_ERROR ("Failed to Disconnect\n");
+        BTRMGRLOG_ERROR ("Failed to Disconnect - %llu\n", ahBTRMgrDevHdl);
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
 
         {
             BTRMGR_EventMessage_t lstEventMessage;
             memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
+            btrMgr_GetPairedDevInfo(ahBTRMgrDevHdl, &lstEventMessage.m_pairedDevice);
+
             lstEventMessage.m_adapterIndex = aui8AdapterIdx;
             lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED;
-            lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
             lstEventMessage.m_pairedDevice.m_isLowEnergyDevice = (lenBTRCoreDevCl==enBTRCore_DC_Tile)?1:0;//Will make it generic later
 
             if (gfpcBBTRMgrEventOut) {
@@ -2779,13 +3040,17 @@ BTRMGR_DisconnectFromDevice (
             if (lenBTRCoreDevTy == enBTRCoreLE) {
                 gIsLeDeviceConnected = 0;
             }
+            else if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet) ||
+                     (lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
+                btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
+                ghBTRMgrDevHdlLastConnected = 0;
+            }
             else if (lenBTRCoreDevTy == enBTRCoreHID) {
                 btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
             }
             else {
-                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
                 btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
-                ghBTRMgrDevHdlLastConnected = 0;
             }
         }
     }
@@ -3219,17 +3484,19 @@ BTRMGR_StartAudioStreamingIn (
     BTRMgrDeviceHandle              ahBTRMgrDevHdl,
     BTRMGR_DeviceOperationType_t    connectAs
 ) {
-    BTRMGR_Result_t     lenBtrMgrResult   = BTRMGR_RESULT_SUCCESS;
-    BTRMGR_DeviceType_t lenBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
-    eBTRMgrRet          lenBtrMgrRet      = eBTRMgrSuccess;
-    enBTRCoreRet        lenBtrCoreRet     = enBTRCoreSuccess;
-    enBTRCoreDeviceType lenBtrCoreDevType = enBTRCoreUnknown;
+    BTRMGR_Result_t             lenBtrMgrResult   = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_DeviceType_t         lenBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
+    eBTRMgrRet                  lenBtrMgrRet      = eBTRMgrSuccess;
+    enBTRCoreRet                lenBtrCoreRet     = enBTRCoreSuccess;
+    enBTRCoreDeviceType         lenBtrCoreDevType = enBTRCoreUnknown;
     stBTRCorePairedDevicesCount listOfPDevices;
-    int i = 0;
-    int i32IsFound = 0;
-    int i32DeviceFD = 0;
-    int i32DeviceReadMTU = 0;
-    int i32DeviceWriteMTU = 0;
+    int                         i = 0;
+    int                         i32IsFound = 0;
+    int                         i32DeviceFD = 0;
+    int                         i32DeviceReadMTU = 0;
+    int                         i32DeviceWriteMTU = 0;
+    eBTRCoreDevMediaType        lenBtrCoreDevInMType = eBTRCoreDevMediaTypeUnknown;
+    void*                       lpstBtrCoreDevInMCodecInfo = NULL;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -3242,18 +3509,51 @@ BTRMGR_StartAudioStreamingIn (
     }
 
     if (ghBTRMgrDevHdlCurStreaming == ahBTRMgrDevHdl) {
-        BTRMGRLOG_WARN ("Its already streaming-in in this device.. Check the volume :)\n");
-        return BTRMGR_RESULT_SUCCESS;
+
+        if (gMediaPlaybackStPrev == BTRMGR_EVENT_MEDIA_TRACK_STOPPED) {
+            BTRMGRLOG_DEBUG ("Starting Media Playback.\n");
+            lenBtrMgrResult = BTRMGR_MediaControl (aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_MEDIA_CTRL_PLAY);
+        }
+        else if (gMediaPlaybackStPrev == BTRMGR_EVENT_MEDIA_TRACK_PAUSED) {
+            BTRMGRLOG_DEBUG ("Resuming Media Playback.\n");
+            lenBtrMgrResult = BTRMGR_MediaControl (aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_MEDIA_CTRL_PLAY);
+        }
+        else {
+            BTRMGRLOG_WARN ("Its already streaming-in in this device.. Check the volume :)\n");
+        }
+
+        if (lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) {
+            BTRMGRLOG_ERROR ("Failed to perform Media Control!\n");
+        }
+
+        return lenBtrMgrResult;
     }
 
 
     if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming != ahBTRMgrDevHdl)) {
-        BTRMGRLOG_ERROR ("Its already streaming in. lets stop this and start on other device \n");
+        enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreUnknown;
+        enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
 
-        lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming);
-        if (lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) {
-            BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
-            return lenBtrMgrResult;
+        BTRMGRLOG_WARN ("Its already streaming in. lets stop this and start on other device \n");
+
+        lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+        BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+            /* Streaming-Out is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-Out\n");
+                BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
+                return lenBtrMgrResult;
+            }
+        }
+        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+            /* Streaming-In is happening; stop it */
+            if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-In\n");
+                BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
+                return lenBtrMgrResult;
+            }
         }
     }
 
@@ -3296,27 +3596,46 @@ BTRMGR_StartAudioStreamingIn (
         gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
     }
 
-    gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
+
+    gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) > sizeof(stBTRCoreDevMediaMpegInfo) ?
+                                                                   (sizeof(stBTRCoreDevMediaPcmInfo) > sizeof(stBTRCoreDevMediaSbcInfo) ? sizeof(stBTRCoreDevMediaPcmInfo) : sizeof(stBTRCoreDevMediaSbcInfo)) : sizeof(stBTRCoreDevMediaMpegInfo));
 
     lenBtrCoreRet = BTRCore_GetDeviceMediaInfo(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType, &gstBtrCoreDevMediaInfo);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if (gstBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
-            BTRMGRLOG_INFO ("DevMedInfo SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
-            BTRMGRLOG_INFO ("DevMedInfo AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
-            BTRMGRLOG_INFO ("DevMedInfo SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
-            BTRMGRLOG_INFO ("DevMedInfo SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
-            BTRMGRLOG_INFO ("DevMedInfo SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
-            BTRMGRLOG_INFO ("DevMedInfo SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
-            BTRMGRLOG_INFO ("DevMedInfo SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
-            BTRMGRLOG_INFO ("DevMedInfo SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
-            BTRMGRLOG_DEBUG("DevMedInfo SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+        lenBtrCoreDevInMType      = gstBtrCoreDevMediaInfo.eBtrCoreDevMType;
+        lpstBtrCoreDevInMCodecInfo= gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo;
+
+        if (lenBtrCoreDevInMType == eBTRCoreDevMediaTypeSBC) {
+            stBTRCoreDevMediaSbcInfo*   lpstBtrCoreDevMSbcInfo = (stBTRCoreDevMediaSbcInfo*)lpstBtrCoreDevInMCodecInfo;
+
+            BTRMGRLOG_INFO ("DevMedInfo SFreq           = %d\n", lpstBtrCoreDevMSbcInfo->ui32DevMSFreq);
+            BTRMGRLOG_INFO ("DevMedInfo AChan           = %d\n", lpstBtrCoreDevMSbcInfo->eDevMAChan);
+            BTRMGRLOG_INFO ("DevMedInfo SbcAllocMethod  = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcAllocMethod);
+            BTRMGRLOG_INFO ("DevMedInfo SbcSubbands     = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcSubbands);
+            BTRMGRLOG_INFO ("DevMedInfo SbcBlockLength  = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcBlockLength);
+            BTRMGRLOG_INFO ("DevMedInfo SbcMinBitpool   = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcMinBitpool);
+            BTRMGRLOG_INFO ("DevMedInfo SbcMaxBitpool   = %d\n", lpstBtrCoreDevMSbcInfo->ui8DevMSbcMaxBitpool);
+            BTRMGRLOG_INFO ("DevMedInfo SbcFrameLen     = %d\n", lpstBtrCoreDevMSbcInfo->ui16DevMSbcFrameLen);
+            BTRMGRLOG_DEBUG("DevMedInfo SbcBitrate      = %d\n", lpstBtrCoreDevMSbcInfo->ui16DevMSbcBitrate);
+        }
+        else if (lenBtrCoreDevInMType == eBTRCoreDevMediaTypeAAC) {
+            stBTRCoreDevMediaMpegInfo*   lpstBtrCoreDevMAacInfo = (stBTRCoreDevMediaMpegInfo*)lpstBtrCoreDevInMCodecInfo;
+
+            BTRMGRLOG_INFO ("DevMedInfo SFreq           = %d\n", lpstBtrCoreDevMAacInfo->ui32DevMSFreq);
+            BTRMGRLOG_INFO ("DevMedInfo AChan           = %d\n", lpstBtrCoreDevMAacInfo->eDevMAChan);
+            BTRMGRLOG_INFO ("DevMedInfo AacMpegCrc      = %d\n", lpstBtrCoreDevMAacInfo->ui8DevMMpegCrc);
+            BTRMGRLOG_INFO ("DevMedInfo AacMpegLayer    = %d\n", lpstBtrCoreDevMAacInfo->ui8DevMMpegLayer);
+            BTRMGRLOG_INFO ("DevMedInfo AacMpegMpf      = %d\n", lpstBtrCoreDevMAacInfo->ui8DevMMpegMpf);
+            BTRMGRLOG_INFO ("DevMedInfo AacMpegRfa      = %d\n", lpstBtrCoreDevMAacInfo->ui8DevMMpegRfa);
+            BTRMGRLOG_INFO ("DevMedInfo AacMpegFrmLen   = %d\n", lpstBtrCoreDevMAacInfo->ui16DevMMpegFrameLen);
+            BTRMGRLOG_INFO ("DevMedInfo AacMpegBitrate  = %d\n", lpstBtrCoreDevMAacInfo->ui16DevMMpegBitrate);
         }
     }
 
     /* Aquire Device Data Path to start audio reception */
     lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType, &i32DeviceFD, &i32DeviceReadMTU, &i32DeviceWriteMTU);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if ((lenBtrMgrRet = btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU, ((stBTRCoreDevMediaSbcInfo*)(gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq)) == eBTRMgrSuccess) {
+        if ((lenBtrMgrRet = btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU, lenBtrCoreDevInMType, lpstBtrCoreDevInMCodecInfo)) == eBTRMgrSuccess) {
             ghBTRMgrDevHdlCurStreaming = listOfPDevices.devices[i].tDeviceId;
             BTRMGRLOG_INFO("Audio Reception Started.. Enjoy the show..! :)\n");
         }
@@ -3327,11 +3646,6 @@ BTRMGR_StartAudioStreamingIn (
     }
     else {
         BTRMGRLOG_ERROR ("Failed to get Device Data Path. So Will not be able to stream now\n");
-        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
-    }
-
-    if (BTRMGR_RESULT_SUCCESS == lenBtrMgrResult && enBTRCoreSuccess != BTRCore_ReportMediaPosition (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType)) {
-        BTRMGRLOG_ERROR ("Failed to set BTRCore report media position info!!!");
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     
@@ -3459,6 +3773,7 @@ BTRMGR_SetEventResponse (
         break;
     case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST:
         gEventRespReceived = 1;
+        gAcceptConnection  = 0;
         if (apstBTRMgrEvtRsp->m_eventResp) {
             gAcceptConnection = 1;
         }
@@ -3746,6 +4061,7 @@ BTRMGR_PerformLeOp (
     BTRMGR_ConnectedDevicesList_t listOfCDevices;
     unsigned char isConnected  = 0;
     unsigned short ui16LoopIdx = 0;
+    enBTRCoreLeOp aenBTRCoreLeOp =  enBTRCoreLeOpUnknown;
 
 
     if (!ghBTRCoreHdl) {
@@ -3772,9 +4088,11 @@ BTRMGR_PerformLeOp (
        return BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
-    enBTRCoreLeOp aenBTRCoreLeOp =  enBTRCoreLeOpUnknown;
 
     switch (aLeOpType) {
+    case BTRMGR_LE_OP_READY:
+        aenBTRCoreLeOp = enBTRCoreLeOpGReady;
+        break;
     case BTRMGR_LE_OP_READ_VALUE:
         aenBTRCoreLeOp = enBTRCoreLeOpGReadValue;
         break;
@@ -3787,6 +4105,10 @@ BTRMGR_PerformLeOp (
     case BTRMGR_LE_OP_STOP_NOTIFY:
         aenBTRCoreLeOp = enBTRCoreLeOpGStopNotify;
         break;
+    case BTRMGR_LE_OP_UNKNOWN:
+    default:
+        aenBTRCoreLeOp = enBTRCoreLeOpGReady;
+        break;
     }
 
     if (enBTRCoreSuccess != BTRCore_PerformLEOp (ghBTRCoreHdl, ahBTRMgrDevHdl, aBtrLeUuid, aenBTRCoreLeOp, aLeOpArg, rOpResult)) {
@@ -3797,6 +4119,19 @@ BTRMGR_PerformLeOp (
     return lenBtrMgrResult;
 }
 
+BTRMGR_Result_t
+BTRMGR_SetAudioInServiceState (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   aui8State
+) {
+    if ((gIsAudioInEnabled = aui8State)) {
+        BTRMGRLOG_INFO ("AudioIn Service is Enabled.\n");
+    }
+    else {
+        BTRMGRLOG_INFO ("AudioIn Service is Disabled.\n");
+    }
+    return BTRMGR_RESULT_SUCCESS;
+}
 
 
 const char*
@@ -4006,11 +4341,28 @@ btrMgr_DeviceStatusCb (
 
     memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
+    if (!gIsAudioInEnabled &&
+        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
+        lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET)) {
+        BTRMGRLOG_DEBUG ("Rejecting status callback - BTR AudioIn is currently Disabled!\n");
+        return lenBtrCoreRet;
+    }
+
     BTRMGRLOG_INFO ("Received status callback\n");
 
     if (p_StatusCB) {
 
         switch (p_StatusCB->eDeviceCurrState) {
+        case enBTRCoreDevStPaired:
+            /* Post this event only for HID Devices */
+            if (p_StatusCB->eDeviceType == enBTRCoreHID) {
+                btrMgr_GetDiscoveredDevInfo (p_StatusCB->deviceId, &lstEventMessage.m_discoveredDevice);
+                lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE;
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
+                }
+            }
+            break;
         case enBTRCoreDevStInitialized:
             break;
         case enBTRCoreDevStConnecting:
@@ -4177,6 +4529,17 @@ btrMgr_DeviceStatusCb (
                 }
             }
             break;
+        case enBTRCoreDevStOpReady:
+            if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TILE) {
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_READY);
+                //Not a big fan of devOpResponse. We should think of a better way to do this
+                strncpy(lstEventMessage.m_deviceOpInfo.m_notifyData, p_StatusCB->devOpResponse, BTRMGR_MAX_STR_LEN-1);
+
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+                }
+            }
+            break;
         case enBTRCoreDevStOpInfo:
             if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TILE) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_INFORMATION);
@@ -4235,12 +4598,10 @@ btrMgr_DeviceDiscoveryCb (
             if (astBTRCoreDiscoveryCbInfo->adapter.bDiscovering)
             {
                 lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED;
-                lstEventMessage.m_numOfDevices = 0;
             }
             else
             {
                 lstEventMessage.m_eventType    = BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE;
-                lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
             }
 
             gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
@@ -4259,8 +4620,8 @@ btrMgr_ConnectionInIntimationCb (
 ) {
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
     BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    BTRMGR_Events_t         lBtMgrOutEvent  = -1;
     BTRMGR_EventMessage_t   lstEventMessage;
+    BTRMGR_Events_t         lBtMgrOutEvent  = -1;
     unsigned char           lui8AdapterIdx = 0;
 
      if (!apstConnCbInfo) {
@@ -4268,34 +4629,51 @@ btrMgr_ConnectionInIntimationCb (
         return enBTRCoreInvalidArg;
     }
 
-
-    if (apstConnCbInfo->ui32devPassKey) {
-        BTRMGRLOG_ERROR ("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
+    if (BTRMGR_DEVICE_TYPE_HID != btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType)) {
+        if (!gIsAudioInEnabled) {
+            BTRMGRLOG_WARN ("Incoming Connection Rejected - BTR AudioIn is currently Disabled!\n");
+            *api32ConnInIntimResp = 0;
+            return lenBtrCoreRet;
+        }
     }
 
+    if (apstConnCbInfo->ui32devPassKey) {
+        BTRMGRLOG_WARN ("Incoming Connection passkey = %06d\n", apstConnCbInfo->ui32devPassKey);
+    }
 
     memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-    btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);  
+    btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);
 
+    /* We mustn't need this conditional check; We must always reset the globals before invoking the Callbacks. But as per code review comments, resetting it only for HID */
+    if (BTRMGR_DEVICE_TYPE_HID == btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType)) {
+        gEventRespReceived = 0;
+        gAcceptConnection  = 0;
+    }
 
     if (gfpcBBTRMgrEventOut) {
         gfpcBBTRMgrEventOut(lstEventMessage); /* Post a callback */
     }
-    
 
-    /* Max 60 sec timeout - Polled at 500ms second interval */
+    /* Used for PIN DISPLAY request */
+    if (!apstConnCbInfo->ucIsReqConfirmation) {
+        BTRMGRLOG_WARN ("This paring request does not require a confirmation BUT it might need you to enter the PIN at the specified device\n");
+        /* Set the return to true; just in case */
+        *api32ConnInIntimResp = 1;
+        return lenBtrCoreRet;
+    }
+
+    /* Max 25 sec timeout - Polled at 500ms second interval */
     {
-        unsigned int ui32sleepIdx = 120;
+        unsigned int ui32sleepIdx = 50;
 
         do {
             usleep(500000);
         } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
 
-        gEventRespReceived = 0;
     }
 
     BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
-    if (gAcceptConnection == 1) {
+    if (gEventRespReceived && gAcceptConnection == 1) {
         BTRMGRLOG_ERROR ("Pin-Passkey accepted\n");
         gAcceptConnection = 0;  //reset variabhle for the next connection
         *api32ConnInIntimResp = 1;
@@ -4306,6 +4684,7 @@ btrMgr_ConnectionInIntimationCb (
         *api32ConnInIntimResp = 0;
     }
 
+    gEventRespReceived = 0;
 
     if (*api32ConnInIntimResp == 1) {
         BTRMGRLOG_INFO ("Paired Successfully\n");
@@ -4319,11 +4698,8 @@ btrMgr_ConnectionInIntimationCb (
     }
 
 
-    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
     lstEventMessage.m_adapterIndex = lui8AdapterIdx;
     lstEventMessage.m_eventType    = lBtMgrOutEvent;
-    lstEventMessage.m_numOfDevices = BTRMGR_DEVICE_COUNT_MAX;  /* Application will have to get the list explicitly for list; Lets return the max value */
 
     if (gfpcBBTRMgrEventOut) {
         gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
@@ -4353,7 +4729,14 @@ btrMgr_ConnectionInAuthenticationCb (
     if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
         apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
 
+        if (!gIsAudioInEnabled) {
+            BTRMGRLOG_WARN ("Incoming Connection Rejected - BTR AudioIn is currently Disabled!\n");
+            *api32ConnInAuthResp = 0;
+            return lenBtrCoreRet;
+        }
+
         BTRMGRLOG_WARN ("Incoming Connection from BT SmartPhone/Tablet\n");
+
         if (apstConnCbInfo->stKnownDevice.tDeviceId != ghBTRMgrDevHdlLastConnected) {
             BTRMGR_EventMessage_t lstEventMessage;
 
@@ -4364,14 +4747,18 @@ btrMgr_ConnectionInAuthenticationCb (
                 gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
             }
 
+            /* PairedList updation is necessary for Connect event than Disconnect event */
+            BTRMGR_GetPairedDevices (lstEventMessage.m_adapterIndex, &gListOfPairedDevices);
+
             
-            {   /* Max 60 sec timeout - Polled at 500ms second interval */
-                unsigned int ui32sleepIdx = 120;
+            {   /* Max 25 sec timeout - Polled at 500ms second interval */
+                unsigned int ui32sleepIdx = 50;
 
                 do {
                     usleep(500000);
                 } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
             }
+
 
             if (gEventRespReceived == 1) {
                 BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
@@ -4435,6 +4822,10 @@ btrMgr_ConnectionInAuthenticationCb (
             *api32ConnInAuthResp = 0;
         }
     }
+    else
+    {
+        BTRMGRLOG_ERROR ("Incoming Connection Auth Callback\n");
+    }
 
     return lenBtrCoreRet;
 }
@@ -4462,18 +4853,22 @@ btrMgr_MediaStatusCb (
         switch (mediaStatus->eBTMediaStUpdate) {
         case eBTRCoreMediaTrkStStarted:
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_STARTED;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             memcpy(&lstEventMessage.m_mediaInfo.m_mediaPositionInfo, &mediaStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
             break;
-        case eBTRCoreMediaTrkStPlaying:
+        case eBTRCoreMediaTrkStPlaying: 
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_PLAYING;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             memcpy(&lstEventMessage.m_mediaInfo.m_mediaPositionInfo, &mediaStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
             break;
         case eBTRCoreMediaTrkStPaused:
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_PAUSED;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             memcpy(&lstEventMessage.m_mediaInfo.m_mediaPositionInfo, &mediaStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
             break;
         case eBTRCoreMediaTrkStStopped:
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_STOPPED;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             memcpy(&lstEventMessage.m_mediaInfo.m_mediaPositionInfo, &mediaStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
             break;
         case eBTRCoreMediaTrkPosition:
@@ -4486,11 +4881,13 @@ btrMgr_MediaStatusCb (
             break;
         case eBTRCoreMediaPlaybackEnded:
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             //memcpy(&lstEventMessage.m_mediaInfo.m_mediaPositionInfo, &mediaStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
             break;
         default:
             break;
         }
+
 
         if (gfpcBBTRMgrEventOut) {
             gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */

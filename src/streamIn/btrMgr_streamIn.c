@@ -214,25 +214,150 @@ BTRMgr_SI_GetStatus (
 
 eBTRMgrRet
 BTRMgr_SI_Start (
-    tBTRMgrSiHdl    hBTRMgrSiHdl,
-    int             aiInBufMaxSize,
-    int             aiBTDevFd,
-    int             aiBTDevMTU,
-    unsigned int    aiBTDevSFreq
+    tBTRMgrSiHdl            hBTRMgrSiHdl,
+    int                     aiInBufMaxSize,
+    stBTRMgrInASettings*    apstBtrMgrSiInASettings
 ) {
-    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
-    stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
+    eBTRMgrRet      leBtrMgrSiRet       = eBTRMgrSuccess;
+    stBTRMgrSIHdl*  pstBtrMgrSiHdl      = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
+
+    eBTRMgrAChan    leBtrMgrSiInAChan   = eBTRMgrAChanUnknown;
+    eBTRMgrSFreq    leBtrMgrSiInSFreq   = eBTRMgrSFreqUnknown;
+
+    const char*     lpcBtrMgrInSiAChanMode = NULL;
+    unsigned int    lui32BtrMgrInSiAChan= 0;
+    unsigned int    lui32BtrMgrInSiSFreq= 0;
+
+    unsigned char   lui8SbcAllocMethod  = 0;
+    unsigned char   lui8SbcSubbands     = 0;
+    unsigned char   lui8SbcBlockLength  = 0;
+    unsigned char   lui8SbcMinBitpool   = 0;
+    unsigned char   lui8SbcMaxBitpool   = 0;
+
+    unsigned char   lui8MpegCrc         = 0;
+    unsigned char   lui8MpegLayer       = 0;
+    unsigned char   lui8MpegMpf         = 0;
+    unsigned char   lui8MpegRfa         = 0;
+    unsigned short  lui16MpegBitrate    = 0;
 
 #ifdef USE_GST1
-    eBTRMgrSIGstRet leBtrMgrSiGstRet = eBTRMgrSIGstSuccess;
+    eBTRMgrSIGstRet leBtrMgrSiGstRet    = eBTRMgrSIGstSuccess;
+    const char*     lpcAudioInType      = NULL;
 #endif
+
 
     if (pstBtrMgrSiHdl == NULL) {
         return eBTRMgrNotInitialized;
     }
 
+    if ((apstBtrMgrSiInASettings == NULL) || (apstBtrMgrSiInASettings->pstBtrMgrInCodecInfo == NULL)) {
+        return eBTRMgrFailInArg;
+    }
+
+
+    if (apstBtrMgrSiInASettings->eBtrMgrInAType == eBTRMgrATypeSBC) {
+        stBTRMgrSBCInfo* pstBtrMgrSiInSbcInfo = (stBTRMgrSBCInfo*)(apstBtrMgrSiInASettings->pstBtrMgrInCodecInfo);
+
+        leBtrMgrSiInAChan   = pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan;
+        leBtrMgrSiInSFreq   = pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq;
+        lui8SbcAllocMethod  = pstBtrMgrSiInSbcInfo->ui8SbcAllocMethod;
+        lui8SbcSubbands     = pstBtrMgrSiInSbcInfo->ui8SbcSubbands;
+        lui8SbcBlockLength  = pstBtrMgrSiInSbcInfo->ui8SbcBlockLength;
+        lui8SbcMinBitpool   = pstBtrMgrSiInSbcInfo->ui8SbcMinBitpool;
+        lui8SbcMaxBitpool   = pstBtrMgrSiInSbcInfo->ui8SbcMaxBitpool;
+
+        lpcAudioInType      = BTRMGR_AUDIO_INPUT_TYPE_SBC;
+
+        (void)lui8SbcAllocMethod;
+        (void)lui8SbcSubbands;
+        (void)lui8SbcBlockLength;
+        (void)lui8SbcMinBitpool;
+        (void)lui8SbcMaxBitpool;
+    }
+    else if (apstBtrMgrSiInASettings->eBtrMgrInAType == eBTRMgrATypeAAC) {
+        stBTRMgrMPEGInfo* pstBtrMgrSiInAacInfo = (stBTRMgrMPEGInfo*)(apstBtrMgrSiInASettings->pstBtrMgrInCodecInfo);
+
+        leBtrMgrSiInAChan   = pstBtrMgrSiInAacInfo->eBtrMgrMpegAChan;
+        leBtrMgrSiInSFreq   = pstBtrMgrSiInAacInfo->eBtrMgrMpegSFreq;
+        lui8MpegCrc         = pstBtrMgrSiInAacInfo->ui8MpegCrc;
+        lui8MpegLayer       = pstBtrMgrSiInAacInfo->ui8MpegLayer;
+        lui8MpegMpf         = pstBtrMgrSiInAacInfo->ui8MpegMpf;
+        lui8MpegRfa         = pstBtrMgrSiInAacInfo->ui8MpegRfa;
+        lui16MpegBitrate    = pstBtrMgrSiInAacInfo->ui16MpegBitrate;
+
+        lpcAudioInType      = BTRMGR_AUDIO_INPUT_TYPE_AAC;
+
+        (void)lui8MpegCrc;
+        (void)lui8MpegLayer;
+        (void)lui8MpegMpf;
+        (void)lui8MpegRfa;
+        (void)lui16MpegBitrate;
+    }
+
+
+    switch (leBtrMgrSiInAChan) {
+    case eBTRMgrAChanMono:
+        lui32BtrMgrInSiAChan   = 1;
+        lpcBtrMgrInSiAChanMode = BTRMGR_AUDIO_CHANNELMODE_MONO;
+        break;
+    case eBTRMgrAChanDualChannel:
+        lui32BtrMgrInSiAChan   = 2;
+        lpcBtrMgrInSiAChanMode = BTRMGR_AUDIO_CHANNELMODE_DUAL;
+        break;
+    case eBTRMgrAChanStereo:
+        lui32BtrMgrInSiAChan   = 2;
+        lpcBtrMgrInSiAChanMode = BTRMGR_AUDIO_CHANNELMODE_STEREO;
+        break;
+    case eBTRMgrAChanJStereo:
+        lui32BtrMgrInSiAChan   = 2;
+        lpcBtrMgrInSiAChanMode = BTRMGR_AUDIO_CHANNELMODE_JSTEREO;
+        break;
+    case eBTRMgrAChan5_1:
+        lui32BtrMgrInSiAChan   = 6;
+        break;
+    case eBTRMgrAChan7_1:
+        lui32BtrMgrInSiAChan   = 8;
+        break;
+    case eBTRMgrAChanUnknown:
+    default:
+        lui32BtrMgrInSiAChan   = 2;
+        lpcBtrMgrInSiAChanMode = BTRMGR_AUDIO_CHANNELMODE_STEREO;
+        break;
+    }
+
+    (void)lui32BtrMgrInSiAChan;
+    (void)lpcBtrMgrInSiAChanMode;
+
+ 
+     switch (leBtrMgrSiInSFreq) {
+     case eBTRMgrSFreq8K:
+         lui32BtrMgrInSiSFreq = 8000;
+     case eBTRMgrSFreq16K:
+         lui32BtrMgrInSiSFreq = 16000;
+         break;
+     case eBTRMgrSFreq32K:
+         lui32BtrMgrInSiSFreq = 32000;
+         break;
+     case eBTRMgrSFreq44_1K:
+         lui32BtrMgrInSiSFreq = 44100;
+         break;
+     case eBTRMgrSFreq48K:
+         lui32BtrMgrInSiSFreq = 48000;
+         break;
+     case eBTRMgrSFreqUnknown:
+     default:
+         lui32BtrMgrInSiSFreq = 48000;
+         break;
+     }
+
+
 #ifdef USE_GST1
-    if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStart(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, aiInBufMaxSize, aiBTDevFd, aiBTDevMTU, aiBTDevSFreq)) != eBTRMgrSIGstSuccess) {
+    if ((leBtrMgrSiGstRet = BTRMgr_SI_GstStart (pstBtrMgrSiHdl->hBTRMgrSiGstHdl,
+                                                aiInBufMaxSize,
+                                                apstBtrMgrSiInASettings->i32BtrMgrDevFd,
+                                                apstBtrMgrSiInASettings->i32BtrMgrDevMtu,
+                                                lui32BtrMgrInSiSFreq,
+                                                lpcAudioInType)) != eBTRMgrSIGstSuccess) {
         BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrSiGstRet);
         leBtrMgrSiRet = eBTRMgrFailure;
     }

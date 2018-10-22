@@ -63,7 +63,7 @@ typedef struct appDataStruct{
 static int streamOutTestMainAlternate (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStart (int argc, char* argv[], appDataStruct *pstAppData);
 static int streamOutLiveTestMainAlternateStop (appDataStruct *pstAppData);
-static int streamInLiveTestMainAlternateStart (int fd_number, int MTU_size, unsigned int aui32InSFreq, appDataStruct *pstAppData);
+static int streamInLiveTestMainAlternateStart (stBTRMgrInASettings* apstBtrMgrSiInASettings, appDataStruct *pstAppData);
 static int streamInLiveTestMainAlternateStop (appDataStruct *pstAppData);
 
 
@@ -739,7 +739,83 @@ main (
             break;
         case 26:
             printf("Start Streaming from remote device to settop with BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataReadMTU);
-            streamInLiveTestMainAlternateStart(stAppData.iDataPath, stAppData.iDataReadMTU, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq, &stAppData);
+            {
+                stBTRMgrInASettings     lstBtrMgrSiInASettings;
+
+                lstBtrMgrSiInASettings.i32BtrMgrDevFd   = stAppData.iDataPath;
+                lstBtrMgrSiInASettings.i32BtrMgrDevMtu  = stAppData.iDataReadMTU;
+
+                 lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ?
+                                                                             (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
+
+                if (stAppData.stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+                    stBTRMgrSBCInfo*            pstBtrMgrSiInSbcInfo       = ((stBTRMgrSBCInfo*)(lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo));
+                    stBTRCoreDevMediaSbcInfo*   pstBtrCoreDevMediaSbcInfo  = (stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
+
+                    lstBtrMgrSiInASettings.eBtrMgrInAType   = eBTRMgrATypeSBC;
+                    if (pstBtrMgrSiInSbcInfo && pstBtrCoreDevMediaSbcInfo) {
+
+                        if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 8000) {
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq8K;
+                        }
+                        else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 16000) {
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq16K;
+                        }
+                        else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 32000) {
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq32K;
+                        }
+                        else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 44100) {
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq44_1K;
+                        }
+                        else if (pstBtrCoreDevMediaSbcInfo->ui32DevMSFreq == 48000) {
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreq48K;
+                        }
+                        else {
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcSFreq  = eBTRMgrSFreqUnknown;
+                        }
+
+
+                        switch (pstBtrCoreDevMediaSbcInfo->eDevMAChan) {
+                        case eBTRCoreDevMediaAChanMono:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanMono;
+                            break;
+                        case eBTRCoreDevMediaAChanDualChannel:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanDualChannel;
+                            break;
+                        case eBTRCoreDevMediaAChanStereo:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanStereo;
+                            break;
+                        case eBTRCoreDevMediaAChanJointStereo:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanJStereo;
+                            break;
+                        case eBTRCoreDevMediaAChan5_1:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan5_1;
+                            break;
+                        case eBTRCoreDevMediaAChan7_1:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChan7_1;
+                            break;
+                        case eBTRCoreDevMediaAChanUnknown:
+                        default:
+                            pstBtrMgrSiInSbcInfo->eBtrMgrSbcAChan  = eBTRMgrAChanUnknown;
+                            break;
+                        }
+
+                        pstBtrMgrSiInSbcInfo->ui8SbcAllocMethod  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcAllocMethod;
+                        pstBtrMgrSiInSbcInfo->ui8SbcSubbands     = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcSubbands;
+                        pstBtrMgrSiInSbcInfo->ui8SbcBlockLength  = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcBlockLength;
+                        pstBtrMgrSiInSbcInfo->ui8SbcMinBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMinBitpool;
+                        pstBtrMgrSiInSbcInfo->ui8SbcMaxBitpool   = pstBtrCoreDevMediaSbcInfo->ui8DevMSbcMaxBitpool;
+                        pstBtrMgrSiInSbcInfo->ui16SbcFrameLen    = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcFrameLen;
+                        pstBtrMgrSiInSbcInfo->ui16SbcBitrate     = pstBtrCoreDevMediaSbcInfo->ui16DevMSbcBitrate;
+                    }
+                }
+
+
+                streamInLiveTestMainAlternateStart(&lstBtrMgrSiInASettings, &stAppData);
+
+                if (lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo)
+                    free(lstBtrMgrSiInASettings.pstBtrMgrInCodecInfo);
+            }
             break;
         case 27:
             printf("Stop Sending Live to BT Dev FD = %d MTU = %d\n", stAppData.iDataPath, stAppData.iDataWriteMTU);
@@ -1876,15 +1952,10 @@ streamOutLiveTestMainAlternateStop (
 
 static int
 streamInLiveTestMainAlternateStart (
-    int             fd_number,
-    int             MTU_size,
-    unsigned int    aui32InSFreq,
-    appDataStruct*  pstAppData
+    stBTRMgrInASettings* apstBtrMgrSiInASettings,
+    appDataStruct*       pstAppData
 ) {
-
     int     inBytesToEncode= IN_BUF_SIZE;
-    int     inFileFd       = fd_number;
-    int     inMTUSize      = MTU_size;
 
 
 
@@ -1897,7 +1968,7 @@ streamInLiveTestMainAlternateStart (
     pstAppData->channels = 2;
 #endif
 
-    BTRMgr_SI_Start(pstAppData->hBTRMgrSiHdl, inBytesToEncode, inFileFd, inMTUSize, aui32InSFreq);
+    BTRMgr_SI_Start(pstAppData->hBTRMgrSiHdl, inBytesToEncode, apstBtrMgrSiInASettings);
 
     printf("BT AUDIO IN - STARTED \n");
 

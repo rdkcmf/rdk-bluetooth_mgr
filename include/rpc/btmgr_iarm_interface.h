@@ -69,6 +69,7 @@
 #define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION       "GetMediaCurrentPosition"
 #define BTRMGR_IARM_METHOD_GET_LE_PROPERTY                  "GetLeProperty"
 #define BTRMGR_IARM_METHOD_PERFORM_LE_OP                    "PerformLeOperation"
+#define BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE       "SetAudioInServiceState"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
 
@@ -100,6 +101,7 @@ typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED,
     BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED,
     BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED,
+    BTRMGR_IARM_EVENT_DEVICE_OP_READY,
     BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION,
     BTRMGR_IARM_EVENT_MAX
 } BTRMGR_IARM_Events_t;
@@ -224,6 +226,12 @@ typedef struct _BTRMGR_IARMDiscoveryStatus_t {
     BTRMGR_DiscoveryStatus_t     m_discoveryInProgress;
     BTRMGR_DeviceOperationType_t m_discoveryType;
 } BTRMGR_IARMDiscoveryStatus_t;
+
+typedef struct _BTRMGR_IARMAudioInServiceState_t {
+    unsigned char m_adapterIndex;
+    unsigned char m_serviceState;
+} BTRMGR_IARMAudioInServiceState_t;
+
 
 /** @} */
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */
