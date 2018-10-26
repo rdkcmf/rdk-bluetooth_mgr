@@ -526,9 +526,17 @@ int main(int argc, char *argv[])
             case 8:
                 {
                     int ch = 0;
-                    printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) ]\n");
+                    BTRMGR_DeviceOperationType_t discoveryType = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) | 2 - HID ]\n");
                     ch = getDeviceSelection();
-                    rc = BTRMGR_StartDeviceDiscovery(0, (ch)? BTRMGR_DEVICE_OP_TYPE_LE : BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+                    if (0 == ch)
+                        discoveryType = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    else if (1 == ch)
+                        discoveryType = BTRMGR_DEVICE_OP_TYPE_LE;
+                    else if (2 == ch)
+                        discoveryType = BTRMGR_DEVICE_OP_TYPE_HID;
+
+                    rc = BTRMGR_StartDeviceDiscovery(0, discoveryType);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -538,9 +546,17 @@ int main(int argc, char *argv[])
             case 9:
                 {
                     int ch = 0;
-                    printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) ]\n");
+                    BTRMGR_DeviceOperationType_t discoveryType = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    printf ("Enter Scan Type : [0 - Normal(BR/EDR) | 1 - LE (BLE) | 2 - HID ]\n");
                     ch = getDeviceSelection();
-                    rc = BTRMGR_StopDeviceDiscovery(0, (ch)? BTRMGR_DEVICE_OP_TYPE_LE : BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+                    if (0 == ch)
+                        discoveryType = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    else if (1 == ch)
+                        discoveryType = BTRMGR_DEVICE_OP_TYPE_LE;
+                    else if (2 == ch)
+                        discoveryType = BTRMGR_DEVICE_OP_TYPE_HID;
+
+                    rc = BTRMGR_StopDeviceDiscovery(0, discoveryType);
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else

@@ -84,7 +84,6 @@ static stBTRCoreDevMediaInfo        gstBtrCoreDevMediaInfo;
 static BTRMGR_PairedDevicesList_t   gListOfPairedDevices;
 static stBTRMgrStreamingInfo        gstBTRMgrStreamingInfo;
 
-static unsigned char                gIsDeviceConnected          = 0;
 static unsigned char                gIsLeDeviceConnected        = 0;
 static unsigned char                gIsAgentActivated           = 0;
 static unsigned char                gEventRespReceived          = 0;
@@ -143,6 +142,10 @@ static eBTRMgrRet btrMgr_PreCheckDiscoveryStatus (unsigned char aui8AdapterIdx, 
 static eBTRMgrRet btrMgr_PostCheckDiscoveryStatus (unsigned char aui8AdapterIdx, BTRMGR_DeviceOperationType_t aDevOpType);
 
 static unsigned char btrMgr_GetDevPaired (BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
+static void btrMgr_SetDevConnected (BTRMgrDeviceHandle ahBTRMgrDevHdl, unsigned char aui8isDeviceConnected);
+static unsigned char btrMgr_GetDevConnected (BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
 static BTRMGR_DeviceType_t btrMgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type);
 static BTRMGR_RSSIValue_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
 static eBTRMgrRet btrMgr_MapDevstatusInfoToEventInfo (void* p_StatusCB, BTRMGR_EventMessage_t* apstEventMessage, BTRMGR_Events_t type);
@@ -233,6 +236,8 @@ btrMgr_GetDiscoveryDeviceTypeAsString (
         opType = "LE";
         break;
     case BTRMGR_DEVICE_OP_TYPE_HID:
+        opType = "HID";
+        break;
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
         opType = "UNKNOWN";
     }
@@ -632,6 +637,41 @@ btrMgr_GetDevPaired (
     return 0;
 }
 
+
+static void
+btrMgr_SetDevConnected (
+    BTRMgrDeviceHandle  ahBTRMgrDevHdl,
+    unsigned char       aui8isDeviceConnected
+) {
+    int i = 0;
+
+    for (i = 0; i < gListOfPairedDevices.m_numOfDevices; i++) {
+        if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[i].m_deviceHandle) {
+            gListOfPairedDevices.m_deviceProperty[i].m_isConnected = aui8isDeviceConnected; 
+            BTRMGRLOG_WARN ("Setting = %lld - \tConnected = %d\n", ahBTRMgrDevHdl, aui8isDeviceConnected);
+        }
+    }
+}
+
+
+static unsigned char
+btrMgr_GetDevConnected (
+    BTRMgrDeviceHandle ahBTRMgrDevHdl
+) {
+    unsigned char lui8isDeviceConnected = 0;
+    int           i = 0;
+
+    for (i = 0; i < gListOfPairedDevices.m_numOfDevices; i++) {
+        if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[i].m_deviceHandle) {
+            lui8isDeviceConnected = gListOfPairedDevices.m_deviceProperty[i].m_isConnected;
+            BTRMGRLOG_WARN ("Getting = %lld - \tConnected = %d\n", ahBTRMgrDevHdl, lui8isDeviceConnected);
+        }
+    }
+    
+    return lui8isDeviceConnected;
+}
+
+
 static BTRMGR_DeviceType_t
 btrMgr_MapDeviceTypeFromCore (
     enBTRCoreDeviceClass    device_type
@@ -692,7 +732,16 @@ btrMgr_MapDeviceTypeFromCore (
     case enBTRCore_DC_Tile:
         type = BTRMGR_DEVICE_TYPE_TILE;
         break;
-    case enBTRCore_DC_HID:
+    case enBTRCore_DC_HID_Keyboard:
+        type = BTRMGR_DEVICE_TYPE_HID;
+        break;
+    case enBTRCore_DC_HID_Mouse:
+        type = BTRMGR_DEVICE_TYPE_HID;
+        break;
+    case enBTRCore_DC_HID_MouseKeyBoard:
+        type = BTRMGR_DEVICE_TYPE_HID;
+        break;
+    case enBTRCore_DC_HID_Joystick:
         type = BTRMGR_DEVICE_TYPE_HID;
         break;
     case enBTRCore_DC_Reserved:
@@ -1090,6 +1139,8 @@ btrMgr_ConnectToDevice (
         lenBTRCoreDeviceType = enBTRCoreLE;
         break;
     case BTRMGR_DEVICE_OP_TYPE_HID:
+        lenBTRCoreDeviceType = enBTRCoreHID;
+        break;
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
         lenBTRCoreDeviceType = enBTRCoreUnknown;
@@ -1130,19 +1181,28 @@ btrMgr_ConnectToDevice (
             else {
                 BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed\n");
 
-                if ((lenBTRCoreDeviceType != enBTRCoreLE) && (connectAs != BTRMGR_DEVICE_OP_TYPE_HID)) {
+                if (lenBTRCoreDeviceType == enBTRCoreLE) {
+                    lenDevOpType = connectAs;
+                    gIsLeDeviceConnected = 1;
+                }
+                else if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn)) {
                     if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
                        BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
                        btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected);
                     }
 
                     btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl);
-                    gIsDeviceConnected = 1;
+                    btrMgr_SetDevConnected(ahBTRMgrDevHdl, 1);
                     gIsUserInitiated = 0;
                     ghBTRMgrDevHdlLastConnected = ahBTRMgrDevHdl;
-                } else {
+                }
+                else if (lenBTRCoreDeviceType == enBTRCoreHID) {
                     lenDevOpType = connectAs;
-                    gIsLeDeviceConnected = 1;
+                    btrMgr_SetDevConnected(ahBTRMgrDevHdl, 1);
+                }
+                else {
+                    lenDevOpType = connectAs;
+                    btrMgr_SetDevConnected(ahBTRMgrDevHdl, 1);
                 }
             }
         }
@@ -2070,6 +2130,8 @@ BTRMGR_StartDeviceDiscovery (
         lenBTRCoreDeviceType = enBTRCoreLE;
         break;
     case BTRMGR_DEVICE_OP_TYPE_HID:
+        lenBTRCoreDeviceType = enBTRCoreHID;
+        break;
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
         lenBTRCoreDeviceType = enBTRCoreUnknown;
@@ -2147,6 +2209,8 @@ BTRMGR_StopDeviceDiscovery (
         lenBTRCoreDeviceType = enBTRCoreLE;
         break;
     case BTRMGR_DEVICE_OP_TYPE_HID:
+        lenBTRCoreDeviceType = enBTRCoreHID;
+        break;
     case BTRMGR_DEVICE_OP_TYPE_UNKNOWN:
     default:
         lenBTRCoreDeviceType = enBTRCoreUnknown;
@@ -2621,7 +2685,7 @@ BTRMGR_DisconnectFromDevice (
     lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
     BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
 
-    if (lenBTRCoreDevTy != enBTRCoreLE && !gIsDeviceConnected) {
+    if ((lenBTRCoreDevTy != enBTRCoreLE) && !btrMgr_GetDevConnected(ahBTRMgrDevHdl)) { 
         BTRMGRLOG_ERROR ("No Device is connected at this time\n");
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -2712,12 +2776,16 @@ BTRMGR_DisconnectFromDevice (
         else {
             BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
 
-            if (lenBTRCoreDevTy != enBTRCoreLE) {
-                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
-                gIsDeviceConnected = 0;
-                ghBTRMgrDevHdlLastConnected = 0;
-            } else {
+            if (lenBTRCoreDevTy == enBTRCoreLE) {
                 gIsLeDeviceConnected = 0;
+            }
+            else if (lenBTRCoreDevTy == enBTRCoreHID) {
+                btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
+            }
+            else {
+                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
+                btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
+                ghBTRMgrDevHdlLastConnected = 0;
             }
         }
     }
@@ -3064,6 +3132,7 @@ BTRMGR_StopAudioStreamingOut (
 
 
     if (ghBTRMgrDevHdlCurStreaming != ahBTRMgrDevHdl) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
@@ -3072,7 +3141,7 @@ BTRMGR_StopAudioStreamingOut (
         BTRMGRLOG_ERROR ("btrMgr_StopCastingAudio = %d\n", lenBtrMgrRet);
     }
 
-    if (gIsDeviceConnected) { 
+    if (btrMgr_GetDevConnected(ahBTRMgrDevHdl) == 1) {
        BTRCore_ReleaseDeviceDataPath (ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, enBTRCoreSpeakers);
     }
 
@@ -3993,8 +4062,11 @@ btrMgr_DeviceStatusCb (
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)) {
 
                     /* Update the flag as the Device is Connected */
-                    if (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_TILE) {
-                        gIsDeviceConnected = 1;
+                    if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID) {
+                        btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 1);
+                    }
+                    else if (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_TILE) {
+                        btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 1);
                         ghBTRMgrDevHdlLastConnected = lstEventMessage.m_pairedDevice.m_deviceHandle;
                     }
 
@@ -4018,9 +4090,12 @@ btrMgr_DeviceStatusCb (
                     /* update the flags as the LE device is NOT Connected */
                     gIsLeDeviceConnected = 0;
                 }
+                else if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID) {
+                    btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 0);
+                }
                 else if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
                     /* update the flags as the device is NOT Connected */
-                    gIsDeviceConnected = 0;
+                    btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 0);
 
                     if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
                         lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
@@ -4033,7 +4108,7 @@ btrMgr_DeviceStatusCb (
                         BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming);
                     }
                 }
-                else if ((gIsDeviceConnected == 1) &&
+                else if ((btrMgr_GetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle) == 1) &&
                          (ghBTRMgrDevHdlLastConnected == lstEventMessage.m_pairedDevice.m_deviceHandle)) {
 
                     if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
@@ -4076,7 +4151,7 @@ btrMgr_DeviceStatusCb (
 
                     if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
                         /* update the flags as the device is NOT Connected */
-                        gIsDeviceConnected = 0;
+                        btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 0);
 
                         BTRMGRLOG_INFO ("lstEventMessage.m_pairedDevice.m_deviceType = %d\n", lstEventMessage.m_pairedDevice.m_deviceType);
                         if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
