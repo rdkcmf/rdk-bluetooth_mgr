@@ -2848,7 +2848,6 @@ BTRMGR_GetConnectedDevices (
 
                    pConnectedDevices->m_numOfDevices++;
                    BTRMGRLOG_INFO ("Successfully obtained the connected device information from paried list\n");
-                   break; // can be eliminated later
                 }
             }
         }
@@ -2882,7 +2881,6 @@ BTRMGR_GetConnectedDevices (
 
                     pConnectedDevices->m_numOfDevices++;
                     BTRMGRLOG_INFO ("Successfully obtained the connected device information from scanned list\n");
-                    break; // can be eliminated later
                 }
             }
         }
