@@ -530,6 +530,7 @@ btrMgr_ResumeDeviceDiscovery (
 #endif
         if (BTRMGR_RESULT_SUCCESS == BTRMGR_StartDeviceDiscovery (aui8AdapterIdx, btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl))) {
 
+			//TODO: Move before you make the call to StartDeviceDiscovery, store the previous state and restore the previous state in case of Failure
             btrMgr_SetDiscoveryState (ahdiscoveryHdl, BTRMGR_DISCOVERY_ST_RESUMED);
             BTRMGRLOG_DEBUG ("[%s] Successfully Resumed Scan\n"
                             , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ahdiscoveryHdl)));
@@ -2391,6 +2392,7 @@ BTRMGR_StartDeviceDiscovery (
     }
     else {
 
+#if 0
         {   /* Max 3 sec timeout - Polled at 500ms second interval */
             unsigned int ui32sleepIdx = 6;
 
@@ -2398,6 +2400,15 @@ BTRMGR_StartDeviceDiscovery (
                 usleep(500000);
             } while ((!gIsAdapterDiscovering) && (--ui32sleepIdx));
         }
+#else
+		{   /* Max 3 sec timeout - Polled at 5ms second interval */
+            unsigned int ui32sleepIdx = 600;
+
+            do {
+                usleep(5000);
+            } while ((!gIsAdapterDiscovering) && (--ui32sleepIdx));
+        }
+#endif
 
         if (!gIsAdapterDiscovering) {
             BTRMGRLOG_WARN ("Discovery is not yet Started !!!\n");
