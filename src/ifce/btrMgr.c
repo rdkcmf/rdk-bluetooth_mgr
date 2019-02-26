@@ -4394,6 +4394,9 @@ btrMgr_DeviceStatusCb (
                             BTRMGRLOG_ERROR ("DiscoveryHoldOffTimeOut reset to  +%u  seconds || TimeOutReference - %u\n", BTRMGR_DISCOVERY_HOLD_OFF_TIME, gTimeOutRef);
                         }
                     }
+                    else if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID) {
+                        btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 1);
+                    }
 
                     if (gfpcBBTRMgrEventOut) {
                         gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
@@ -4794,6 +4797,45 @@ btrMgr_ConnectionInAuthenticationCb (
             BTRMGR_EventMessage_t lstEventMessage;
 
             BTRMGRLOG_DEBUG ("Paired - Last Connected device...\n");
+
+            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
+
+            //TODO: Check if XRE wants to bring up a Pop-up or Respond
+            if (gfpcBBTRMgrEventOut) {
+                gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
+            }
+
+
+            {   /* Max 200msec timeout - Polled at 50ms second interval */
+                unsigned int ui32sleepIdx = 4;
+
+                do {
+                    usleep(50000);
+                } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+                gEventRespReceived = 0;
+            }
+
+            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
+            *api32ConnInAuthResp = 1;
+        }
+        else {
+            BTRMGRLOG_ERROR ("Incoming Connection denied\n");
+            *api32ConnInAuthResp = 0;
+        }
+    }
+    else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Keyboard)      ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Mouse)         ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_MouseKeyBoard) ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Joystick)      ){
+
+        BTRMGRLOG_WARN ("Incoming Connection from BT Keyboard\n");
+        /* PairedList updation is necessary for Connect event than Disconnect event */
+        BTRMGR_GetPairedDevices (gDefaultAdapterContext.adapter_number, &gListOfPairedDevices);
+
+        if (btrMgr_GetDevPaired(apstConnCbInfo->stKnownDevice.tDeviceId)) {
+            BTRMGR_EventMessage_t lstEventMessage;
 
             memset (&lstEventMessage, 0, sizeof(lstEventMessage));
             btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
