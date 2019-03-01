@@ -252,6 +252,7 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_MEDIA_TRACK_POSITION              : event = "MEDIA_TRACK_POSITION";              break;
     case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";               break;
     case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_PLAYBACK_ENDED";              break;
+    case BTRMGR_EVENT_DEVICE_OP_READY                   : event = "DEVICE_OP_READY";                   break;
     case BTRMGR_EVENT_DEVICE_OP_INFORMATION             : event = "DEVICE_OP_INFORMATION";             break;
     default                                            : event = "##INVALID##";
   }
@@ -382,6 +383,10 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED:
         printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
         printf("\tDevice %s ended streaming successfully\n", event.m_mediaInfo.m_name);
+        break;
+    case BTRMGR_EVENT_DEVICE_OP_READY:
+        printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
+        printf("\tDevice %s Op Ready\n", event.m_deviceOpInfo.m_name);
         break;
     case BTRMGR_EVENT_DEVICE_OP_INFORMATION:
         printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));

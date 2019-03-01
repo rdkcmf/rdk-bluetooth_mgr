@@ -4634,21 +4634,30 @@ btrMgr_ConnectionInIntimationCb (
 ) {
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
     BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
-    BTRMGR_EventMessage_t   lstEventMessage;
+    eBTRMgrRet              lenBtrMgrRet    = eBTRMgrSuccess;
+    BTRMGR_DeviceType_t     lBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
     BTRMGR_Events_t         lBtMgrOutEvent  = -1;
-    unsigned char           lui8AdapterIdx = 0;
+    unsigned char           lui8AdapterIdx  = 0;
+    BTRMGR_EventMessage_t   lstEventMessage;
 
      if (!apstConnCbInfo) {
         BTRMGRLOG_ERROR ("Invaliid argument\n");
         return enBTRCoreInvalidArg;
     }
 
-    if (BTRMGR_DEVICE_TYPE_HID != btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType)) {
+    if (BTRMGR_DEVICE_TYPE_HID != (lBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType))) {
         if (!gIsAudioInEnabled) {
             BTRMGRLOG_WARN ("Incoming Connection Rejected - BTR AudioIn is currently Disabled!\n");
             *api32ConnInIntimResp = 0;
             return lenBtrCoreRet;
         }
+    }
+
+    lenBtrMgrRet = btrMgr_PreCheckDiscoveryStatus(lui8AdapterIdx, lBtrMgrDevType);
+
+    if (eBTRMgrSuccess != lenBtrMgrRet) {
+        BTRMGRLOG_ERROR ("Pre Check Discovery State Rejected !!!\n");
+        return enBTRCoreFailure;
     }
 
     if (apstConnCbInfo->ui32devPassKey) {
@@ -4659,7 +4668,7 @@ btrMgr_ConnectionInIntimationCb (
     btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);
 
     /* We mustn't need this conditional check; We must always reset the globals before invoking the Callbacks. But as per code review comments, resetting it only for HID */
-    if (BTRMGR_DEVICE_TYPE_HID == btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType)) {
+    if (BTRMGR_DEVICE_TYPE_HID == lBtrMgrDevType) {
         gEventRespReceived = 0;
         gAcceptConnection  = 0;
     }
@@ -4673,6 +4682,7 @@ btrMgr_ConnectionInIntimationCb (
         BTRMGRLOG_WARN ("This paring request does not require a confirmation BUT it might need you to enter the PIN at the specified device\n");
         /* Set the return to true; just in case */
         *api32ConnInIntimResp = 1;
+        btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, lBtrMgrDevType);
         return lenBtrCoreRet;
     }
 
@@ -4719,6 +4729,7 @@ btrMgr_ConnectionInIntimationCb (
         gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
     }
 
+    btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, lBtrMgrDevType);
 
     (void)lenBtrMgrResult;
 
@@ -4733,12 +4744,25 @@ btrMgr_ConnectionInAuthenticationCb (
     void*                   apvUserData
 ) {
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+    eBTRMgrRet              lenBtrMgrRet    = eBTRMgrSuccess;
+    BTRMGR_DeviceType_t     lBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
+    unsigned char           lui8AdapterIdx  = 0;
+
 
     if (!apstConnCbInfo) {
         BTRMGRLOG_ERROR ("Invaliid argument\n");
         return enBTRCoreInvalidArg;
     }
-    
+
+    lBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stKnownDevice.enDeviceType);
+    /* Move this check into DeviceClass scope? */
+    lenBtrMgrRet = btrMgr_PreCheckDiscoveryStatus(lui8AdapterIdx, lBtrMgrDevType);
+
+    if (eBTRMgrSuccess != lenBtrMgrRet) {
+        BTRMGRLOG_ERROR ("Pre Check Discovery State Rejected !!!\n");
+        return enBTRCoreFailure;
+    }
+
 
     if (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_SmartPhone ||
         apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Tablet) {
@@ -4746,6 +4770,7 @@ btrMgr_ConnectionInAuthenticationCb (
         if (!gIsAudioInEnabled) {
             BTRMGRLOG_WARN ("Incoming Connection Rejected - BTR AudioIn is currently Disabled!\n");
             *api32ConnInAuthResp = 0;
+            btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, lBtrMgrDevType);
             return lenBtrCoreRet;
         }
 
@@ -4879,6 +4904,8 @@ btrMgr_ConnectionInAuthenticationCb (
     {
         BTRMGRLOG_ERROR ("Incoming Connection Auth Callback\n");
     }
+
+    btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, lBtrMgrDevType);
 
     return lenBtrCoreRet;
 }
