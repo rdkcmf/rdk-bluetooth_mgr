@@ -128,6 +128,9 @@ BTRMgr_PI_Init (
         BTRMGRLOG_ERROR ("BTRMgr_PI_Init FAILED\n");
         return eBTRMgrFailure;
     }
+
+    memset(piHandle->piData.limitBeaconDetection, '\0', BTRMGR_NAME_LEN_MAX);
+
     *hBTRMgrPiHdl = (tBTRMgrPIHdl) piHandle;
     return eBTRMgrSuccess;
 }
@@ -153,6 +156,72 @@ BTRMgr_PI_DeInit (
     }
 }
 
+/*Creating a persistent get/set api for limiting beacon detection */
+eBTRMgrRet
+BTRMgr_PI_GetLEBeaconLimitingStatus (
+    BTRMGR_Beacon_PersistentData_t*    persistentData
+) {
+    char *persistent_file_content = NULL;
+
+    persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
+    if(persistent_file_content == NULL) {
+        // Seems like file is empty
+        return eBTRMgrFailure;
+    }
+
+    cJSON *btData = cJSON_Parse(persistent_file_content);
+    free(persistent_file_content);
+    if(btData == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    cJSON * limitDetection = cJSON_GetObjectItem(btData,"LimitBeaconDetection");
+    if(limitDetection == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not able to get limit value for beacon detection from JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    strcpy(persistentData->limitBeaconDetection ,limitDetection->valuestring);
+    return eBTRMgrSuccess;
+}
+
+eBTRMgrRet
+BTRMgr_PI_SetLEBeaconLimitingStatus (
+    BTRMGR_Beacon_PersistentData_t*    persistentData
+) {
+    char *persistent_file_content = NULL;
+
+    persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
+    if(persistent_file_content == NULL) {
+        // Seems like file is empty
+        return eBTRMgrFailure;
+    }
+
+    cJSON *btData = cJSON_Parse(persistent_file_content);
+    free(persistent_file_content);
+    if(btData == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    /*Adding limit for beacon detection*/
+    BTRMGRLOG_DEBUG ("Appending object to JSON file\n");
+    cJSON *limitDetection = cJSON_GetObjectItem(btData,"LimitBeaconDetection");
+    if(limitDetection == NULL) {
+        cJSON_AddStringToObject(btData, "LimitBeaconDetection", persistentData->limitBeaconDetection);
+    }
+    else {
+        strcpy(limitDetection->valuestring, persistentData->limitBeaconDetection);
+    }
+
+    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
+    return eBTRMgrSuccess;
+}
+
 eBTRMgrRet
 BTRMgr_PI_GetAllProfiles (
     tBTRMgrPIHdl                hBTRMgrPiHdl,
@@ -167,39 +236,47 @@ BTRMgr_PI_GetAllProfiles (
     // Validate Handle
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
 
-    if (pstBtrMgrPiHdl == NULL)
-    {
+    if (pstBtrMgrPiHdl == NULL) {
         BTRMGRLOG_ERROR ("PI Handle not initialized\n");
         return eBTRMgrFailure;
     }
 
     // Read file and fill persistent_file_content
     persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
-
     // Seems like file is empty
-    if(NULL == persistent_file_content)
-    {
+    if (persistent_file_content == NULL) {
+        memset (persistentData->limitBeaconDetection, '\0', BTRMGR_NAME_LEN_MAX);
+        strcpy(persistentData->limitBeaconDetection, "false");
         return eBTRMgrFailure;
     }
+
     cJSON *btProfileData = cJSON_Parse(persistent_file_content);
     free(persistent_file_content);
-    if(NULL == btProfileData)
-    {
+    if (btProfileData == NULL) {
         // Corrupted JSON
         BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
         return eBTRMgrFailure;
     }
+
     cJSON * adpaterIdptr = cJSON_GetObjectItem(btProfileData,"AdapterId");
-    if(NULL == adpaterIdptr)
-    {
+    if (adpaterIdptr == NULL) {
         // Corrupted JSON
         BTRMGRLOG_ERROR ("Could not able to get AdapterId from JSON\n");
         return eBTRMgrFailure;
     }
     strcpy(persistentData->adapterId,adpaterIdptr->valuestring);
+
+    cJSON *limitDetection = cJSON_GetObjectItem(btProfileData,"LimitBeaconDetection");
+    if(limitDetection != NULL) {
+        strcpy(persistentData->limitBeaconDetection, limitDetection->valuestring);
+    }
+    else {
+        memset (persistentData->limitBeaconDetection, '\0', BTRMGR_NAME_LEN_MAX);
+        strcpy(persistentData->limitBeaconDetection, "false");
+    }
+
     cJSON *btProfiles = cJSON_GetObjectItem(btProfileData,"Profiles");
-    if(NULL != btProfiles )
-    {
+    if (btProfiles != NULL) {
         // Read Profile details
         profileCount = cJSON_GetArraySize(btProfiles);
         BTRMGRLOG_DEBUG ("Successfully Parsed Persistent profile, Profile count = %d\n",profileCount);
@@ -229,9 +306,9 @@ BTRMgr_PI_GetAllProfiles (
                     isConnect =  cJSON_GetObjectItem(device,"ConnectionStatus")->valueint;
                 persistentData->profileList[pcount].deviceList[dcount].isConnected = isConnect;
                 if(deviceId && profileId)
-		{
+                {
                    BTRMGRLOG_DEBUG ("Parsing device details, Device- %s, Status-%d, Profile-%s\n",deviceId,isConnect,profileId);
-		}
+                }
             }
         }
     }
@@ -315,7 +392,7 @@ BTRMgr_PI_AddProfile (
         piData.profileList[0].numOfDevices =1;
         strcpy(piData.profileList[0].profileId,persistProfile.profileId );
         piData.profileList[0].deviceList[0].deviceId = persistProfile.deviceId;
-        piData.profileList[0].deviceList[0].isConnected = 1;
+        piData.profileList[0].deviceList[0].isConnected = persistProfile.isConnect;
         isObjectAdded = 1;
     }
     if(isObjectAdded)
@@ -351,8 +428,7 @@ BTRMgr_PI_SetAllProfiles (
     piData = cJSON_CreateObject();
     Profiles = cJSON_CreateArray();
     BTRMGRLOG_DEBUG ("Writing object to JSON\n");
-    for(pcount = 0; pcount <profileCount; pcount++)
-    {
+    for (pcount = 0; pcount <profileCount; pcount++) {
         // Get All Device details first
         int deviceCount = persistentData->profileList[pcount].numOfDevices;
         if(deviceCount > 0)
@@ -380,20 +456,22 @@ BTRMgr_PI_SetAllProfiles (
             //return eBTRMgrFailure;
         }
     }
-    if(profileCount != 0)
-    {
+
+    if (profileCount != 0) {
         cJSON_AddStringToObject(piData,"AdapterId",persistentData->adapterId);
         cJSON_AddItemToObject(piData, "Profiles", Profiles);
         BTRMGRLOG_DEBUG ("Writing Profile details - %s\n",persistentData->profileList[pcount].profileId);
-        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH,piData);
-        cJSON_Delete(piData);
     }
-    else // No profiles exists empty file
-    {
-        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH,piData);
+    else { // No profiles exists empty file
         BTRMGRLOG_DEBUG ("Writing empty data\n");
-        cJSON_Delete(piData);
     }
+
+    if (persistentData->limitBeaconDetection && *(persistentData->limitBeaconDetection) != '\0') {
+        cJSON_AddStringToObject(piData, "LimitBeaconDetection", persistentData->limitBeaconDetection);
+    }
+
+    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH,piData);
+    cJSON_Delete(piData);
 
     return eBTRMgrSuccess;
 }

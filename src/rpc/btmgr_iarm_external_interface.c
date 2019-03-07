@@ -96,6 +96,24 @@ BTRMGR_Init (
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED, btrMgrMediaCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_READY, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION, btrMgrdeviceCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_NAME, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_VOLUME, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_OFF, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_ON, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_OFF, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_OFF, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_GROUP, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_ALBUM_INFO, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_ARTIST_INFO, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_GENRE_INFO, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_COMPILATION_INFO, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYLIST_INFO, btrMgrMediaCallback);
+        IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO, btrMgrMediaCallback);
+        
         BTRMGRLOG_INFO ("IARM Interface Inited Successfully\n");
     }
     else
@@ -185,6 +203,68 @@ BTRMGR_ResetAdapter (
     return rc;
 }
 
+BTRMGR_Result_t
+BTRMGR_GetLimitBeaconDetection (
+    unsigned char   index_of_adapter,
+    unsigned char   *pLimited
+) {
+    BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMBeaconDetection_t beaconDetection;
+
+    if((BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) || (NULL == pLimited)) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    beaconDetection.m_adapterIndex = index_of_adapter;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_LIMIT_BEACON_DETECTION, (void *)&beaconDetection, sizeof(BTRMGR_IARMBeaconDetection_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+    if (IARM_RESULT_SUCCESS == retCode) {
+        *pLimited = beaconDetection.m_limitBeaconDetection;
+        BTRMGRLOG_INFO ("Success; Beacon Detection Limited ?  %s\n", (*pLimited ? "true" : "false"));
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t
+BTRMGR_SetLimitBeaconDetection (
+    unsigned char   index_of_adapter,
+    unsigned char   limited
+) {
+
+    BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMBeaconDetection_t beaconDetection;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    memset (&beaconDetection, 0, sizeof(BTRMGR_IARMBeaconDetection_t));
+    beaconDetection.m_adapterIndex = index_of_adapter;
+    beaconDetection.m_limitBeaconDetection = limited;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_LIMIT_BEACON_DETECTION, (void*)&beaconDetection, sizeof(BTRMGR_IARMBeaconDetection_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
 
 BTRMGR_Result_t
 BTRMGR_SetAdapterName (
@@ -1087,6 +1167,126 @@ BTRMGR_GetMediaCurrentPosition (
 
 
 BTRMGR_Result_t
+BTRMGR_SetMediaElementActive (
+    unsigned char                index_of_adapter,
+    BTRMgrDeviceHandle           deviceHandle,
+    BTRMgrMediaElementHandle     mediaElementHandle,
+    BTRMGR_MediaElementType_t    mediaElementType
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMMediaElementListInfo_t   mediaElementList;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    memset (&mediaElementList, 0, sizeof(BTRMGR_IARMMediaElementListInfo_t));
+    mediaElementList.m_adapterIndex         = index_of_adapter;
+    mediaElementList.m_deviceHandle         = deviceHandle;
+    mediaElementList.m_mediaElementHandle   = mediaElementHandle;
+    mediaElementList.m_mediaElementType     = mediaElementType;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_MEDIA_ELEMENT_ACTIVE, (void*)&mediaElementList, sizeof(BTRMGR_IARMMediaElementListInfo_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetMediaElementList (
+    unsigned char                  index_of_adapter,
+    BTRMgrDeviceHandle             deviceHandle,
+    BTRMgrMediaElementHandle       mediaElementHandle,
+    unsigned short                 mediaElementStartIdx,
+    unsigned short                 mediaElementEndIdx, 
+    unsigned char                  mediaElementListDepth,
+    BTRMGR_MediaElementType_t      mediaElementType,
+    BTRMGR_MediaElementListInfo_t* mediaElementListInfo
+) { 
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMMediaElementListInfo_t   mediaElementList;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter || !mediaElementListInfo) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    memset (&mediaElementList, 0, sizeof(BTRMGR_IARMMediaElementListInfo_t));
+    mediaElementList.m_adapterIndex         = index_of_adapter;
+    mediaElementList.m_deviceHandle         = deviceHandle;
+    mediaElementList.m_mediaElementHandle   = mediaElementHandle;
+    mediaElementList.m_mediaElementStartIdx = mediaElementStartIdx;
+    mediaElementList.m_mediaElementEndIdx   = mediaElementEndIdx;
+    mediaElementList.m_mediaElementListDepth= mediaElementListDepth;
+    mediaElementList.m_mediaElementType     = mediaElementType;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_MEDIA_ELEMENT_LIST, (void*)&mediaElementList, sizeof(BTRMGR_IARMMediaElementListInfo_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+        memcpy (mediaElementListInfo, &mediaElementList.m_mediaTrackListInfo, sizeof(BTRMGR_IARMMediaElementListInfo_t));
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_SelectMediaElement (
+    unsigned char                  index_of_adapter,
+    BTRMgrDeviceHandle             deviceHandle,
+    BTRMgrMediaElementHandle       mediaElementHandle,
+    BTRMGR_MediaElementType_t      mediaElementType
+
+) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMMediaElementListInfo_t   mediaElementList;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    memset (&mediaElementList, 0, sizeof(BTRMGR_IARMMediaElementListInfo_t));
+    mediaElementList.m_adapterIndex         = index_of_adapter;
+    mediaElementList.m_deviceHandle         = deviceHandle;
+    mediaElementList.m_mediaElementHandle   = mediaElementHandle;
+    mediaElementList.m_mediaElementType     = mediaElementType;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SELECT_MEDIA_ELEMENT, (void*)&mediaElementList, sizeof(BTRMGR_IARMMediaElementListInfo_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+
+BTRMGR_Result_t
 BTRMGR_GetLeProperty (
     unsigned char                index_of_adapter,
     BTRMgrDeviceHandle           handle,
@@ -1371,13 +1571,30 @@ btrMgrMediaCallback (
         BTRMGR_EventMessage_t *pReceivedEvent = (BTRMGR_EventMessage_t*)pData;
         BTRMGR_EventMessage_t newEvent;
 
-        if ((BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED     == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING     == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED      == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED     == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION    == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED     == eventId) ||
-            (BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED    == eventId) ){
+        if ((BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED              == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING              == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED               == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED              == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION             == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED              == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED             == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_NAME                == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_VOLUME              == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_OFF       == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_ON        == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_OFF         == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS   == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP       == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_OFF          == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK  == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS    == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_GROUP        == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_ALBUM_INFO                 == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_ARTIST_INFO                == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_GENRE_INFO                 == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_COMPILATION_INFO           == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_PLAYLIST_INFO              == eventId) ||
+            (BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO             == eventId) ){
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));
 

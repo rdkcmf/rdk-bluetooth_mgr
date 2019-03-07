@@ -95,6 +95,17 @@ eBTRMgrRet BTRMgr_SI_GetCurrentSettings (tBTRMgrSiHdl hBTRMgrSiHdl);
 eBTRMgrRet BTRMgr_SI_GetStatus (tBTRMgrSiHdl hBTRMgrSiHdl, stBTRMgrMediaStatus* apstBtrMgrSiStatus);
 
 /**
+ * @brief This API will set the current settings used by this interface.
+ *
+ * @param[in]  hBTRMgrSiHdl             Handle to the bluetooth manager stream in  interface.
+ * @param[in]  pstBtrMgrSiStatus        Status of media device that has to be fetched.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
+ */
+eBTRMgrRet BTRMgr_SI_SetStatus (tBTRMgrSiHdl hBTRMgrSiHdl, stBTRMgrMediaStatus* apstBtrMgrSiStatus);
+
+/**
  * @brief This API uses BTRMgr_SI_GstStart(), starts the pipeline.
  *
  * @param[in]  hBTRMgrSiHdl              Handle to the bluetooth manager stream in interface.

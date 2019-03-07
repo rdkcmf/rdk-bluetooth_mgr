@@ -57,11 +57,15 @@ typedef struct _stBTRMgrPersistProfile {
     stBTRMgrPersistDevice deviceList[BTRMGR_MAX_PERSISTENT_DEVICE_COUNT];
 } stBTRMgrPersistProfile;
 
+typedef struct _BTRMGR_Beacon_PersistentData_t {
+    char limitBeaconDetection[BTRMGR_NAME_LEN_MAX];
+} BTRMGR_Beacon_PersistentData_t;
 
 typedef struct _BTRMGR_PersistentData_t {
     char adapterId[BTRMGR_NAME_LEN_MAX];
     unsigned short numOfProfiles;
     stBTRMgrPersistProfile profileList[BTRMGR_NAME_LEN_MAX];
+    char limitBeaconDetection[BTRMGR_NAME_LEN_MAX];
 } BTRMGR_PersistentData_t;
 
 
@@ -72,6 +76,8 @@ typedef struct _BTRMGR_Profile_t {
     int isConnect;
 } BTRMGR_Profile_t;
 
+eBTRMgrRet BTRMgr_PI_GetLEBeaconLimitingStatus (BTRMGR_Beacon_PersistentData_t*    persistentData);
+eBTRMgrRet BTRMgr_PI_SetLEBeaconLimitingStatus (BTRMGR_Beacon_PersistentData_t*    persistentData);
 
 /**
  * @brief  This API initializes bluetooth manager's persistent storage interface.

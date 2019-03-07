@@ -168,6 +168,7 @@ typedef struct _stBTRMgrMediaStatus {
     eBTRMgrAChan    eBtrMgrAChan;
     unsigned int    ui32OverFlowCnt;
     unsigned int    ui32UnderFlowCnt;
+    unsigned char   ui8Volume;
 } stBTRMgrMediaStatus;
 
 /** @} */

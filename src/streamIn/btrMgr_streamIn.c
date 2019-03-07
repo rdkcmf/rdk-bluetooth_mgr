@@ -213,6 +213,62 @@ BTRMgr_SI_GetStatus (
 
 
 eBTRMgrRet
+BTRMgr_SI_SetStatus (
+    tBTRMgrSiHdl            hBTRMgrSiHdl,
+    stBTRMgrMediaStatus*    apstBtrMgrSiStatus
+) {
+    eBTRMgrRet      leBtrMgrSiRet  = eBTRMgrSuccess;
+    stBTRMgrSIHdl*  pstBtrMgrSiHdl = (stBTRMgrSIHdl*)hBTRMgrSiHdl;
+
+#ifdef USE_GST1
+    eBTRMgrSIGstRet leBtrMgrSiGstRet = eBTRMgrSIGstSuccess;
+#endif
+
+    if (pstBtrMgrSiHdl == NULL) {
+        return eBTRMgrNotInitialized;
+    }
+
+    if (apstBtrMgrSiStatus == NULL) {
+        return eBTRMgrFailInArg;
+    }
+
+
+#ifdef USE_GST1
+    if (apstBtrMgrSiStatus->eBtrMgrState != eBTRMgrStateUnknown) {
+        //TODO: Figure out what to do at the lower layer
+        leBtrMgrSiRet  = eBTRMgrFailure;
+    }
+
+    if (apstBtrMgrSiStatus->eBtrMgrSFreq != eBTRMgrSFreqUnknown) {
+        //TODO: Figure out what to do at the lower layer
+        leBtrMgrSiRet  = eBTRMgrFailure;
+    }
+
+    if (apstBtrMgrSiStatus->eBtrMgrSFmt  != eBTRMgrSFmtUnknown) {
+        //TODO: Figure out what to do at the lower layer
+        leBtrMgrSiRet  = eBTRMgrFailure;
+    }
+
+    if (apstBtrMgrSiStatus->eBtrMgrAChan != eBTRMgrAChanUnknown) {
+        //TODO: Figure out what to do at the lower layer
+        leBtrMgrSiRet  = eBTRMgrFailure;
+    }
+
+    if (apstBtrMgrSiStatus->ui8Volume != 255) {
+        if ((leBtrMgrSiGstRet = BTRMgr_SI_GstSetVolume(pstBtrMgrSiHdl->hBTRMgrSiGstHdl, apstBtrMgrSiStatus->ui8Volume)) != eBTRMgrSIGstSuccess) {
+            BTRMGRLOG_ERROR("Return Status = %d - Failed to set volume\n", leBtrMgrSiGstRet);
+            leBtrMgrSiRet  = eBTRMgrFailure;
+        }
+    }
+#else
+    // TODO: Implement Stream out functionality using generic libraries
+#endif
+
+    return leBtrMgrSiRet;
+}
+
+
+eBTRMgrRet
 BTRMgr_SI_Start (
     tBTRMgrSiHdl            hBTRMgrSiHdl,
     int                     aiInBufMaxSize,

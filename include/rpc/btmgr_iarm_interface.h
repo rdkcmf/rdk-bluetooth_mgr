@@ -35,44 +35,48 @@
  * @{
  *
  */
-#define IARM_BUS_BTRMGR_NAME                                "BTRMgrBus"
-#define BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS          15000
+#define IARM_BUS_BTRMGR_NAME                                         "BTRMgrBus"
+#define BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS                   15000
 
 
-#define BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS           "GetNumberOfAdapters"
-#define BTRMGR_IARM_METHOD_SET_ADAPTER_NAME                 "SetAdapterName"
-#define BTRMGR_IARM_METHOD_GET_ADAPTER_NAME                 "GetAdapterName"
-#define BTRMGR_IARM_METHOD_SET_ADAPTER_POWERSTATUS          "SetAdapterPowerStatus"
-#define BTRMGR_IARM_METHOD_GET_ADAPTER_POWERSTATUS          "GetAdapterPowerStatus"
-#define BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE         "SetAdapterDiscoverable"
-#define BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE          "IsAdapterDiscoverable"
-#define BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS   "SetDeviceDiscoveryStatus"
-#define BTRMGR_IARM_METHOD_GET_DISCOVERY_STATUS             "GetDeviceDiscoveryStatus"
-#define BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES           "GetDiscoveredDevices"
-#define BTRMGR_IARM_METHOD_PAIR_DEVICE                      "PairDevice"
-#define BTRMGR_IARM_METHOD_UNPAIR_DEVICE                    "UnpairDevice"
-#define BTRMGR_IARM_METHOD_GET_PAIRED_DEVICES               "GetPairedDevices"
-#define BTRMGR_IARM_METHOD_CONNECT_TO_DEVICE                "ConnectToDevice"
-#define BTRMGR_IARM_METHOD_DISCONNECT_FROM_DEVICE           "DisconnectFromDevice"
-#define BTRMGR_IARM_METHOD_GET_CONNECTED_DEVICES            "GetConnectedDevices"
-#define BTRMGR_IARM_METHOD_GET_DEVICE_PROPERTIES            "GetDeviceProperties"
-#define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_OUT        "StartAudioStreamingOut"
-#define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_OUT         "StopAudioStreamingOut"
-#define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_OUT           "IsAudioStreamingOut"
-#define BTRMGR_IARM_METHOD_SET_AUDIO_STREAM_OUT_TYPE        "SetAudioStreamOutType"
-#define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN         "StartAudioStreamingIn"
-#define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN          "StopAudioStreamingIn"
-#define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN            "IsAudioStreamingIn"
-#define BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE               "SetEventResponse"
-#define BTRMGR_IARM_METHOD_MEDIA_CONTROL                    "MediaControl"
-#define BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO             "GetMediaTrackInfo"
-#define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION       "GetMediaCurrentPosition"
-#define BTRMGR_IARM_METHOD_GET_LE_PROPERTY                  "GetLeProperty"
-#define BTRMGR_IARM_METHOD_PERFORM_LE_OP                    "PerformLeOperation"
-#define BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE       "SetAudioInServiceState"
-#define BTRMGR_IARM_METHOD_RESET_ADAPTER                    "ResetAdapter"
-#define BTRMGR_IARM_METHOD_DEINIT                           "DeInit"
-
+#define BTRMGR_IARM_METHOD_GET_NUMBER_OF_ADAPTERS                    "GetNumberOfAdapters"
+#define BTRMGR_IARM_METHOD_SET_ADAPTER_NAME                          "SetAdapterName"
+#define BTRMGR_IARM_METHOD_GET_ADAPTER_NAME                          "GetAdapterName"
+#define BTRMGR_IARM_METHOD_SET_ADAPTER_POWERSTATUS                   "SetAdapterPowerStatus"
+#define BTRMGR_IARM_METHOD_GET_ADAPTER_POWERSTATUS                   "GetAdapterPowerStatus"
+#define BTRMGR_IARM_METHOD_SET_ADAPTER_DISCOVERABLE                  "SetAdapterDiscoverable"
+#define BTRMGR_IARM_METHOD_IS_ADAPTER_DISCOVERABLE                   "IsAdapterDiscoverable"
+#define BTRMGR_IARM_METHOD_CHANGE_DEVICE_DISCOVERY_STATUS            "SetDeviceDiscoveryStatus"
+#define BTRMGR_IARM_METHOD_GET_DISCOVERY_STATUS                      "GetDeviceDiscoveryStatus"
+#define BTRMGR_IARM_METHOD_GET_DISCOVERED_DEVICES                    "GetDiscoveredDevices"
+#define BTRMGR_IARM_METHOD_PAIR_DEVICE                               "PairDevice"
+#define BTRMGR_IARM_METHOD_UNPAIR_DEVICE                             "UnpairDevice"
+#define BTRMGR_IARM_METHOD_GET_PAIRED_DEVICES                        "GetPairedDevices"
+#define BTRMGR_IARM_METHOD_CONNECT_TO_DEVICE                         "ConnectToDevice"
+#define BTRMGR_IARM_METHOD_DISCONNECT_FROM_DEVICE                    "DisconnectFromDevice"
+#define BTRMGR_IARM_METHOD_GET_CONNECTED_DEVICES                     "GetConnectedDevices"
+#define BTRMGR_IARM_METHOD_GET_DEVICE_PROPERTIES                     "GetDeviceProperties"
+#define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_OUT                 "StartAudioStreamingOut"
+#define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_OUT                  "StopAudioStreamingOut"
+#define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_OUT                    "IsAudioStreamingOut"
+#define BTRMGR_IARM_METHOD_SET_AUDIO_STREAM_OUT_TYPE                 "SetAudioStreamOutType"
+#define BTRMGR_IARM_METHOD_START_AUDIO_STREAMING_IN                  "StartAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_STOP_AUDIO_STREAMING_IN                   "StopAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN                     "IsAudioStreamingIn"
+#define BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE                        "SetEventResponse"
+#define BTRMGR_IARM_METHOD_MEDIA_CONTROL                             "MediaControl"
+#define BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO                      "GetMediaTrackInfo"
+#define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION                "GetMediaCurrentPosition"
+#define BTRMGR_IARM_METHOD_SET_MEDIA_ELEMENT_ACTIVE                  "SetMediaElementActive"
+#define BTRMGR_IARM_METHOD_GET_MEDIA_ELEMENT_LIST                    "GetMediaElementList"
+#define BTRMGR_IARM_METHOD_SELECT_MEDIA_ELEMENT                      "SelectMediaElement"
+#define BTRMGR_IARM_METHOD_GET_LE_PROPERTY                           "GetLeProperty"
+#define BTRMGR_IARM_METHOD_PERFORM_LE_OP                             "PerformLeOperation"
+#define BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE                "SetAudioInServiceState"
+#define BTRMGR_IARM_METHOD_RESET_ADAPTER                             "ResetAdapter"
+#define BTRMGR_IARM_METHOD_DEINIT                                    "DeInit"
+#define BTRMGR_IARM_METHOD_SET_LIMIT_BEACON_DETECTION                "SetLimitBeaconDetection"
+#define BTRMGR_IARM_METHOD_GET_LIMIT_BEACON_DETECTION                "GetLimitBeaconDetection"
 
 /**
  * @brief Represents the events supported by bluetooth manager.
@@ -103,8 +107,30 @@ typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED,
     BTRMGR_IARM_EVENT_DEVICE_OP_READY,
     BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_NAME,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_VOLUME,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_OFF,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_ON,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_OFF,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_OFF,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_GROUP,
+    BTRMGR_IARM_EVENT_MEDIA_ALBUM_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_ARTIST_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_GENRE_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_COMPILATION_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYLIST_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO,
     BTRMGR_IARM_EVENT_MAX
 } BTRMGR_IARM_Events_t;
+
+typedef struct _BTRMGR_IARMBeaconDetection_t {
+    unsigned char m_adapterIndex;
+    unsigned char m_limitBeaconDetection;
+} BTRMGR_IARMBeaconDetection_t;
 
 typedef struct _BTRMGR_IARMAdapterName_t {
     unsigned char m_adapterIndex;
@@ -192,6 +218,24 @@ typedef struct _BTRMGR_IARMMediaProperty_t {
     };
 } BTRMGR_IARMMediaProperty_t;
 
+typedef struct _BTRMGR_IARMMediaElementListInfo_t {
+    unsigned char                 m_adapterIndex;
+    BTRMgrDeviceHandle            m_deviceHandle;
+    BTRMgrMediaElementHandle      m_mediaElementHandle;
+    unsigned short                m_mediaElementStartIdx;
+    unsigned short                m_mediaElementEndIdx;
+    unsigned char                 m_mediaElementListDepth;
+    BTRMGR_MediaElementType_t     m_mediaElementType;
+
+    union {
+        BTRMGR_MediaElementListInfo_t  m_mediaAlbumListInfo;
+        BTRMGR_MediaElementListInfo_t  m_mediaArtistListInfo;
+        BTRMGR_MediaElementListInfo_t  m_mediaGenreListInfo;
+        BTRMGR_MediaElementListInfo_t  m_mediaCompilationInfo;
+        BTRMGR_MediaElementListInfo_t  m_mediaPlayListInfo;
+        BTRMGR_MediaElementListInfo_t  m_mediaTrackListInfo;
+    };
+} BTRMGR_IARMMediaElementListInfo_t;
 
 typedef struct _BTRMGR_IARMLeProperty_t {
     unsigned char           m_adapterIndex;
