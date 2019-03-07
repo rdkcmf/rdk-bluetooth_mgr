@@ -1958,8 +1958,10 @@ streamInLiveTestMainAlternateStart (
     int     inBytesToEncode= IN_BUF_SIZE;
 
 
-
-    BTRMgr_SI_Init(&pstAppData->hBTRMgrSiHdl, NULL, NULL);
+    if (eBTRMgrSuccess != BTRMgr_SI_Init(&pstAppData->hBTRMgrSiHdl, NULL, NULL)) {
+        fprintf(stderr, "BTRMgr_SI_Init - FAILED\n");
+        return -1;
+    }
 
 #if 0
     /* could get defaults from audio capture, but for the sample app we want to write a the wav header first*/
@@ -1980,12 +1982,29 @@ static int
 streamInLiveTestMainAlternateStop (
     appDataStruct*  pstAppData
 ) {
-    BTRMgr_SI_SendEOS(pstAppData->hBTRMgrSiHdl);
-    BTRMgr_SI_Stop(pstAppData->hBTRMgrSiHdl);
+    int ret = 0;
 
-    BTRMgr_SI_DeInit(pstAppData->hBTRMgrSiHdl);
+    if (pstAppData->hBTRMgrSiHdl == NULL) {
+        return 0;
+    }
 
+    if (eBTRMgrSuccess != BTRMgr_SI_SendEOS(pstAppData->hBTRMgrSiHdl)) {
+        fprintf(stderr, "BTRMgr_SI_SendEOS - FAILED\n");
+        ret = -1;
+    }
+
+    if (eBTRMgrSuccess != BTRMgr_SI_Stop(pstAppData->hBTRMgrSiHdl)) {
+        fprintf(stderr, "BTRMgr_SI_Stop - FAILED\n");
+        ret = -1;
+    }
+
+    if (eBTRMgrSuccess != BTRMgr_SI_DeInit(pstAppData->hBTRMgrSiHdl)) {
+        fprintf(stderr, "BTRMgr_SI_DeInit - FAILED\n");
+        ret = -1;
+    }
+
+    pstAppData->hBTRMgrSiHdl = NULL;
     printf("BT AUDIO IN - STOPPED\n");
 
-    return 0;
+    return ret;
 }

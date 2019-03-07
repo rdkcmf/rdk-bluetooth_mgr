@@ -54,8 +54,10 @@ extern "C"
 #define BTRMGR_ADAPTER_COUNT_MAX       16
 #define BTRMGR_MAX_DEVICE_PROFILE      32
 #define BTRMGR_LE_FLAG_LIST_SIZE       10
+#define BTRMGR_MEDIA_ELEMENT_COUNT_MAX 64
 
 typedef unsigned long long int BTRMgrDeviceHandle;
+typedef unsigned long long int BTRMgrMediaElementHandle;
 
 /**
  * @brief Represents the status of the operation.
@@ -96,6 +98,23 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED,
     BTRMGR_EVENT_DEVICE_OP_READY,
     BTRMGR_EVENT_DEVICE_OP_INFORMATION,
+    BTRMGR_EVENT_MEDIA_PLAYER_NAME,
+    BTRMGR_EVENT_MEDIA_PLAYER_VOLUME,
+    BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_OFF,
+    BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_ON,
+    BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_OFF,
+    BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS,
+    BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP,
+    BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_OFF,
+    BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK,
+    BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS,
+    BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_GROUP,
+    BTRMGR_EVENT_MEDIA_ALBUM_INFO,
+    BTRMGR_EVENT_MEDIA_ARTIST_INFO,
+    BTRMGR_EVENT_MEDIA_GENRE_INFO,
+    BTRMGR_EVENT_MEDIA_COMPILATION_INFO,
+    BTRMGR_EVENT_MEDIA_PLAYLIST_INFO,
+    BTRMGR_EVENT_MEDIA_TRACKLIST_INFO,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
@@ -188,9 +207,25 @@ typedef enum _BTRMGR_MediaControlCommand_t {
     BTRMGR_MEDIA_CTRL_FASTFORWARD,
     BTRMGR_MEDIA_CTRL_REWIND,
     BTRMGR_MEDIA_CTRL_VOLUMEUP,
-    BTRMGR_MEDIA_CTRL_VOLUMEDOWN
+    BTRMGR_MEDIA_CTRL_VOLUMEDOWN,
+    BTRMGR_MEDIA_CTRL_EQUALIZER_OFF,
+    BTRMGR_MEDIA_CTRL_EQUALIZER_ON,
+    BTRMGR_MEDIA_CTRL_SHUFFLE_OFF,
+    BTRMGR_MEDIA_CTRL_SHUFFLE_ALLTRACKS,
+    BTRMGR_MEDIA_CTRL_SHUFFLE_GROUP,
+    BTRMGR_MEDIA_CTRL_REPEAT_OFF,
+    BTRMGR_MEDIA_CTRL_REPEAT_SINGLETRACK,
+    BTRMGR_MEDIA_CTRL_REPEAT_ALLTRACKS,
+    BTRMGR_MEDIA_CTRL_REPEAT_GROUP,
+    BTRMGR_MEDIA_CTRL_SCAN_OFF,
+    BTRMGR_MEDIA_CTRL_SCAN_ALLTRACKS,
+    BTRMGR_MEDIA_CTRL_SCAN_GROUP,
+    BTRMGR_MEDIA_CTRL_UNKNOWN
 } BTRMGR_MediaControlCommand_t;
 
+/**
+ * @brief Represents LE properties.
+ */
 typedef enum _BTRMGR_LeProperty_t {  // looking for a better enum name
     BTRMGR_LE_PROP_UUID,
     BTRMGR_LE_PROP_PRIMARY,
@@ -214,6 +249,9 @@ typedef enum _BTRMGR_LeOp_t {
     BTRMGR_LE_OP_UNKNOWN
 } BTRMGR_LeOp_t;
 
+/**
+ * @brief Represents Gatt Characteristic Flags.
+ */
 typedef enum _BTRMGR_GattCharFlags_t {
     BTRMGR_GATT_CHAR_FLAG_READ                         = 1 << 0,
     BTRMGR_GATT_CHAR_FLAG_WRITE                        = 1 << 1,
@@ -240,6 +278,20 @@ typedef enum _BTRMGR_ScanFilter_t {
     BTRMGR_DISCOVERY_FILTER_SCAN_TYPE
 } BTRMGR_ScanFilter_t;
 
+/**
+ * @brief Represents Media Element Types.
+ */
+typedef enum _BTRMGR_MediaElementType_t {
+    BTRMGR_MEDIA_ELEMENT_TYPE_UNKNOWN,
+    BTRMGR_MEDIA_ELEMENT_TYPE_ALBUM,
+    BTRMGR_MEDIA_ELEMENT_TYPE_ARTIST,
+    BTRMGR_MEDIA_ELEMENT_TYPE_GENRE,
+    BTRMGR_MEDIA_ELEMENT_TYPE_COMPILATIONS,
+    BTRMGR_MEDIA_ELEMENT_TYPE_PLAYLIST,
+    BTRMGR_MEDIA_ELEMENT_TYPE_TRACKLIST
+} BTRMGR_MediaElementType_t;
+
+    
 /**
  * @brief Represents the media track info.
  */
@@ -394,20 +446,47 @@ typedef struct _BTRMGR_ExternalDevice_t {
 } BTRMGR_ExternalDevice_t;
 
 /**
+ * @brief Represents Media Element details.
+ */
+typedef struct _BTRMGR_MediaElementInfo_t {
+    BTRMgrMediaElementHandle    m_mediaElementHdl;
+    unsigned char               m_IsPlayable;
+    char                        m_mediaElementName[BTRMGR_MAX_STR_LEN];
+    BTRMGR_MediaTrackInfo_t     m_mediaTrackInfo;
+} BTRMGR_MediaElementInfo_t;
+
+/**
+  * @brief Represents Media Element List.
+ */
+typedef struct _BTRMGR_MediaElementListInfo_t {
+    unsigned short              m_numberOfElements;
+    BTRMGR_MediaElementInfo_t   m_mediaElementInfo[BTRMGR_MEDIA_ELEMENT_COUNT_MAX];
+} BTRMGR_MediaElementListInfo_t;
+
+/**
  * @brief Represents the media info.
  */
 typedef struct _BTRMGR_MediaInfo_t {
     BTRMgrDeviceHandle     m_deviceHandle;
     BTRMGR_DeviceType_t    m_deviceType;
     char                   m_name [BTRMGR_NAME_LEN_MAX];
+
     union {
-       BTRMGR_MediaTrackInfo_t     m_mediaTrackInfo;
-       BTRMGR_MediaPositionInfo_t  m_mediaPositionInfo;
+       BTRMGR_MediaTrackInfo_t          m_mediaTrackInfo;
+       BTRMGR_MediaPositionInfo_t       m_mediaPositionInfo;
+       BTRMGR_MediaElementListInfo_t    m_mediaAlbumListInfo;
+       BTRMGR_MediaElementListInfo_t    m_mediaArtistListInfo;
+       BTRMGR_MediaElementListInfo_t    m_mediaGenreListInfo;
+       BTRMGR_MediaElementListInfo_t    m_mediaCompilationInfo;
+       BTRMGR_MediaElementListInfo_t    m_mediaPlayListInfo;
+       BTRMGR_MediaElementListInfo_t    m_mediaTrackListInfo;
+       char                             m_mediaPlayerName[BTRMGR_MAX_STR_LEN];
+       unsigned char                    m_mediaPlayerVolumeInPercentage;
     };
 } BTRMGR_MediaInfo_t;
 
 /**
- * @brief Represents the notification data
+    * @brief Represents the notification data
  */
 typedef struct _BTRMGR_DeviceOpInfo_t {
     BTRMgrDeviceHandle     m_deviceHandle;
@@ -852,6 +931,48 @@ BTRMGR_Result_t BTRMGR_GetMediaTrackInfo(unsigned char aui8AdapterIdx, BTRMgrDev
 BTRMGR_Result_t BTRMGR_GetMediaCurrentPosition(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaPositionInfo_t*  mediaPositionInfo);
 
 /**
+ * @brief  This API sets the mentioned media element list active/in_scope for further operations on it.
+ *
+ * @param[in]  aui8AdapterIdx            Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl            Device handle.
+ * @param[in]  ahBTRMgrMedElementHdl     Media Element handle
+ * @param[in]  aui16MediaElementStartIdx Starting index of the list.
+ * @param[in]  aui16MediaElementEndIdx   Ending index of the list
+ * @param[in]  aMediaElementType         Media Element Type.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_SetMediaElementActive (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMgrMediaElementHandle ahBTRMgrMedElementHdl, 
+                                                                                                            BTRMGR_MediaElementType_t aMediaElementType);
+/**
+ * @brief  This API gets the media element list.
+ * @param[in]  aui8AdapterIdx            Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl            Device handle.
+ * @param[in]  ahBTRMgrMedElementHdl     Media Element handle
+ * @param[in]  aui16MediaElementStartIdx Starting index of the list.
+ * @param[in]  aui16MediaElementEndIdx   Ending index of the list
+ * @param[in]  aMediaElementType         Media Element Type.
+ * @param[out] aMediaElementListInfo     Media Element List.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_GetMediaElementList (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMgrMediaElementHandle ahBTRMgrMedElementHdl, unsigned short aui16MediaElementStartIdx,
+                unsigned short aui16MediaElementEndIdx, unsigned char abMediaElementListDepth, BTRMGR_MediaElementType_t aMediaElementType, BTRMGR_MediaElementListInfo_t* aMediaElementListInfo);
+/**
+ * @brief  This API performs operation based on the element type selected.
+ * @param[in]  aui8AdapterIdx            Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl            Device handle.
+ * @param[in]  ahBTRMgrMedElementHdl     Media Element handle
+ * @param[in]  aMediaElementType         Media Element Type.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_SelectMediaElement (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMgrMediaElementHandle ahBTRMgrMedElementHdl, BTRMGR_MediaElementType_t aMediaElementType);
+
+/**
  * @brief  This API fetches the Device name of the media.
  *
  * @param[in]  type		Device type.
@@ -899,6 +1020,9 @@ BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHa
  * @retval BTRMGR_RESULT_SUCCESS on success.
  */
 BTRMGR_Result_t BTRMGR_SetAudioInServiceState (unsigned char aui8AdapterIdx, unsigned char aui8State);
+
+BTRMGR_Result_t BTRMGR_SetLimitBeaconDetection(unsigned char aui8AdapterIdx, unsigned char isLimited);
+BTRMGR_Result_t BTRMGR_GetLimitBeaconDetection(unsigned char aui8AdapterIdx, unsigned char *isLimited);
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);

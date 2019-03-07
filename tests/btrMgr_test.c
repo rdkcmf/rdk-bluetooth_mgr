@@ -92,6 +92,9 @@ static void printOptions (void)
     printf ("40. Ring A Tile (Just for POC)\n");
     printf ("41. (RFC)Set AudioIn - Enabled/Disabled\n");
     printf ("42. Set AudioIn - Enabled/Disabled\n");
+    printf ("43. Set Media Element Active\n");
+    printf ("44. Get Media Element List\n");
+    printf ("45. Select Media Element to Play/Explore\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -230,30 +233,47 @@ const char* getEventAsString (BTRMGR_Events_t etype)
   char *event = "\0";
   switch(etype)
   {
-    case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE               : event = "DEVICE_OUT_OF_RANGE_OR_LOST";       break;
-    case BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED          : event = "DEVICE_DISCOVERY_STARTED";          break;
-    case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE           : event = "DEVICE_DISCOVERY_UPDATE";           break;
-    case BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE         : event = "DEVICE_DISCOVERY_COMPLETE";         break;
-    case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE           : event = "DEVICE_PAIRING_COMPLETE";           break; 
-    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE         : event = "DEVICE_UNPAIRING_COMPLETE";         break;
-    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE        : event = "DEVICE_CONNECTION_COMPLETE";        break;
-    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE        : event = "DEVICE_DISCONNECT_COMPLETE";        break;
-    case BTRMGR_EVENT_DEVICE_PAIRING_FAILED             : event = "DEVICE_PAIRING_FAILED";             break;
-    case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED           : event = "DEVICE_UNPAIRING_FAILED";           break;
-    case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED          : event = "DEVICE_CONNECTION_FAILED";          break;     
-    case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED          : event = "DEVICE_DISCONNECT_FAILED";          break;
-    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";    break;
-    case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST"; break;
-    case BTRMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                      break;
-    case BTRMGR_EVENT_MEDIA_TRACK_STARTED               : event = "MEDIA_TRACK_STARTED";               break;
-    case BTRMGR_EVENT_MEDIA_TRACK_PLAYING               : event = "MEDIA_TRACK_PLAYING";               break;
-    case BTRMGR_EVENT_MEDIA_TRACK_PAUSED                : event = "MEDIA_TRACK_PAUSED";                break;
-    case BTRMGR_EVENT_MEDIA_TRACK_STOPPED               : event = "MEDIA_TRACK_STOPPED";               break;
-    case BTRMGR_EVENT_MEDIA_TRACK_POSITION              : event = "MEDIA_TRACK_POSITION";              break;
-    case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";               break;
-    case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_PLAYBACK_ENDED";              break;
-    case BTRMGR_EVENT_DEVICE_OP_READY                   : event = "DEVICE_OP_READY";                   break;
-    case BTRMGR_EVENT_DEVICE_OP_INFORMATION             : event = "DEVICE_OP_INFORMATION";             break;
+    case BTRMGR_EVENT_DEVICE_OUT_OF_RANGE               : event = "DEVICE_OUT_OF_RANGE_OR_LOST";         break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED          : event = "DEVICE_DISCOVERY_STARTED";            break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE           : event = "DEVICE_DISCOVERY_UPDATE";             break;
+    case BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE         : event = "DEVICE_DISCOVERY_COMPLETE";           break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE           : event = "DEVICE_PAIRING_COMPLETE";             break; 
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE         : event = "DEVICE_UNPAIRING_COMPLETE";           break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE        : event = "DEVICE_CONNECTION_COMPLETE";          break;
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE        : event = "DEVICE_DISCONNECT_COMPLETE";          break;
+    case BTRMGR_EVENT_DEVICE_PAIRING_FAILED             : event = "DEVICE_PAIRING_FAILED";               break;
+    case BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED           : event = "DEVICE_UNPAIRING_FAILED";             break;
+    case BTRMGR_EVENT_DEVICE_CONNECTION_FAILED          : event = "DEVICE_CONNECTION_FAILED";            break;     
+    case BTRMGR_EVENT_DEVICE_DISCONNECT_FAILED          : event = "DEVICE_DISCONNECT_FAILED";            break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST    : event = "RECEIVED_EXTERNAL_PAIR_REQUEST";      break;
+    case BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST : event = "RECEIVED_EXTERNAL_CONNECT_REQUEST";   break;
+    case BTRMGR_EVENT_DEVICE_FOUND                      : event = "DEVICE_FOUND";                        break;
+    case BTRMGR_EVENT_MEDIA_TRACK_STARTED               : event = "MEDIA_TRACK_STARTED";                 break;
+    case BTRMGR_EVENT_MEDIA_TRACK_PLAYING               : event = "MEDIA_TRACK_PLAYING";                 break;
+    case BTRMGR_EVENT_MEDIA_TRACK_PAUSED                : event = "MEDIA_TRACK_PAUSED";                  break;
+    case BTRMGR_EVENT_MEDIA_TRACK_STOPPED               : event = "MEDIA_TRACK_STOPPED";                 break;
+    case BTRMGR_EVENT_MEDIA_TRACK_POSITION              : event = "MEDIA_TRACK_POSITION";                break;
+    case BTRMGR_EVENT_MEDIA_TRACK_CHANGED               : event = "MEDIA_TRACK_CHANGED";                 break;
+    case BTRMGR_EVENT_MEDIA_PLAYBACK_ENDED              : event = "MEDIA_PLAYBACK_ENDED";                break;
+    case BTRMGR_EVENT_DEVICE_OP_READY                   : event = "DEVICE_OP_READY";                     break;
+    case BTRMGR_EVENT_DEVICE_OP_INFORMATION             : event = "DEVICE_OP_INFORMATION";               break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_NAME                 : event = "MEDIA_PLAYER_NAME";                   break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_VOLUME               : event = "MEDIA_PLAYER_VOLUME";                 break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_OFF        : event = "MEDIA_PLAYER_EQUALIZER_OFF";          break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_ON         : event = "MEDIA_PLAYER_EQUALIZER_ON";           break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_OFF          : event = "MEDIA_PLAYER_SHUFFLE_OFF";            break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS    : event = "MEDIA_PLAYER_SHUFFLE_ALLTRACKS";      break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP        : event = "MEDIA_PLAYER_SHUFFLE_GROUP";          break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_OFF           : event = "MEDIA_PLAYER_REPEAT_OFF";             break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK   : event = "MEDIA_PLAYER_REPEAT_SINGLETRACK";     break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS     : event = "MEDIA_PLAYER_REPEAT_ALLTRACKS";       break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_GROUP         : event = "MEDIA_PLAYER_REPEAT_GROUP";           break;
+    case BTRMGR_EVENT_MEDIA_ALBUM_INFO                  : event = "MEDIA_PLAYER_ALBUM_INFO";             break;
+    case BTRMGR_EVENT_MEDIA_ARTIST_INFO                 : event = "MEDIA_PLAYER_ARTIST_INFO";            break;
+    case BTRMGR_EVENT_MEDIA_GENRE_INFO                  : event = "MEDIA_PLAYER_GENRE_INFO";             break;
+    case BTRMGR_EVENT_MEDIA_COMPILATION_INFO            : event = "MEDIA_PLAYER_COMPILATION_INFO";       break;
+    case BTRMGR_EVENT_MEDIA_PLAYLIST_INFO               : event = "MEDIA_PLAYER_PLAYLIST_INFO";          break;
+    case BTRMGR_EVENT_MEDIA_TRACKLIST_INFO              : event = "MEDIA_PLAYER_TRACKLIST_INFO";         break;
     default                                            : event = "##INVALID##";
   }
   return event;
@@ -396,6 +416,40 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE:
         printf ("\n\tDiscovered %s device of type %s\n", event.m_discoveredDevice.m_name, BTRMGR_GetDeviceTypeAsString(event.m_discoveredDevice.m_deviceType));
         break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_NAME:
+        printf("\n\t[%s] set  %s  %s \n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType), event.m_mediaInfo.m_mediaPlayerName);
+        break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_VOLUME:
+        printf("\n\t[%s] set  %s  %d%% \n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType), event.m_mediaInfo.m_mediaPlayerVolumeInPercentage);
+        break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_OFF:
+    case BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_ON:
+    case BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_OFF:
+    case BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS:
+    case BTRMGR_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP:
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_OFF:
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK:
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS:
+    case BTRMGR_EVENT_MEDIA_PLAYER_REPEAT_GROUP:
+        printf("\n\t[%s] set  %s\n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType));
+        break;
+        break;
+    case BTRMGR_EVENT_MEDIA_ALBUM_INFO:
+    case BTRMGR_EVENT_MEDIA_ARTIST_INFO:
+    case BTRMGR_EVENT_MEDIA_GENRE_INFO:
+    case BTRMGR_EVENT_MEDIA_COMPILATION_INFO:
+    case BTRMGR_EVENT_MEDIA_PLAYLIST_INFO:
+    case BTRMGR_EVENT_MEDIA_TRACKLIST_INFO:
+        if (event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_IsPlayable) {
+            printf("\t%50s\t\t%020llu\n", event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_mediaTrackInfo.pcTitle
+                                        , event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_mediaElementHdl);
+        }
+        else {
+            printf("\t%50s\t\t%020llu\n", event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_mediaElementName
+                                        , event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_mediaElementHdl);
+        }
+        break;
+
      default:
         printf("\tReceived %s Event from BTRMgr\n", getEventAsString(event.m_eventType));  
         break;
@@ -897,7 +951,10 @@ int main(int argc, char *argv[])
                     handle = 0;
                     printf ("Please Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
-                    printf ("Please Enter the Medio Control Options [0 - Play | 1 - Pause | 2 - Stop | 3 - Next  | 4 - Previous]\n");
+                    printf ("Please Enter the Media Control Options\n"
+                            "[0 - Play | 1 - Pause | 2 - Stop | 3 - Next  | 4 - Previous | 5 - FF | 6 - Rewind]\n"
+                            "[7 - VolUp | 8 - VolDown | 9 - EQZ Off | 10 - EQZ On | 11 - Shuffle Off | 12 - shuffle AllTracks]\n"
+                            "[13 - shuffle Group | 14 - Repeat Off | 15 - Repeat SingleTrack | 16 - Repeat AllTracks | 17 - Repeat Group]\n");
                     opt = getDeviceSelection();
 
                     rc = BTRMGR_MediaControl(0, handle, opt);
@@ -908,6 +965,7 @@ int main(int argc, char *argv[])
                 }
                 break;
             case 30:
+            case 46:
                 {
                     BTRMGR_MediaTrackInfo_t mediaTrackInfo;
                     handle = 0;
@@ -915,10 +973,11 @@ int main(int argc, char *argv[])
                     handle = getDeviceSelection();
 
                     rc = BTRMGR_GetMediaTrackInfo(0, handle, &mediaTrackInfo);
+
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
-                        printf ("\n---Current Media Track Info--- \n"
+                        printf ("\n---Media Track Info--- \n"
                                 "Album           : %s\n"
                                 "Artist          : %s\n"
                                 "Title           : %s\n"
@@ -1204,6 +1263,99 @@ int main(int argc, char *argv[])
                     }
                 }
                 break;
+            case 43:
+                {
+                    BTRMgrMediaElementHandle mediaElementHdl = 0;
+                    int mediaElementType    = 0;
+                    handle = 0;
+                    printf ("\nPlease Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf("\nEnter the Media Browser Element Handle\t: ");
+                    scanf("%llu", &mediaElementHdl);
+                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList"
+                           "\nEnter the Media Element type\t: ");
+                    scanf("%d", &mediaElementType);
+
+                    rc = BTRMGR_SetMediaElementActive(0, handle, mediaElementHdl, mediaElementType);
+
+                    if (BTRMGR_RESULT_SUCCESS == rc) {
+                        printf ("\nSuccess...\n");
+                    }
+                    else {
+                        printf("\nFailed...\n");
+                    }
+                }
+                break;
+            case 44:
+                {
+                    BTRMgrMediaElementHandle mediaElementHdl = 0;
+                    unsigned short startIdx = 0;
+                    unsigned short endIdx   = 0;
+                    int mediaElementType    = 0;
+                    BTRMGR_MediaElementListInfo_t   mediaEementListInfo;
+                    handle = 0;
+                    printf ("\nPlease Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf("\nEnter the Media Browser Element Handle\t: ");
+                    scanf("%llu", &mediaElementHdl);
+                    printf("\nEnter the Start index of List\t: ");
+                    scanf("%hu", &startIdx);
+                    printf("\nEnter the End index of List\t: ");
+                    scanf("%hu", &endIdx);
+                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList"
+                           "\nEnter the Media Element type\t: ");
+                    scanf("%d", &mediaElementType);
+
+                    memset (&mediaEementListInfo, 0, sizeof(BTRMGR_MediaElementListInfo_t));
+
+                    rc = BTRMGR_GetMediaElementList(0, handle, mediaElementHdl, startIdx, endIdx, 0, mediaElementType, &mediaEementListInfo);
+
+                    if (BTRMGR_RESULT_SUCCESS == rc) {
+                        unsigned short ui16LoopIdx = 0;
+                        printf ("\nSuccess...\n");
+
+                        printf ("\n%4s\t%-20s\t\t%-60sPlayable\n", "SN", "MediaElementId", "MediaElementName");
+                        while (ui16LoopIdx < mediaEementListInfo.m_numberOfElements) {
+                            if (strlen(mediaEementListInfo.m_mediaElementInfo[ui16LoopIdx].m_mediaElementName) > 50) {
+                                strcpy (&mediaEementListInfo.m_mediaElementInfo[ui16LoopIdx].m_mediaElementName[50],"...");
+                            }
+                            printf("\n%4u\t%020llu\t\t%-60s%d", ui16LoopIdx
+                                                              , mediaEementListInfo.m_mediaElementInfo[ui16LoopIdx].m_mediaElementHdl
+                                                              , mediaEementListInfo.m_mediaElementInfo[ui16LoopIdx].m_mediaElementName
+                                                              , mediaEementListInfo.m_mediaElementInfo[ui16LoopIdx].m_IsPlayable);
+                            ui16LoopIdx++;
+                        }
+                        printf ("\n\nRetrived %u Media Elements.\n", mediaEementListInfo.m_numberOfElements);
+                    }
+                    else {
+                        printf("\nFailed...\n");
+                    }
+                }
+                break;
+            case 45:
+                {
+                    BTRMgrMediaElementHandle  mediaElementHdl = 0;
+                    int mediaElementType    = 0;
+                    handle = 0;
+                    printf ("\nPlease Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf("\nEnter the Media Element Handle to select\t: ");
+                    scanf("%llu", &mediaElementHdl);
+                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList"
+                           "\nEnter the Media Element type\t: ");
+                    scanf("%d", &mediaElementType);
+
+                    rc = BTRMGR_SelectMediaElement (0, handle, mediaElementHdl, mediaElementType);
+
+                    if (BTRMGR_RESULT_SUCCESS == rc) {
+                        printf ("\nSuccess...\n");
+                    }
+                    else {
+                        printf("\nFailed...\n");
+                    }
+                }
+                break;
+
             case 55:
                 loop = 0;
                 break;

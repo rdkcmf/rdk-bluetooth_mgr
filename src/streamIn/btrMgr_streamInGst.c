@@ -66,6 +66,7 @@ typedef struct _stBTRMgrSIGst {
     void*        pAudioParse;
     void*        psbcdecCapsFilter;
     void*        pRtpAudioDePay;
+    void*        pVolume;
     void*        pSink;
 
 #if !(ENABLE_MAIN_LOOP_CONTEXT)
@@ -147,6 +148,7 @@ btrMgr_SI_g_main_loop_Task (
     GstElement*     rtpauddepay     = NULL;
     GstElement*     audparse        = NULL;
     GstElement*     auddec          = NULL;
+    GstElement*     volume          = NULL;
     GstElement*     fdsink          = NULL;
     GstElement*     pipeline        = NULL;
     GstBus*         bus             = NULL;
@@ -179,6 +181,7 @@ btrMgr_SI_g_main_loop_Task (
     rtpauddepay     = gst_element_factory_make ("rtpsbcdepay",  "btmgr-si-rtpsbcdepay");
     audparse        = gst_element_factory_make ("sbcparse",     "btmgr-si-rtpsbcparse");
     auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
+    volume          = gst_element_factory_make ("volume",       "btmgr-si-volume");
 
 #ifdef BUILD_FOR_PI
     fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
@@ -191,7 +194,7 @@ btrMgr_SI_g_main_loop_Task (
 
     loop =  pstBtrMgrSiGst->pLoop;
 
-    if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !fdsink || !loop || !pipeline) {
+    if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !volume || !fdsink || !loop || !pipeline) {
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamIn\n");
         return NULL;
     }
@@ -202,6 +205,7 @@ btrMgr_SI_g_main_loop_Task (
     pstBtrMgrSiGst->pRtpAudioDePay  = (void*)rtpauddepay;
     pstBtrMgrSiGst->pAudioParse     = (void*)audparse;
     pstBtrMgrSiGst->pAudioDec       = (void*)auddec;
+    pstBtrMgrSiGst->pVolume         = (void*)volume;
     pstBtrMgrSiGst->pSink           = (void*)fdsink;
     pstBtrMgrSiGst->pLoop           = (void*)loop;
     pstBtrMgrSiGst->gstClkTStamp    = 0;
@@ -214,8 +218,8 @@ btrMgr_SI_g_main_loop_Task (
     g_object_unref (bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
-    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, volume, fdsink, NULL);
+    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, volume, fdsink, NULL);
 
 #endif
 
@@ -256,6 +260,7 @@ BTRMgr_SI_GstInit (
     GstElement*     rtpauddepay     = NULL;
     GstElement*     audparse        = NULL;
     GstElement*     auddec          = NULL;
+    GstElement*     volume          = NULL;
     GstElement*     fdsink          = NULL;
     GstElement*     pipeline        = NULL;
     GstBus*         bus             = NULL;
@@ -287,6 +292,7 @@ BTRMgr_SI_GstInit (
     rtpauddepay     = gst_element_factory_make ("rtpsbcdepay",  "btmgr-si-rtpsbcdepay");
     audparse        = gst_element_factory_make ("sbcparse",     "btmgr-si-rtpsbcparse");
     auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
+    volume          = gst_element_factory_make ("volume",       "btmgr-si-volume");
 
 #ifdef BUILD_FOR_PI
     fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
@@ -314,7 +320,7 @@ BTRMgr_SI_GstInit (
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-si-pipeline");
 
-    if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !fdsink || !loop || !pipeline) {
+    if (!fdsrc || !rtpcapsfilter || !rtpauddepay || !audparse || !auddec || !volume || !fdsink || !loop || !pipeline) {
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamIn\n");
         //TODO: Call BTRMgr_SI_GstDeInit((tBTRMgrSiGstHdl)pstBtrMgrSiGst);
         return eBTRMgrSIGstFailure;
@@ -326,6 +332,7 @@ BTRMgr_SI_GstInit (
     pstBtrMgrSiGst->pRtpAudioDePay  = (void*)rtpauddepay;
     pstBtrMgrSiGst->pAudioParse     = (void*)audparse;
     pstBtrMgrSiGst->pAudioDec       = (void*)auddec;
+    pstBtrMgrSiGst->pVolume         = (void*)volume;
     pstBtrMgrSiGst->pSink           = (void*)fdsink;
     pstBtrMgrSiGst->pLoop           = (void*)loop;
     pstBtrMgrSiGst->gstClkTStamp    = 0;
@@ -346,8 +353,8 @@ BTRMgr_SI_GstInit (
     g_object_unref (bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
-    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, volume, fdsink, NULL);
+    gst_element_link_many (fdsrc, rtpcapsfilter, rtpauddepay, audparse, auddec, volume, fdsink, NULL);
 
 
     mainLoopThread = g_thread_new("btrMgr_SI_g_main_loop_Task", btrMgr_SI_g_main_loop_Task, pstBtrMgrSiGst);
@@ -488,9 +495,7 @@ BTRMgr_SI_GstStart (
     GstElement* fdsrc           = (GstElement*)pstBtrMgrSiGst->pSrc;
     GstElement* rtpcapsfilter   = (GstElement*)pstBtrMgrSiGst->pSrcCapsFilter;
     GstElement* auddec          = (GstElement*)pstBtrMgrSiGst->pAudioDec;
-#ifdef BUILD_FOR_PI
     GstElement* fdsink          = (GstElement*)pstBtrMgrSiGst->pSink;
-#endif
 
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
     gint        rtpPaylodVal= 0;
@@ -531,9 +536,7 @@ BTRMgr_SI_GstStart (
     g_object_set (fdsrc, "blocksize",   aiBTDevMTU, NULL);
     g_object_set (fdsrc, "do-timestamp",TRUE, NULL);
     g_object_set (rtpcapsfilter, "caps",fdsrcSrcCaps, NULL);
-#ifdef BUILD_FOR_PI
     g_object_set (fdsink, "sync", FALSE, NULL);
-#endif
 
 
     gst_caps_unref(fdsrcSrcCaps);
@@ -655,6 +658,31 @@ BTRMgr_SI_GstResume (
         BTRMGRLOG_ERROR ("Unable to perform Operation\n");
         return eBTRMgrSIGstFailure;
     }
+
+    return eBTRMgrSIGstSuccess;
+}
+
+
+eBTRMgrSIGstRet
+BTRMgr_SI_GstSetVolume (
+    tBTRMgrSiGstHdl hBTRMgrSiGstHdl,
+    unsigned char   ui8Volume
+) {
+    stBTRMgrSIGst* pstBtrMgrSiGst = (stBTRMgrSIGst*)hBTRMgrSiGstHdl;
+
+    if (!pstBtrMgrSiGst) {
+        BTRMGRLOG_ERROR ("Invalid input argument\n");
+        return eBTRMgrSIGstFailInArg;
+    }
+
+    GstElement* pipeline    = (GstElement*)pstBtrMgrSiGst->pPipeline;
+    GstElement* volume      = (GstElement*)pstBtrMgrSiGst->pVolume;
+
+    (void)pipeline;
+
+
+    BTRMGRLOG_DEBUG("Volume at StreamIn Gst = %d, %f\n", ui8Volume, ui8Volume/100.0);
+    g_object_set (volume, "volume", (double)(ui8Volume/100.0),  NULL);
 
     return eBTRMgrSIGstSuccess;
 }
