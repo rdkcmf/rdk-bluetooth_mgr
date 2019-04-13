@@ -167,8 +167,8 @@ static eBTRMgrRet btrMgr_ConnectToDevice (unsigned char aui8AdapterIdx, BTRMgrDe
 
 static eBTRMgrRet btrMgr_StartAudioStreamingOut (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t streamOutPref, unsigned int aui32ConnectRetryIdx, unsigned int aui32ConfirmIdx, unsigned int aui32SleepIdx);
 
-static eBTRMgrRet btrMgr_AddPersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
-static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl);
+static eBTRMgrRet btrMgr_AddPersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apui8ProfileStr);
+static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apui8ProfileStr);
 
 
 /*  Local Op Threads Prototypes */
@@ -1411,10 +1411,22 @@ btrMgr_ConnectToDevice (
                          (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
                     if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
                        BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
-                       btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected);
+
+                        if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet)) {
+                            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SINK_PROFILE_ID);
+                        }
+                        else if ((lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
+                            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SRC_PROFILE_ID);
+                        }
                     }
 
-                    btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl);
+                    if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet)) {
+                        btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID);
+                    }
+                    else if ((lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
+                        btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID);
+                    }
+
                     btrMgr_SetDevConnected(ahBTRMgrDevHdl, 1);
                     gIsUserInitiated = 0;
                     ghBTRMgrDevHdlLastConnected = ahBTRMgrDevHdl;
@@ -1674,7 +1686,8 @@ btrMgr_StartAudioStreamingOut (
 static eBTRMgrRet
 btrMgr_AddPersistentEntry (
     unsigned char       aui8AdapterIdx,
-    BTRMgrDeviceHandle  ahBTRMgrDevHdl
+    BTRMgrDeviceHandle  ahBTRMgrDevHdl,
+    const char*         apui8ProfileStr
 ) {
     char        lui8adapterAddr[BD_NAME_LEN] = {'\0'};
     eBTRMgrRet  lenBtrMgrPiRet = eBTRMgrFailure;
@@ -1684,7 +1697,7 @@ btrMgr_AddPersistentEntry (
     // Device connected add data from json file
     BTRMGR_Profile_t btPtofile;
     strncpy(btPtofile.adapterId, lui8adapterAddr, BTRMGR_NAME_LEN_MAX);
-    strncpy(btPtofile.profileId, BTRMGR_A2DP_SINK_PROFILE_ID, BTRMGR_NAME_LEN_MAX);
+    strncpy(btPtofile.profileId, apui8ProfileStr, BTRMGR_NAME_LEN_MAX);
     btPtofile.deviceId = ahBTRMgrDevHdl;
     btPtofile.isConnect = 1;
 
@@ -1702,7 +1715,8 @@ btrMgr_AddPersistentEntry (
 static eBTRMgrRet
 btrMgr_RemovePersistentEntry (
     unsigned char       aui8AdapterIdx,
-    BTRMgrDeviceHandle  ahBTRMgrDevHdl
+    BTRMgrDeviceHandle  ahBTRMgrDevHdl,
+    const char*         apui8ProfileStr
 ) {
     char         lui8adapterAddr[BD_NAME_LEN] = {'\0'};
     eBTRMgrRet   lenBtrMgrPiRet = eBTRMgrFailure;
@@ -1712,7 +1726,7 @@ btrMgr_RemovePersistentEntry (
     // Device disconnected remove data from json file
     BTRMGR_Profile_t btPtofile;
     strncpy(btPtofile.adapterId, lui8adapterAddr, BTRMGR_NAME_LEN_MAX);
-    strncpy(btPtofile.profileId, BTRMGR_A2DP_SINK_PROFILE_ID, BTRMGR_NAME_LEN_MAX);
+    strncpy(btPtofile.profileId, apui8ProfileStr, BTRMGR_NAME_LEN_MAX);
     btPtofile.deviceId = ahBTRMgrDevHdl;
     btPtofile.isConnect = 1;
 
@@ -2886,7 +2900,7 @@ BTRMGR_GetPairedDevices (
                 strncpy(lpstBtrMgrPDevice->m_name,          lstBtrCoreListOfPDevices.devices[i].pcDeviceName,   (BTRMGR_NAME_LEN_MAX - 1));
                 strncpy(lpstBtrMgrPDevice->m_deviceAddress, lstBtrCoreListOfPDevices.devices[i].pcDeviceAddress,(BTRMGR_NAME_LEN_MAX - 1));
 
-                BTRMGRLOG_INFO ("Paired Device ID = %lld\n", lstBtrCoreListOfPDevices.devices[i].tDeviceId);
+                BTRMGRLOG_INFO ("Paired Device ID = %lld Connected = %d\n", lstBtrCoreListOfPDevices.devices[i].tDeviceId, lstBtrCoreListOfPDevices.devices[i].bDeviceConnected);
 
                 lpstBtrMgrPDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService;
                 for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
@@ -3060,9 +3074,13 @@ BTRMGR_DisconnectFromDevice (
             if (lenBTRCoreDevTy == enBTRCoreLE) {
                 gIsLeDeviceConnected = 0;
             }
-            else if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet) ||
-                     (lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
-                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl);
+            else if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID);
+                btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
+                ghBTRMgrDevHdlLastConnected = 0;
+            }
+            else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID);
                 btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
                 ghBTRMgrDevHdlLastConnected = 0;
             }
@@ -3611,6 +3629,18 @@ BTRMGR_StartAudioStreamingIn (
        lenBtrCoreDevType = enBTRCorePCAudioIn; 
     }
 
+
+    if (!listOfPDevices.devices[i].bDeviceConnected) {
+        if ((lenBtrMgrRet = btrMgr_ConnectToDevice(aui8AdapterIdx, listOfPDevices.devices[i].tDeviceId, connectAs, 0, 1)) == eBTRMgrSuccess) {
+            gMediaPlaybackStPrev = BTRMGR_EVENT_MEDIA_TRACK_STOPPED;    //TODO: Bad Bad Bad way of doing this
+        }
+        else {
+            BTRMGRLOG_ERROR ("Failure\n");
+            return BTRMGR_RESULT_GENERIC_FAILURE;
+        }
+    }
+
+
     if (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
         free (gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
         gstBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = NULL;
@@ -3853,6 +3883,8 @@ BTRMGR_MediaControl (
        BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_INVALID_INPUT;
     }
+
+
     /* Can implement a reverse mapping when our dev class usecases grow later point of time */
     if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
        lenBtrCoreDevType = enBTRCoreMobileAudioIn;
@@ -3936,6 +3968,8 @@ BTRMGR_GetMediaTrackInfo (
        BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_INVALID_INPUT;
     }
+
+
     /* Can implement a reverse mapping when our dev class usecases grow later point of time */
     if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
        lenBtrCoreDevType = enBTRCoreMobileAudioIn;
@@ -3990,6 +4024,8 @@ BTRMGR_GetMediaCurrentPosition (
        BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
        return BTRMGR_RESULT_INVALID_INPUT;
     }
+
+
     /* Can implement a reverse mapping when our dev class usecases grow later point of time */
     if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE) {
        lenBtrCoreDevType = enBTRCoreMobileAudioIn;
