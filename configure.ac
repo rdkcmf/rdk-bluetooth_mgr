@@ -168,6 +168,21 @@ AC_ARG_ENABLE([rpc],
     	      ],
     	      [echo "rpc plugin is disabled"])
 
+# Check for breakpad
+BREAKPAD_CFLAGS=" "
+BREAKPAD_LFLAGS=" "
+AC_ARG_ENABLE([breakpad],
+		AS_HELP_STRING([--enable-breakpad],[enable breakpad support (default is no)]),
+		[
+			case "${enableval}" in
+        	 yes) BREAKPAD_CFLAGS="-DINCLUDE_BREAKPAD"
+                    BREAKPAD_LFLAGS="-lbreakpadwrapper";;
+        	 no) AC_MSG_ERROR([breakpad is disabled]) ;;
+        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-breakpad]) ;;
+        	 esac
+        	 ],
+    	    [echo "breakpad is disabled"])
+
 # Check for rdk logger 
 AC_ARG_ENABLE([rdk-logger],
               AS_HELP_STRING([--enable-rdk-logger],[enable rdk logger (default is no)]),
@@ -179,8 +194,6 @@ AC_ARG_ENABLE([rdk-logger],
        		esac
     	      ],
     	      [echo "rdk logger is disabled"])
-
-
 AS_IF([test "x$rdk_logger_ok" = "xyes"], [
     AC_CHECK_LIB(rdkloggers, rdk_logger_init,
                        enable_rdk_logger=yes, enable_rdk_logger=no
@@ -220,6 +233,8 @@ AC_SUBST(plugindir)
 AC_SUBST(GST_MAJORMINOR)
 AC_SUBST(BTR_MGR_SRC)
 AC_SUBST(BTR_MGR_TEST)
+AC_SUBST(BREAKPAD_CFLAGS)
+AC_SUBST(BREAKPAD_LFLAGS)
 
 # Checks for library functions.
 
