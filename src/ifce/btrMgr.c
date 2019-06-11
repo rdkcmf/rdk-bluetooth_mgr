@@ -1577,12 +1577,16 @@ btrMgr_StartAudioStreamingOut (
 
             if (ui16DevMediaBitrate) {
                 /* Aquire Device Data Path to start the audio casting */
-                lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
+                lenBtrCoreRet = BTRCore_AcquireDeviceDataPath(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
                 if ((lenBtrCoreRet == enBTRCoreSuccess) && deviceWriteMTU) {
                     /* Now that you got the FD & Read/Write MTU, start casting the audio */
                     if ((lenBtrMgrRet = btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU, lenBtrCoreDevOutMType, lpstBtrCoreDevOutMCodecInfo)) == eBTRMgrSuccess) {
                         ghBTRMgrDevHdlCurStreaming = listOfPDevices.devices[i].tDeviceId;
                         BTRMGRLOG_INFO("Streaming Started.. Enjoy the show..! :)\n");
+
+                        if (BTRCore_SetDeviceDataAckTimeout(ghBTRCoreHdl, 100) != enBTRCoreSuccess) {
+                            BTRMGRLOG_WARN ("Failed to set timeout for Audio drop. EXPECT AV SYNC ISSUES!\n");
+                        }
                     }
                     else {
                         BTRMGRLOG_ERROR ("Failed to stream now\n");
