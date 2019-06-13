@@ -4848,6 +4848,16 @@ btrMgr_ConnectionInAuthenticationCb (
                 BTRMGRLOG_ERROR ("you picked %d\n", gAcceptConnection);
                 if (gAcceptConnection == 1) {
                     BTRMGRLOG_WARN ("Incoming Connection accepted\n");
+
+                    if (ghBTRMgrDevHdlLastConnected) {
+                        BTRMGRLOG_DEBUG ("Disconnecting from previous AudioIn connection(%llu)!\n", ghBTRMgrDevHdlLastConnected);
+
+                        if (BTRMGR_RESULT_SUCCESS != BTRMGR_DisconnectFromDevice(0, ghBTRMgrDevHdlLastConnected)) {
+                            BTRMGRLOG_ERROR ("Failed to Disconnect from previous AudioIn connection(%llu)!\n", ghBTRMgrDevHdlLastConnected);
+                            //return lenBtrCoreRet;
+                        }
+                    }
+
                     ghBTRMgrDevHdlLastConnected = lstEventMessage.m_externalDevice.m_deviceHandle;
                 }
                 else {
