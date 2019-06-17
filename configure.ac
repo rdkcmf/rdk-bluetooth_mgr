@@ -217,6 +217,20 @@ AS_IF([test "x$rdk_logger_ok" = "xyes"], [
     fi
 ], [])
 
+# Check for pi build
+AC_ARG_ENABLE([pi-build],
+               AS_HELP_STRING([--enable-pi-build],[enable raspberrypi build (default is no)]),
+               [
+                 case "${enableval}" in
+                  yes) pi_build_ok=yes
+                    PI_BUILD_FLAG="-DBUILD_FOR_PI" ;;
+                  no)  pi_build_ok=no;;
+                  *) AC_MSG_ERROR([bad value ${enableval} for --enable-pi-build]) ;;
+                 esac
+               ],
+               [echo "Building for comcast devices"])
+AM_CONDITIONAL([WITH_PI_BUILD], [test x$pi_build_ok = xyes])
+AC_SUBST(PI_BUILD_FLAG)
 
 plugindir="\$(libdir)/gstreamer-$GST_MAJORMINOR"
 
