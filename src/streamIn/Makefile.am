@@ -37,5 +37,8 @@ if USE_GSTREAMER1
 libbtrMgrStreamIn_la_SOURCES += btrMgr_streamInGst.c
 endif
 
+if WITH_PI_BUILD
+AM_CPPFLAGS += $(PI_BUILD_FLAG)
+endif
 include_HEADERS = $(top_srcdir)/include/streamIn/btrMgr_streamIn.h
 

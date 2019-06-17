@@ -180,9 +180,12 @@ btrMgr_SI_g_main_loop_Task (
     audparse        = gst_element_factory_make ("sbcparse",     "btmgr-si-rtpsbcparse");
     auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
 
+#ifdef BUILD_FOR_PI
+    fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
+#else
     // make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
     fdsink          = gst_element_factory_make ("brcmpcmsink",  "btmgr-si-pcmsink");
-
+#endif  //BUILD_FOR_PI
     /* Create a new pipeline to hold the elements */
     pipeline        = gst_pipeline_new ("btmgr-si-pipeline");
 
@@ -285,8 +288,12 @@ BTRMgr_SI_GstInit (
     audparse        = gst_element_factory_make ("sbcparse",     "btmgr-si-rtpsbcparse");
     auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
 
+#ifdef BUILD_FOR_PI
+    fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
+#else
     // make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
     fdsink          = gst_element_factory_make ("brcmpcmsink",  "btmgr-si-pcmsink");
+#endif  //BUILD_FOR_PI
 
     /* Create an event loop and feed gstreamer bus mesages to it */
     loop = g_main_loop_new (NULL, FALSE);
@@ -481,6 +488,9 @@ BTRMgr_SI_GstStart (
     GstElement* fdsrc           = (GstElement*)pstBtrMgrSiGst->pSrc;
     GstElement* rtpcapsfilter   = (GstElement*)pstBtrMgrSiGst->pSrcCapsFilter;
     GstElement* auddec          = (GstElement*)pstBtrMgrSiGst->pAudioDec;
+#ifdef BUILD_FOR_PI
+    GstElement* fdsink          = (GstElement*)pstBtrMgrSiGst->pSink;
+#endif
 
     guint       busWatchId  = pstBtrMgrSiGst->busWId;
     gint        rtpPaylodVal= 0;
@@ -521,7 +531,9 @@ BTRMgr_SI_GstStart (
     g_object_set (fdsrc, "blocksize",   aiBTDevMTU, NULL);
     g_object_set (fdsrc, "do-timestamp",TRUE, NULL);
     g_object_set (rtpcapsfilter, "caps",fdsrcSrcCaps, NULL);
-
+#ifdef BUILD_FOR_PI
+    g_object_set (fdsink, "sync", FALSE, NULL);
+#endif
 
 
     gst_caps_unref(fdsrcSrcCaps);

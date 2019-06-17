@@ -231,6 +231,11 @@ static void
 btrMgr_CheckAudioInServiceAvailability (
     void
 ) {
+#ifdef BUILD_FOR_PI
+   //Since RFC is not enabled for PI devices, enabling by default
+    gIsAudioInEnabled = 1;
+    BTRMGRLOG_INFO ("Enabling BTR AudioIn Service for raspberry pi devices.\n");
+#else
     RFC_ParamData_t param = {0};
     /* We shall make this api generic and macro defined tr181 params as we start to enable diff services based on RFC */
     WDMP_STATUS status = getRFCParameter("BTRMGR", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.AudioIn.Enable", &param);
@@ -249,6 +254,7 @@ btrMgr_CheckAudioInServiceAvailability (
     else {
         BTRMGRLOG_ERROR ("getRFCParameter Failed : %s\n", getRFCErrorString(status));
     }
+#endif
 }
 
 static const char*
@@ -1847,7 +1853,6 @@ BTRMGR_Init (
     if(lenBtrMgrPiRet != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
-
     btrMgr_CheckAudioInServiceAvailability();
       
     pMainLoop   = g_main_loop_new (NULL, FALSE);
