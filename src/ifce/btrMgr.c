@@ -2904,7 +2904,7 @@ BTRMGR_GetPairedDevices (
 
                 lpstBtrMgrPDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService;
                 for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
-                    BTRMGRLOG_INFO ("Profile ID = %u; Profile Name = %s\n", lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
+                    BTRMGRLOG_TRACE ("Profile ID = %u; Profile Name = %s\n", lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
                                                                             lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
                     lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
                     strcpy (lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
@@ -2915,7 +2915,7 @@ BTRMGR_GetPairedDevices (
                 }
             }
             /*  Success */
-            BTRMGRLOG_INFO ("Successful\n");
+            BTRMGRLOG_TRACE ("Successful\n");
         }
         else {
             BTRMGRLOG_WARN("No Device is paired yet\n");
@@ -3150,7 +3150,7 @@ BTRMGR_GetConnectedDevices (
                    }
 
                    pConnectedDevices->m_numOfDevices++;
-                   BTRMGRLOG_INFO ("Successfully obtained the connected device information from paried list\n");
+                   BTRMGRLOG_TRACE ("Successfully obtained the connected device information from paried list\n");
                 }
             }
         }
@@ -3183,7 +3183,7 @@ BTRMGR_GetConnectedDevices (
                     }
 
                     pConnectedDevices->m_numOfDevices++;
-                    BTRMGRLOG_INFO ("Successfully obtained the connected device information from scanned list\n");
+                    BTRMGRLOG_TRACE ("Successfully obtained the connected device information from scanned list\n");
                 }
             }
         }

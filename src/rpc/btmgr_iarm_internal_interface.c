@@ -402,7 +402,7 @@ btrMgr_GetDiscoveredDevices (
     BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
     BTRMGR_IARMDiscoveredDevices_t* pDiscoveredDevices = (BTRMGR_IARMDiscoveredDevices_t*) arg;
 
-    BTRMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_TRACE ("Entering\n");
 
     if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
@@ -419,7 +419,7 @@ btrMgr_GetDiscoveredDevices (
 
     rc = BTRMGR_GetDiscoveredDevices(pDiscoveredDevices->m_adapterIndex, &pDiscoveredDevices->m_devices);
     if (BTRMGR_RESULT_SUCCESS == rc) {
-        BTRMGRLOG_INFO ("Success\n");
+        BTRMGRLOG_TRACE ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
@@ -514,7 +514,7 @@ btrMgr_GetPairedDevices (
     BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
     BTRMGR_IARMPairedDevices_t* pPairedDevices = (BTRMGR_IARMPairedDevices_t*) arg;
 
-    BTRMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_TRACE ("Entering\n");
 
     if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
@@ -531,7 +531,7 @@ btrMgr_GetPairedDevices (
 
     rc = BTRMGR_GetPairedDevices(pPairedDevices->m_adapterIndex, &pPairedDevices->m_devices);
     if (BTRMGR_RESULT_SUCCESS == rc) {
-        BTRMGRLOG_INFO ("Success\n");
+        BTRMGRLOG_TRACE ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
@@ -622,7 +622,7 @@ btrMgr_GetConnectedDevices (
     BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
     BTRMGR_IARMConnectedDevices_t* pConnectedDevices = (BTRMGR_IARMConnectedDevices_t*) arg;
 
-    BTRMGRLOG_INFO ("Entering\n");
+    BTRMGRLOG_TRACE ("Entering\n");
 
     if (!gIsBTRMGR_Internal_Inited) {
         retCode = IARM_RESULT_INVALID_STATE;
@@ -639,7 +639,7 @@ btrMgr_GetConnectedDevices (
 
     rc = BTRMGR_GetConnectedDevices(pConnectedDevices->m_adapterIndex, &pConnectedDevices->m_devices);
     if (BTRMGR_RESULT_SUCCESS == rc) {
-        BTRMGRLOG_INFO ("Success\n");
+        BTRMGRLOG_TRACE ("Success\n");
     }
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
