@@ -1541,10 +1541,10 @@ btrMgrdeviceCallback (
             if (m_eventCallbackFunction)
                 m_eventCallbackFunction (newEvent);
               
-            BTRMGRLOG_INFO ("posted event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
+            BTRMGRLOG_TRACE ("posted event(%d) from the adapter(%d) to listener successfully\n", newEvent.m_eventType, newEvent.m_adapterIndex);
 
             if (BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE == eventId) {
-                BTRMGRLOG_INFO("Name = %s\n\n", newEvent.m_discoveredDevice.m_name);
+                BTRMGRLOG_TRACE("Name = %s\n\n", newEvent.m_discoveredDevice.m_name);
             }
         }
         else {
