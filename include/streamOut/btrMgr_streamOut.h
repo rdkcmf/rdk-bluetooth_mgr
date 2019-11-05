@@ -97,6 +97,17 @@ eBTRMgrRet BTRMgr_SO_GetCurrentSettings (tBTRMgrSoHdl hBTRMgrSoHdl);
 eBTRMgrRet BTRMgr_SO_GetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrMediaStatus* apstBtrMgrSoStatus);
 
 /**
+ * @brief This API will set the current settings used by this interface.
+ *
+ * @param[in]  hBTRMgrSoHdl             Handle to the bluetooth manager stream out interface.
+ * @param[in]  pstBtrMgrSoStatus        Status of media device that has to be fetched.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
+ */
+eBTRMgrRet BTRMgr_SO_SetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrMediaStatus* apstBtrMgrSoStatus);
+
+/**
  * @brief This API fetches the maximum transmission rate.
  *
  * @param[in]  hBTRMgrSoHdl              Handle to the bluetooth manager stream out   interface.

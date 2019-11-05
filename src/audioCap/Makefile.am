@@ -24,9 +24,12 @@ AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/inclu
 AM_LDFLAGS =
 
 if USE_ACM
+AM_CPPFLAGS += -DUSE_ACM
 AM_CPPFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus
 AM_LDFLAGS += -lIARMBus
-else
+endif
+
+if USE_RMF_AC
 AM_CPPFLAGS += -DUSE_AC_RMF
 endif
 

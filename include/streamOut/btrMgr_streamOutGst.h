@@ -172,6 +172,18 @@ eBTRMgrSOGstRet BTRMgr_SO_GstPause (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 eBTRMgrSOGstRet BTRMgr_SO_GstResume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 
 /**
+ * @brief This API Sets the volume of current operation and listens to the events.
+ *
+ * Checks for the current state, if it is in paused state, playing state is set.
+ *
+ * @param[in]  hBTRMgrSoGstHdl             Handle to the stream in interface.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ */
+eBTRMgrSOGstRet BTRMgr_SO_GstSetVolume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, unsigned char ui8Volume);
+
+/**
  * @brief This API pushes the buffer to the queue.
  *
  * @param[in]  hBTRMgrSoGstHdl         Handle to the stream out interface.

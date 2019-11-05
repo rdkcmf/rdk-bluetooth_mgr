@@ -215,6 +215,41 @@ BTRMgr_SO_GetStatus (
 
 
 eBTRMgrRet
+BTRMgr_SO_SetStatus (
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    stBTRMgrMediaStatus*    apstBtrMgrSoStatus
+) {
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
+
+#ifdef USE_GST1
+    eBTRMgrSOGstRet leBtrMgrSoGstRet = eBTRMgrSOGstSuccess;
+#endif
+
+    if (pstBtrMgrSoHdl == NULL) {
+        return eBTRMgrNotInitialized;
+    }
+
+    if (apstBtrMgrSoStatus == NULL) {
+        return eBTRMgrFailInArg;
+    }
+
+#ifdef USE_GST1
+    if (apstBtrMgrSoStatus->ui8Volume != 128) {
+        if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetVolume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, apstBtrMgrSoStatus->ui8Volume)) != eBTRMgrSOGstSuccess) {
+            BTRMGRLOG_ERROR("Return Status = %d - Failed to set volume\n", leBtrMgrSoGstRet);
+            leBtrMgrSoRet  = eBTRMgrFailure;
+        }
+    }
+#else
+    // TODO: Implement Stream out functionality using generic libraries
+#endif
+
+    return leBtrMgrSoRet;
+}
+
+
+eBTRMgrRet
 BTRMgr_SO_GetEstimatedInABufSize (
     tBTRMgrSoHdl            hBTRMgrSoHdl,
     stBTRMgrInASettings*    apstBtrMgrSoInASettings,

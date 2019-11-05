@@ -66,6 +66,7 @@ typedef struct _stBTRMgrSOGst {
     void*        pAudioEnc;
     void*        pAECapsFilter;
     void*        pRtpAudioPay;
+    void*        pVolume;
 
 #if !(ENABLE_MAIN_LOOP_CONTEXT)
     void*        pContext;
@@ -150,6 +151,7 @@ btrMgr_SO_g_main_loop_Task (
 
 #if !(ENABLE_MAIN_LOOP_CONTEXT)
     GstElement*     appsrc      = NULL;
+    GstElement*     volume      = NULL;
     GstElement*     audresample = NULL;
     GstElement*     audenc      = NULL;
     GstElement*     aecapsfilter= NULL;
@@ -179,6 +181,7 @@ btrMgr_SO_g_main_loop_Task (
 
     /* Create elements */
     appsrc      = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
+    volume      = gst_element_factory_make ("volume", "btmgr-so-volume");
 #if defined(DISABLE_AUDIO_ENCODING)
     audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
@@ -199,13 +202,14 @@ btrMgr_SO_g_main_loop_Task (
 
     loop =  pstBtrMgrSoGst->pLoop;
 
-    if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
+    if (!appsrc || !volume || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamOut\n");
         return NULL;
     }
 
     pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
+    pstBtrMgrSoGst->pVolume         = (void*)volume;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
     pstBtrMgrSoGst->pAudioResample  = (void*)audresample;
     pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
@@ -223,8 +227,8 @@ btrMgr_SO_g_main_loop_Task (
     g_object_unref(bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
-    gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), appsrc, volume, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_element_link_many (appsrc, volume, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
 
     g_signal_connect (appsrc, "need-data", G_CALLBACK(btrMgr_SO_NeedDataCb), pstBtrMgrSoGst);
     g_signal_connect (appsrc, "enough-data", G_CALLBACK(btrMgr_SO_EnoughDataCb), pstBtrMgrSoGst);
@@ -265,6 +269,7 @@ BTRMgr_SO_GstInit (
 ) {
 #if (ENABLE_MAIN_LOOP_CONTEXT)
     GstElement*     appsrc          = NULL;
+    GstElement*     volume          = NULL;
     GstElement*     audresample     = NULL;
     GstElement*     audenc          = NULL;
     GstElement*     aecapsfilter    = NULL;
@@ -294,6 +299,7 @@ BTRMgr_SO_GstInit (
 #if (ENABLE_MAIN_LOOP_CONTEXT)
     /* Create elements */
     appsrc      = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
+    volume      = gst_element_factory_make ("volume", "btmgr-so-volume");
 #if defined(DISABLE_AUDIO_ENCODING)
     audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
@@ -327,7 +333,7 @@ BTRMgr_SO_GstInit (
     /* Create a new pipeline to hold the elements */
     pipeline = gst_pipeline_new ("btmgr-so-pipeline");
 
-    if (!appsrc || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
+    if (!appsrc || !volume || !audenc || !aecapsfilter || !rtpaudpay || !fdsink || !loop || !pipeline) {
         BTRMGRLOG_ERROR ("Gstreamer plugin missing for streamOut\n");
         //TODO: Call BTRMgr_SO_GstDeInit((tBTRMgrSoGstHdl)pstBtrMgrSoGst);
         free((void*)pstBtrMgrSoGst);
@@ -336,6 +342,7 @@ BTRMgr_SO_GstInit (
 
     pstBtrMgrSoGst->pPipeline       = (void*)pipeline;
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
+    pstBtrMgrSoGst->pVolume         = (void*)volume;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
     pstBtrMgrSoGst->pAudioResample  = (void*)audresample;
     pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
@@ -362,8 +369,8 @@ BTRMgr_SO_GstInit (
     g_object_unref(bus);
 
     /* setup */
-    gst_bin_add_many (GST_BIN (pipeline), appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
-    gst_element_link_many (appsrc, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_bin_add_many (GST_BIN (pipeline), appsrc, volume, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
+    gst_element_link_many (appsrc, volume, audenc, aecapsfilter, rtpaudpay, fdsink, NULL);
 
 
     mainLoopThread = g_thread_new("btrMgr_SO_g_main_loop_Task", btrMgr_SO_g_main_loop_Task, pstBtrMgrSoGst);
@@ -521,6 +528,7 @@ BTRMgr_SO_GstStart (
 
     GstElement* pipeline    = (GstElement*)pstBtrMgrSoGst->pPipeline;
     GstElement* appsrc      = (GstElement*)pstBtrMgrSoGst->pSrc;
+    GstElement* volume      = (GstElement*)pstBtrMgrSoGst->pVolume;
     GstElement* fdsink      = (GstElement*)pstBtrMgrSoGst->pSink;
     GstElement* audresample = (GstElement*)pstBtrMgrSoGst->pAudioResample;
     GstElement* audenc      = (GstElement*)pstBtrMgrSoGst->pAudioEnc;
@@ -535,6 +543,7 @@ BTRMgr_SO_GstStart (
 
     (void)pipeline;
     (void)appsrc;
+    (void)volume;
     (void)audenc;
     (void)busWatchId;
 
@@ -548,8 +557,8 @@ BTRMgr_SO_GstStart (
         //TODO: Audio resampling from 48KHz to 44.1KHz results in some timestamp issues
         //      and discontinuties which we need to fix
         gst_bin_add(GST_BIN(pipeline), audresample);
-        gst_element_unlink(appsrc, audenc);
-        gst_element_link_many (appsrc, audresample, audenc, NULL);
+        gst_element_unlink(volume, audenc);
+        gst_element_link_many (volume, audresample, audenc, NULL);
     }
 
     pstBtrMgrSoGst->gstClkTStamp = 0;
@@ -759,6 +768,31 @@ BTRMgr_SO_GstResume (
         BTRMGRLOG_ERROR ("Unable to perform Operation\n");
         return eBTRMgrSOGstFailure;
     }
+
+    return eBTRMgrSOGstSuccess;
+}
+
+
+eBTRMgrSOGstRet
+BTRMgr_SO_GstSetVolume (
+    tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
+    unsigned char   ui8Volume
+) {
+    stBTRMgrSOGst* pstBtrMgrSoGst = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
+
+    if (!pstBtrMgrSoGst) {
+        BTRMGRLOG_ERROR ("Invalid input argument\n");
+        return eBTRMgrSOGstFailInArg;
+    }
+
+    GstElement* pipeline    = (GstElement*)pstBtrMgrSoGst->pPipeline;
+    GstElement* volume      = (GstElement*)pstBtrMgrSoGst->pVolume;
+
+    (void)pipeline;
+
+
+    BTRMGRLOG_DEBUG("Volume at StreamOut Gst = %d, %f\n", ui8Volume, ui8Volume/255.0);
+    g_object_set (volume, "volume", (double)(ui8Volume/255.0),  NULL);
 
     return eBTRMgrSOGstSuccess;
 }

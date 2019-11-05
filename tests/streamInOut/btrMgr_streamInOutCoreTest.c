@@ -1781,7 +1781,7 @@ streamOutLiveTestMainAlternateStart (
         goto err_open;
     }
 
-    if (eBTRMgrSuccess != BTRMgr_AC_Init(&(pstAppData->hBTRMgrAcHdl))) {
+    if (eBTRMgrSuccess != BTRMgr_AC_Init(&(pstAppData->hBTRMgrAcHdl), NULL)) {
         fprintf(stderr, "BTRMgr_AC_Init - FAILED\n");
         goto err_open;
     }
@@ -1889,6 +1889,7 @@ streamOutLiveTestMainAlternateStart (
     if (eBTRMgrSuccess != BTRMgr_AC_Start(pstAppData->hBTRMgrAcHdl,
                                           &lstBtrMgrAcOutASettings,
                                           btmgr_ACDataReadyCallback,
+                                          NULL,
                                           pstAppData
                                          )) {
         goto err_open;

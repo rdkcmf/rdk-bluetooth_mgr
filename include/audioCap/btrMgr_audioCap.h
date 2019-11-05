@@ -33,8 +33,16 @@
 
 typedef void* tBTRMgrAcHdl;
 
+typedef char* tBTRMgrAcType;
+
+
+const tBTRMgrAcType BTRMGR_AC_TYPE_PRIMARY      = "primary";
+const tBTRMgrAcType BTRMGR_AC_TYPE_AUXILIARY    = "auxiliary";
+
+
 /* Fptr Callbacks types */
 typedef eBTRMgrRet (*fPtr_BTRMgr_AC_DataReadyCb) (void* apvAcDataBuf, unsigned int aui32AcDataLen, void *apvUserData);
+typedef eBTRMgrRet (*fPtr_BTRMgr_AC_StatusCb) (stBTRMgrMediaStatus* apstBtrMgrSoStatus, void *apvUserData);
 
 /* Interfaces */
 /**
@@ -51,7 +59,7 @@ typedef eBTRMgrRet (*fPtr_BTRMgr_AC_DataReadyCb) (void* apvAcDataBuf, unsigned i
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
-eBTRMgrRet BTRMgr_AC_Init (tBTRMgrAcHdl* phBTRMgrAcHdl);
+eBTRMgrRet BTRMgr_AC_Init (tBTRMgrAcHdl* phBTRMgrAcHdl, tBTRMgrAcType api8BTRMgrAcType);
 
 /**
  * @brief This API deinitializes the bluetooth manager audio capture interface.
@@ -116,7 +124,7 @@ eBTRMgrRet BTRMgr_AC_GetStatus (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrMediaStatus* 
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
-eBTRMgrRet BTRMgr_AC_Start (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrOutASettings* apstBtrMgrAcOutASettings, fPtr_BTRMgr_AC_DataReadyCb afpcBBtrMgrAcDataReady, void* apvUserData);
+eBTRMgrRet BTRMgr_AC_Start (tBTRMgrAcHdl hBTRMgrAcHdl, stBTRMgrOutASettings* apstBtrMgrAcOutASettings, fPtr_BTRMgr_AC_DataReadyCb afpcBBtrMgrAcDataReady,  fPtr_BTRMgr_AC_StatusCb afpcBBtrMgrAcStatus, void* apvUserData);
 
 /**
  * @brief This function will stop the audio capture.
