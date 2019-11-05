@@ -66,13 +66,13 @@ fi
 AC_SUBST([BTRCORE_LIBS])
 
 
-AC_ARG_ENABLE(acm,
-              AS_HELP_STRING([--enable-acm],
-                             [Use Audio Capture Manager (default is no)]),
-                             [enable_acm=$enableval],
-                             [enable_acm=no])
+AC_ARG_ENABLE(ac_rmf,
+              AS_HELP_STRING([--enable-ac_rmf],
+                             [Use RMF Audio Capture (default is no)]),
+                             [enable_ac_rmf=$enableval],
+                             [enable_ac_rmf=no])
 
-AS_IF([test "x$enable_acm" = "xno"], [
+AS_IF([test "x$enable_ac_rmf" = "xyes"], [
     AC_CHECK_LIB(rmfAudioCapture, RMF_AudioCapture_Open,
                        rmfAudioCapture_ok=yes, rmfAudioCapture_ok=no
                        AC_MSG_ERROR([RMFAUDIOCAPTURE library (librmfAudioCapture) not found]))
@@ -95,6 +95,13 @@ AS_IF([test "x$enable_acm" = "xno"], [
     fi
 ], [])
 
+
+AC_ARG_ENABLE(acm,
+              AS_HELP_STRING([--enable-acm],
+                             [Use Audio Capture Manager (default is no)]),
+                             [enable_acm=$enableval],
+                             [enable_acm=no])
+
 AS_IF([test "x$enable_acm" = "xyes"], [
        AC_MSG_CHECKING([for audioCaptureMgr])
        AC_TRY_COMPILE(
@@ -109,13 +116,14 @@ AS_IF([test "x$enable_acm" = "xyes"], [
              audioCaptureMgr_ok=no)
        AC_MSG_RESULT($audioCaptureMgr_ok)
        if test "$audioCaptureMgr_ok" = yes; then
-          AUDIOCAPTURE_LIBS=" "
+          AUDIOCAPTURE_LIBS+="  "
        else
           AC_MSG_ERROR([AUDIOCAPTURE Interface (audiocapturemgr_iarm.h) not found])
        fi
 ], [])
 
 
+AM_CONDITIONAL(USE_RMF_AC, test "x$enable_ac_rmf" = xyes)
 AM_CONDITIONAL(USE_ACM, test "x$enable_acm" = xyes)
 AC_SUBST([AUDIOCAPTURE_LIBS])
 

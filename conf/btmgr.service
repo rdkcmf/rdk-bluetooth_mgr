@@ -24,6 +24,7 @@ Requires=iarmbusd.service bluetooth.service audiocapturemgr.service
 [Service]
 Type=notify
 TimeoutStartSec=10s
+Environment="XDG_RUNTIME_DIR=/tmp"
 ExecStartPre=/bin/sh -c 'sleep 5'
 ExecStart=/bin/sh -c "/usr/bin/btMgrBus"
 Restart=always

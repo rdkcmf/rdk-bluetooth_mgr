@@ -152,7 +152,7 @@ typedef enum _BTRMGR_DeviceType_t {
  */
 typedef enum _BTRMGR_StreamOut_Type_t {
     BTRMGR_STREAM_PRIMARY = 0,
-    BTRMGR_STREAM_SECONDARY,
+    BTRMGR_STREAM_AUXILIARY
 } BTRMGR_StreamOut_Type_t;
 
 /**

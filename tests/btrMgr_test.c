@@ -89,6 +89,7 @@ static void printOptions (void)
     printf ("34. Perform LE Operation\n");
     printf ("35. Reset Bluetooth Adapter\n");
     printf ("36. Get Discovery State \n");
+    printf ("37. Set StreamOut Type Auxiliary\n");
     printf ("40. Ring A Tile (Just for POC)\n");
     printf ("41. (RFC)Set AudioIn - Enabled/Disabled\n");
     printf ("42. Set AudioIn - Enabled/Disabled\n");
@@ -141,6 +142,7 @@ static void printOptionsCli (void)
     printf ("34. Perform LE Operation\n Usage: btrMgrTest 34 <Handle> <UUID> <Option> \nEnter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
     printf ("35. Reset Bluetooth Adapter\n Usage: btrMgrTest 35\n");
     printf ("36. Get Discovery State \n");
+    printf ("37. Set StreamOut Type Auxiliary\n Usage: btrMgrTest 37\n");
     printf ("40. Ring A Tile (Just for POC)\n");
     printf ("55. Quit\n");
     printf ("\n\n");
@@ -1146,6 +1148,27 @@ int main(int argc, char *argv[])
                     else
                         printf ("\nSuccess....; Device Discovery Status = %u and Device Type = %u \n", aeDiscoveryStatus, aenBTRMgrDevOpType);
 
+                }
+                break;
+            case 37:
+                {
+                	BTRMGR_StreamOut_Type_t type = BTRMGR_STREAM_AUXILIARY;
+
+                    int ch = 0;
+                    printf ("Enter StreamOut Type : [0 - Primary | 1 - Auxiliary]\n");
+                    ch = getDeviceSelection();
+                    if (0 == ch)
+                        type = BTRMGR_STREAM_PRIMARY;
+                    else if (1 == ch)
+                        type = BTRMGR_STREAM_AUXILIARY;
+                    else
+                        type = BTRMGR_STREAM_AUXILIARY;
+
+                    rc = BTRMGR_SetAudioStreamingOutType(0, type);
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\nSuccess....; Set StreamOut Type = %d \n",  type);
                 }
                 break;
             case 40:

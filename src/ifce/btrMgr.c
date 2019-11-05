@@ -48,13 +48,14 @@
 
 // Move to private header ?
 typedef struct _stBTRMgrStreamingInfo {
-    tBTRMgrAcHdl    hBTRMgrAcHdl;
-    tBTRMgrSoHdl    hBTRMgrSoHdl;
-    tBTRMgrSoHdl    hBTRMgrSiHdl;
-    unsigned long   bytesWritten;
-    unsigned        samplerate;
-    unsigned        channels;
-    unsigned        bitsPerSample;
+    tBTRMgrAcHdl            hBTRMgrAcHdl;
+    tBTRMgrSoHdl            hBTRMgrSoHdl;
+    tBTRMgrSoHdl            hBTRMgrSiHdl;
+    BTRMGR_StreamOut_Type_t tBTRMgrSoType;
+    unsigned long           bytesWritten;
+    unsigned                samplerate;
+    unsigned                channels;
+    unsigned                bitsPerSample;
 } stBTRMgrStreamingInfo;
 
 typedef enum _BTRMGR_DiscoveryState_t {
@@ -183,6 +184,7 @@ static gpointer btrMgr_g_main_loop_Task (gpointer appvMainLoop);
 static gboolean btrMgr_DiscoveryHoldOffTimerCb (gpointer gptr);
 
 static eBTRMgrRet btrMgr_ACDataReadyCb (void* apvAcDataBuf, unsigned int aui32AcDataLen, void* apvUserData);
+static eBTRMgrRet btrMgr_ACStatusCb (stBTRMgrMediaStatus* apstBtrMgrAcStatus, void* apvUserData);
 static eBTRMgrRet btrMgr_SOStatusCb (stBTRMgrMediaStatus* apstBtrMgrSoStatus, void* apvUserData);
 static eBTRMgrRet btrMgr_SIStatusCb (stBTRMgrMediaStatus* apstBtrMgrSiStatus, void* apvUserData);
 
@@ -998,6 +1000,8 @@ btrMgr_StartCastingAudio (
 
     int                     inBytesToEncode = 3072; // Corresponds to MTU size of 895
 
+    BTRMGR_StreamOut_Type_t lCurrentSoType  = gstBTRMgrStreamingInfo.tBTRMgrSoType;
+    tBTRMgrAcType           lpi8BTRMgrAcType= BTRMGR_AC_TYPE_PRIMARY;
 
     if ((ghBTRMgrDevHdlCurStreaming != 0) || (outMTUSize == 0)) {
         return eBTRMgrFailInArg;
@@ -1017,7 +1021,20 @@ btrMgr_StartCastingAudio (
         return eBTRMgrInitFailure;
     }
 
-    if ((lenBtrMgrRet = BTRMgr_AC_Init(&gstBTRMgrStreamingInfo.hBTRMgrAcHdl)) != eBTRMgrSuccess) {
+    if (lCurrentSoType == BTRMGR_STREAM_PRIMARY) {
+        lpi8BTRMgrAcType = BTRMGR_AC_TYPE_PRIMARY;
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = lCurrentSoType;
+    }
+    else if (lCurrentSoType == BTRMGR_STREAM_AUXILIARY) {
+        lpi8BTRMgrAcType = BTRMGR_AC_TYPE_AUXILIARY;
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = lCurrentSoType;
+    }
+    else {
+        lpi8BTRMgrAcType = BTRMGR_AC_TYPE_PRIMARY;
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = BTRMGR_STREAM_PRIMARY;
+    }
+
+    if ((lenBtrMgrRet = BTRMgr_AC_Init(&gstBTRMgrStreamingInfo.hBTRMgrAcHdl, lpi8BTRMgrAcType)) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("BTRMgr_AC_Init FAILED\n");
         return eBTRMgrInitFailure;
     }
@@ -1142,6 +1159,7 @@ btrMgr_StartCastingAudio (
         if ((lenBtrMgrRet = BTRMgr_AC_Start(gstBTRMgrStreamingInfo.hBTRMgrAcHdl,
                                             &lstBtrMgrAcOutASettings,
                                             btrMgr_ACDataReadyCb,
+                                            btrMgr_ACStatusCb,
                                             &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
             BTRMGRLOG_ERROR ("BTRMgr_AC_Start FAILED\n");
         }
@@ -3636,8 +3654,47 @@ BTRMGR_SetAudioStreamingOutType (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
+    BTRMGRLOG_INFO ("Audio output - Stored %d - Switching to %d\n", gstBTRMgrStreamingInfo.tBTRMgrSoType, type);
+    if (gstBTRMgrStreamingInfo.tBTRMgrSoType != type) {
+        unsigned char ui8StreamingStatus = 0;
 
-    BTRMGRLOG_ERROR ("Secondary audio support is not implemented yet. Always primary audio is played for now\n");
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = type;
+        if ((BTRMGR_RESULT_SUCCESS == BTRMGR_IsAudioStreamingOut(aui8AdapterIdx, &ui8StreamingStatus)) && ui8StreamingStatus) {
+            enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
+            enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreUnknown;
+            enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
+            BTRMgrDeviceHandle      lhBTRMgrDevHdlCurStreaming  = ghBTRMgrDevHdlCurStreaming;
+
+            BTRMGRLOG_WARN ("Its already streaming. lets stop this and start on other device \n");
+
+            lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+            BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+            if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+                /* Streaming-Out is happening; stop it */
+                if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                    BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-Out\n");
+                    BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
+                    return lenBtrMgrResult;
+                }
+            }
+            else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+                /* Streaming-In is happening; stop it */
+                if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
+                    BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-In\n");
+                    BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
+                    return lenBtrMgrResult;
+                }
+            }
+
+            BTRMGRLOG_WARN ("Audio output - Switching to %d - Stored %d\n", type, gstBTRMgrStreamingInfo.tBTRMgrSoType);
+            if (btrMgr_StartAudioStreamingOut(aui8AdapterIdx, lhBTRMgrDevHdlCurStreaming, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT, 0, 0, 0) != eBTRMgrSuccess) {
+                BTRMGRLOG_ERROR ("Failure To Switch - Please reconnect\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+        }
+    }
+
     return lenBtrMgrResult;
 }
 
@@ -4647,6 +4704,29 @@ btrMgr_ACDataReadyCb (
     }
 
     lstBTRMgrStrmInfo->bytesWritten += aui32AcDataLen;
+
+    return leBtrMgrAcRet;
+}
+
+
+static eBTRMgrRet
+btrMgr_ACStatusCb (
+    stBTRMgrMediaStatus*    apstBtrMgrAcStatus,
+    void*                   apvUserData
+) {
+    eBTRMgrRet              leBtrMgrAcRet = eBTRMgrSuccess;
+    stBTRMgrStreamingInfo*  lpstBTRMgrStrmInfo  = (stBTRMgrStreamingInfo*)apvUserData; 
+
+    if (lpstBTRMgrStrmInfo && apstBtrMgrAcStatus) {
+        stBTRMgrMediaStatus lstBtrMgrSoStatus;
+
+        //TODO; Dont just memcpy from AC Status to SO Status, map it correctly in the future.
+        BTRMGRLOG_WARN ("STATUS CHANGED\n");
+        memcpy(&lstBtrMgrSoStatus, apstBtrMgrAcStatus, sizeof(stBTRMgrMediaStatus));
+        if ((leBtrMgrAcRet = BTRMgr_SO_SetStatus(lpstBTRMgrStrmInfo->hBTRMgrSoHdl, &lstBtrMgrSoStatus)) != eBTRMgrSuccess) {
+            BTRMGRLOG_ERROR ("BTRMgr_SO_SetStatus FAILED = %d\n", leBtrMgrAcRet);
+        }
+    }
 
     return leBtrMgrAcRet;
 }
