@@ -16,4 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = audioCap streamOut streamIn persistIf rpc ifce sysDiag columbo leOnboarding main
+SUBDIRS =
+
+INCLUDE_FILES =
+
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/leOnboarding -I${top_srcdir}/include/logger
+AM_LDFLAGS = -lrdkloggers
+AM_CPPFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal
+AM_LDFLAGS += -lIARMBus -lssl -lcrypto
+
+if USE_SYS_DIAG
+AM_CPPFLAGS += -DBTRTEST_LE_ONBRDG_ENABLE=1
+endif
+
+lib_LTLIBRARIES = libbtrMgrLeOnboarding.la
+libbtrMgrLeOnboarding_la_SOURCES = btrMgr_LEOnboarding.c ecdh.c
+libbtrMgrLeOnboarding_la_CFLAGS = $(INCLUDE_FILES) 
+
+include_HEADERS = $(top_srcdir)/include/leOnboarding/btrMgr_LEOnboarding.h $(top_srcdir)/include/leOnboarding/ecdh.h

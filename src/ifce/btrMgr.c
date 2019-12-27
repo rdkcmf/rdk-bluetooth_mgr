@@ -34,7 +34,9 @@
 #include "btrMgr_audioCap.h"
 #include "btrMgr_streamIn.h"
 #include "btrMgr_persistIface.h"
-
+#include "btrMgr_SysDiag.h"
+#include "btrMgr_Columbo.h"
+#include "btrMgr_LEOnboarding.h"
 
 /* Private Macro definitions */
 #define BTRMGR_SIGNAL_POOR       (-90)
@@ -45,6 +47,8 @@
 #define BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS 3
 
 #define BTRMGR_DISCOVERY_HOLD_OFF_TIME      120
+#define BTRTEST_LE_ONBRDG_ENABLE 1
+
 
 // Move to private header ?
 typedef struct _stBTRMgrStreamingInfo {
@@ -105,6 +109,35 @@ static void*                        gpvMainLoop                 = NULL;
 static void*                        gpvMainLoopThread           = NULL;
 
 static BTRMGR_EventCallback         gfpcBBTRMgrEventOut         = NULL;
+static char                         gLeReadOpResponse[BTRMGR_MAX_DEV_OP_DATA_LEN] = "\0";
+static BOOLEAN                      gIsAdvertisementSet         = FALSE;
+static BOOLEAN                      gIsDeviceAdvertising        = FALSE;
+
+BTRMGR_LeCustomAdvertisement_t stCoreCustomAdv =
+{
+    0x02 ,
+    0x01 ,
+    0x06 ,
+    0x05 ,
+    0x03 ,
+    0x0A ,
+    0x18 ,
+    0xB9 ,
+    0xFD ,
+    0x0B ,
+    0xFF ,
+    0xA3 ,
+    0x07 ,
+    0x0101,
+    {
+        0xC8,
+        0xB3,
+        0x73,
+        0x32,
+        0xEA,
+        0x3D
+    }
+};
 
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
@@ -158,6 +191,9 @@ static unsigned char btrMgr_GetDevPaired (BTRMgrDeviceHandle ahBTRMgrDevHdl);
 static void btrMgr_SetDevConnected (BTRMgrDeviceHandle ahBTRMgrDevHdl, unsigned char aui8isDeviceConnected);
 static unsigned char btrMgr_IsDevConnected (BTRMgrDeviceHandle ahBTRMgrDevHdl);
 
+static unsigned char btrMgr_IsDevNameSameAsAddress (char* apcDeviceName, char* apcDeviceAddress, unsigned int ui32StrLen);
+static unsigned char btrMgr_CheckIfDevicePrevDetected (BTRMgrDeviceHandle ahBTRMgrDevHdl);
+
 static BTRMGR_DeviceType_t btrMgr_MapDeviceTypeFromCore (enBTRCoreDeviceClass device_type);
 static BTRMGR_DeviceOperationType_t btrMgr_MapDeviceOpFromDeviceType (BTRMGR_DeviceType_t device_type);
 static BTRMGR_RSSIValue_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
@@ -174,7 +210,13 @@ static eBTRMgrRet btrMgr_StartAudioStreamingOut (unsigned char aui8AdapterIdx, B
 
 static eBTRMgrRet btrMgr_AddPersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apui8ProfileStr, int ai32DevConnected);
 static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apui8ProfileStr);
+#if 0
+static void btrMgr_AddStandardAdvGattInfo(void);
 
+static void btrMgr_AddColumboGATTInfo(void);
+#endif
+
+static BTRMGR_SysDiagChar_t btrMgr_MapUUIDtoDiagElement(char *aUUID);
 
 /*  Local Op Threads Prototypes */
 static gpointer btrMgr_g_main_loop_Task (gpointer appvMainLoop);
@@ -772,6 +814,52 @@ btrMgr_IsDevConnected (
 }
 
 
+static unsigned char
+btrMgr_IsDevNameSameAsAddress (
+    char*           apcDeviceName,
+    char*           apcDeviceAddress,
+    unsigned int    ui32StrLen
+) {
+    if (ui32StrLen > 17)
+        return 0;
+
+
+    if ((apcDeviceName[0] == apcDeviceAddress[0]) &&
+        (apcDeviceName[1] == apcDeviceAddress[1]) &&
+        (apcDeviceName[3] == apcDeviceAddress[3]) &&
+        (apcDeviceName[4] == apcDeviceAddress[4]) &&
+        (apcDeviceName[6] == apcDeviceAddress[6]) &&
+        (apcDeviceName[7] == apcDeviceAddress[7]) &&
+        (apcDeviceName[9] == apcDeviceAddress[9]) &&
+        (apcDeviceName[10] == apcDeviceAddress[10]) &&
+        (apcDeviceName[12] == apcDeviceAddress[12]) &&
+        (apcDeviceName[13] == apcDeviceAddress[13]) &&
+        (apcDeviceName[15] == apcDeviceAddress[15]) &&
+        (apcDeviceName[16] == apcDeviceAddress[16]) ) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+
+static unsigned char
+btrMgr_CheckIfDevicePrevDetected (
+    BTRMgrDeviceHandle          ahBTRMgrDevHdl
+) {
+    int j = 0;
+
+    for (j = 0; j < gListOfDiscoveredDevices.m_numOfDevices; j++) {
+        if (ahBTRMgrDevHdl == gListOfDiscoveredDevices.m_deviceProperty[j].m_deviceHandle) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+
 static BTRMGR_DeviceType_t
 btrMgr_MapDeviceTypeFromCore (
     enBTRCoreDeviceClass    device_type
@@ -842,6 +930,9 @@ btrMgr_MapDeviceTypeFromCore (
         type = BTRMGR_DEVICE_TYPE_HID;
         break;
     case enBTRCore_DC_HID_Joystick:
+        type = BTRMGR_DEVICE_TYPE_HID;
+        break;
+    case enBTRCore_DC_HID_AudioRemote:
         type = BTRMGR_DEVICE_TYPE_HID;
         break;
     case enBTRCore_DC_Reserved:
@@ -971,17 +1062,38 @@ btrMgr_MapDevstatusInfoToEventInfo (
         strncpy(apstEventMessage->m_externalDevice.m_deviceAddress, "TO BE FILLED", BTRMGR_NAME_LEN_MAX - 1);
         // Need to check for devAddress, if possible ?
     }
+    else if (type == BTRMGR_EVENT_DEVICE_OP_INFORMATION) {
+        if (enBTRCoreLE == ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceType) {
+            apstEventMessage->m_deviceOpInfo.m_deviceHandle      = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
+            apstEventMessage->m_deviceOpInfo.m_deviceType        = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
+            apstEventMessage->m_deviceOpInfo.m_leOpType          = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eCoreLeOper;
+
+            strncpy(apstEventMessage->m_deviceOpInfo.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName,
+                    strlen(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName) < BTRMGR_NAME_LEN_MAX ? strlen (((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName) : BTRMGR_NAME_LEN_MAX - 1);
+            strncpy(apstEventMessage->m_deviceOpInfo.m_deviceAddress, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceAddress,
+                    strlen(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceAddress) < BTRMGR_NAME_LEN_MAX ? strlen (((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceAddress) : BTRMGR_NAME_LEN_MAX - 1);
+            strncpy(apstEventMessage->m_deviceOpInfo.m_uuid, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->uuid,
+                    strlen(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->uuid) < BTRMGR_MAX_STR_LEN ? strlen(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->uuid) : BTRMGR_MAX_STR_LEN - 1);
+        }
+    }
     else {
         apstEventMessage->m_pairedDevice.m_deviceHandle          = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceId;
         apstEventMessage->m_pairedDevice.m_deviceType            = btrMgr_MapDeviceTypeFromCore(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceClass);
         apstEventMessage->m_pairedDevice.m_isLastConnectedDevice = (ghBTRMgrDevHdlLastConnected == apstEventMessage->m_pairedDevice.m_deviceHandle) ? 1 : 0;
-        apstEventMessage->m_pairedDevice.m_isLowEnergyDevice     = (apstEventMessage->m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//We shall make it generic later
-        apstEventMessage->m_pairedDevice.m_ui32DevClassBtSpec    = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->ui32DevClassBtSpec;
-        strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName, BTRMGR_NAME_LEN_MAX - 1);
-        strncpy(apstEventMessage->m_pairedDevice.m_deviceAddress, "TO BE FILLED", BTRMGR_NAME_LEN_MAX - 1);
-        // Need to add devAddress in stBTRCoreDevStatusCBInfo ?
-    }
 
+        if (apstEventMessage->m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TILE) {
+            apstEventMessage->m_pairedDevice.m_isLowEnergyDevice     = 1;//We shall make it generic later
+        }
+        else {
+            apstEventMessage->m_pairedDevice.m_isLowEnergyDevice     = (((stBTRCoreDevStatusCBInfo*)p_StatusCB)->eDeviceType == enBTRCoreLE)?1:0;//We shall make it generic later
+        }
+
+        apstEventMessage->m_pairedDevice.m_ui32DevClassBtSpec    = ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->ui32DevClassBtSpec;
+        strncpy(apstEventMessage->m_pairedDevice.m_name, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName,
+                    strlen(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName) < BTRMGR_NAME_LEN_MAX ? strlen (((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceName) : BTRMGR_NAME_LEN_MAX - 1);
+        strncpy(apstEventMessage->m_pairedDevice.m_deviceAddress, ((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceAddress,
+                    strlen(((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceAddress) < BTRMGR_NAME_LEN_MAX ? strlen (((stBTRCoreDevStatusCBInfo*)p_StatusCB)->deviceAddress) : BTRMGR_NAME_LEN_MAX - 1);
+    }
 
     return lenBtrMgrRet;
 }
@@ -1536,62 +1648,6 @@ btrMgr_ConnectToDevice (
     return lenBtrMgrRet;
 }
 
-BTRMGR_Result_t
-BTRMGR_GetLimitBeaconDetection (
-    unsigned char   aui8AdapterIdx,
-    unsigned char   *pLimited
-) {
-
-    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt())) {
-        BTRMGRLOG_ERROR ("Input is invalid\n");
-        return BTRMGR_RESULT_INVALID_INPUT;
-    }
-
-    BTRMGR_Beacon_PersistentData_t BeaconPersistentData;
-    if (BTRMgr_PI_GetLEBeaconLimitingStatus(&BeaconPersistentData) == eBTRMgrFailure) {
-        BTRMGRLOG_INFO ("Failed to get limit for beacon detection from json.\n");
-        return BTRMGR_RESULT_GENERIC_FAILURE;
-    }
-
-    *pLimited =  (unsigned char)((!strncasecmp(BeaconPersistentData.limitBeaconDetection, "true", 4)) ? 1 : 0 );
-    if (pLimited != NULL) {
-        BTRMGRLOG_INFO ("the beacon detection detection : %s\n", *pLimited? "true":"false");
-    }
-    else {
-        BTRMGRLOG_INFO ("Failed to get limit for beacon detection.\n");
-        return BTRMGR_RESULT_GENERIC_FAILURE;
-    }
-
-    return BTRMGR_RESULT_SUCCESS;
-}
-
-BTRMGR_Result_t
-BTRMGR_SetLimitBeaconDetection (
-    unsigned char   aui8AdapterIdx,
-    unsigned char   limited
-) {
-
-    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt())) {
-        BTRMGRLOG_ERROR ("Input is invalid\n");
-        return BTRMGR_RESULT_INVALID_INPUT;
-    }
-
-    BTRMGR_Beacon_PersistentData_t BeaconPersistentData;
-    sprintf(BeaconPersistentData.limitBeaconDetection, "%s", limited ? "true" : "false");
-    if (BTRMgr_PI_SetLEBeaconLimitingStatus(&BeaconPersistentData) == eBTRMgrFailure) {
-        BTRMGRLOG_ERROR ("Failed to set limit for beacon detection from json.\n");
-        return BTRMGR_RESULT_GENERIC_FAILURE;
-    }
-
-    if (limited) {
-        BTRMGRLOG_INFO ("Limiting the beacon detection.\n");
-     }
-     else {
-        BTRMGRLOG_INFO ("Removing the limit for beacon detection\n");
-     }
-    return BTRMGR_RESULT_SUCCESS;
-}
-
 static eBTRMgrRet
 btrMgr_StartAudioStreamingOut (
     unsigned char                   aui8AdapterIdx,
@@ -1886,7 +1942,104 @@ btrMgr_RemovePersistentEntry (
     return lenBtrMgrPiRet;
 }
 
+static BTRMGR_SysDiagChar_t
+btrMgr_MapUUIDtoDiagElement(
+    char *aUUID
+) {
+    BTRMGR_SysDiagChar_t lDiagChar = BTRMGR_SYS_DIAG_UNKNOWN;
+#ifndef BTRTEST_LE_ONBRDG_ENABLE
+    if (!strcmp(aUUID, BTRMGR_SYSTEM_ID_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_SYSTEMID; }
+    else if (!strcmp(aUUID, BTRMGR_MODEL_NUMBER_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_MODELNUMBER; }
+    else if (!strcmp(aUUID, BTRMGR_SERIAL_NUMBER_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_SERIALNUMBER; }
+    else if (!strcmp(aUUID, BTRMGR_FIRMWARE_REVISION_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_FWREVISION; }
+    else if (!strcmp(aUUID, BTRMGR_HARDWARE_REVISION_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_HWREVISION; }
+    else if (!strcmp(aUUID, BTRMGR_SOFTWARE_REVISION_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_SWREVISION; }
+    else if (!strcmp(aUUID, BTRMGR_MANUFACTURER_NAME_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_MFGRNAME; }
+#else
+    if (!strcmp(aUUID, BTRMGR_SYSTEM_ID_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_SYSTEMID; }
+    else if (!strcmp(aUUID, BTRMGR_MODEL_NUMBER_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_MODELNUMBER; }
+    else if (!strcmp(aUUID, BTRMGR_SERIAL_NUMBER_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_SERIALNUMBER; }
+    else if (!strcmp(aUUID, BTRMGR_FIRMWARE_REVISION_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_FWREVISION; }
+    else if (!strcmp(aUUID, BTRMGR_HARDWARE_REVISION_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_HWREVISION; }
+    else if (!strcmp(aUUID, BTRMGR_SOFTWARE_REVISION_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_SWREVISION; }
+    else if (!strcmp(aUUID, BTRMGR_MANUFACTURER_NAME_UUID)) { lDiagChar = BTRMGR_LE_ONBRDG_MFGRNAME; }
+#endif
+    else if (!strcmp(aUUID, BTRMGR_LEONBRDG_UUID_QR_CODE)) { lDiagChar = BTRMGR_LE_ONBRDG_UUID_QR_CODE; }
+    else if (!strcmp(aUUID, BTRMGR_LEONBRDG_UUID_PROVISION_STATUS)) { lDiagChar = BTRMGR_LE_ONBRDG_UUID_PROVISION_STATUS; }
+    else if (!strcmp(aUUID, BTRMGR_LEONBRDG_UUID_PUBLIC_KEY)) { lDiagChar = BTRMGR_LE_ONBRDG_UUID_PUBLIC_KEY; }
+    else if (!strcmp(aUUID, BTRMGR_LEONBRDG_UUID_WIFI_CONFIG)) { lDiagChar = BTRMGR_LE_ONBRDG_UUID_WIFI_CONFIG; }
+    else if (!strcmp(aUUID, BTRMGR_DEVICE_STATUS_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_DEVICESTATUS; }
+    else if (!strcmp(aUUID, BTRMGR_FWDOWNLOAD_STATUS_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_FWDOWNLOADSTATUS; }
+    else if (!strcmp(aUUID, BTRMGR_WEBPA_STATUS_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_WEBPASTATUS; }
+    else if (!strcmp(aUUID, BTRMGR_WIFIRADIO1_STATUS_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_WIFIRADIO1STATUS; }
+    else if (!strcmp(aUUID, BTRMGR_WIFIRADIO2_STATUS_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_WIFIRADIO2STATUS; }
+    else if (!strcmp(aUUID, BTRMGR_RF_STATUS_UUID)) { lDiagChar = BTRMGR_SYS_DIAG_RFSTATUS; }
+    else if (!strcmp(aUUID, BTRMGR_DEVICE_MAC)) { lDiagChar = BTRMGR_SYS_DIAG_DEVICEMAC; }
+    else if (!strcmp(aUUID, BTRMGR_COLUMBO_START)) { lDiagChar = BTRMGR_SYSDIAG_COLUMBO_START; }
+    else if (!strcmp(aUUID, BTRMGR_COLUMBO_STOP)) { lDiagChar = BTRMGR_SYSDIAG_COLUMBO_STOP; }
+    else { lDiagChar = BTRMGR_SYS_DIAG_UNKNOWN; }
 
+    return lDiagChar;
+}
+
+#if 0
+static void btrMgr_AddColumboGATTInfo(
+){
+    char l16BitUUID[4] = "";
+    char l128BitUUID[BTRMGR_NAME_LEN_MAX] = "";
+
+    strncpy(l128BitUUID, BTRMGR_COLUMBO_UUID, BTRMGR_NAME_LEN_MAX - 1);
+    snprintf(l16BitUUID, 5, "%s", l128BitUUID);
+
+    /* add to GAP advertisement */
+    BTRCore_SetServiceUUIDs(ghBTRCoreHdl, l16BitUUID);
+    /* Add to GATT Info */
+    BTRCore_SetServiceInfo(ghBTRCoreHdl, BTRMGR_COLUMBO_UUID, TRUE);
+    BTRCore_SetGattInfo(ghBTRCoreHdl, BTRMGR_COLUMBO_UUID, BTRMGR_COLUMBO_START, 0x2, " ", enBTRCoreLePropGChar);           /* uuid_columbo_service_char_start */
+    BTRCore_SetGattInfo(ghBTRCoreHdl, BTRMGR_COLUMBO_UUID, BTRMGR_COLUMBO_STOP, 0x2, " ", enBTRCoreLePropGChar);           /* uuid_columbo_service_char_stop */
+    BTRCore_SetGattInfo(ghBTRCoreHdl, BTRMGR_COLUMBO_UUID, BTRMGR_COLUMBO_STATUS, 0x1, " ", enBTRCoreLePropGChar);           /* uuid_columbo_service_char_status */
+    BTRCore_SetGattInfo(ghBTRCoreHdl, BTRMGR_COLUMBO_UUID, BTRMGR_COLUMBO_REPORT, 0x1, " ", enBTRCoreLePropGChar);           /* uuid_columbo_service_char_report */
+}
+
+static void btrMgr_AddStandardAdvGattInfo(
+){
+    char lPropertyValue[BTRMGR_MAX_STR_LEN] = "";
+
+    BTRMGRLOG_INFO("Adding default local services : DEVICE_INFORMATION_UUID - 0x180a, RDKDIAGNOSTICS_UUID - 0xFDB9\n");
+    BTRMGR_LE_SetServiceInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, 1);
+    BTRMGR_LE_SetServiceInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, 1);
+
+    /* Get model number */
+    BTRMGR_SysDiagInfo(0, BTRMGR_SYSTEM_ID_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGRLOG_INFO("Adding char for the default local services : 0x180a, 0xFDB9\n");
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SYSTEM_ID_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                                /* system ID            */
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_MODEL_NUMBER_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                             /* model number         */
+    /*Get HW revision*/
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_HARDWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Hardware revision    */
+    /* Get serial number */
+    BTRMGR_SysDiagInfo(0, BTRMGR_SERIAL_NUMBER_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SERIAL_NUMBER_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                            /* serial number        */
+    /* Get firmware revision */
+    BTRMGR_SysDiagInfo(0, BTRMGR_FIRMWARE_REVISION_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_FIRMWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Firmware revision    */
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SOFTWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Software revision    */
+    /* Get manufacturer name */
+    BTRMGR_SysDiagInfo(0, BTRMGR_MANUFACTURER_NAME_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_MANUFACTURER_NAME_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Manufacturer name    */
+
+    /* 0xFDB9 */
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_DEVICE_STATUS_UUID, 0x1, "READY", BTRMGR_LE_PROP_CHAR);                                       /* DeviceStatus         */
+    BTRMGR_SysDiagInfo(0, BTRMGR_FWDOWNLOAD_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_FWDOWNLOAD_STATUS_UUID, 0x103, lPropertyValue, BTRMGR_LE_PROP_CHAR);                          /* FWDownloadStatus     */
+    BTRMGR_SysDiagInfo(0, BTRMGR_WEBPA_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_WEBPA_STATUS_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                                 /* WebPAStatus          */
+    BTRMGR_SysDiagInfo(0, BTRMGR_WIFIRADIO1_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_WIFIRADIO1_STATUS_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                            /* WiFiRadio1Status     */
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_WIFIRADIO2_STATUS_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                            /* WiFiRadio2Status     */
+    BTRMGR_SysDiagInfo(0, BTRMGR_RF_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_RF_STATUS_UUID, 0x1, "NOT CONNECTED", BTRMGR_LE_PROP_CHAR);                                   /* RFStatus             */
+}
+#endif
 /*  Local Op Threads */
 
 
@@ -1901,7 +2054,7 @@ BTRMGR_Init (
     GMainLoop*      pMainLoop      = NULL;
     GThread*        pMainLoopThread= NULL;
 
-    char            lpcBtVersion[BTRCORE_STRINGS_MAX_LEN] = {'\0'};
+    char            lpcBtVersion[BTRCORE_STR_LEN] = {'\0'};
 
     if (ghBTRCoreHdl) {
         BTRMGRLOG_WARN("Already Inited; Return Success\n");
@@ -1963,10 +2116,12 @@ BTRMGR_Init (
 
     /* you have atlesat one Bluetooth adapter. Now get the Default Adapter path for future usages; */
     gDefaultAdapterContext.bFirstAvailable = 1; /* This is unused by core now but lets fill it */
-    if (enBTRCoreSuccess == BTRCore_GetAdapter(ghBTRCoreHdl, &gDefaultAdapterContext)) {
-        BTRMGRLOG_DEBUG ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
+    if (enBTRCoreSuccess != BTRCore_GetAdapter(ghBTRCoreHdl, &gDefaultAdapterContext)) {
+        BTRMGRLOG_WARN("Bluetooth adapter NOT received..!!!!\n");
+        return  BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
+    BTRMGRLOG_DEBUG ("Aquired default Adapter; Path is %s\n", gDefaultAdapterContext.pcAdapterPath);
     /* TODO: Handling multiple Adapters */
     if (gListOfAdapters.number_of_adapters > 1) {
         BTRMGRLOG_WARN("Number of Bluetooth Adapters Found : %u !! Lets handle it properly\n", gListOfAdapters.number_of_adapters);
@@ -2013,7 +2168,18 @@ BTRMGR_Init (
         BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
     btrMgr_CheckAudioInServiceAvailability();
-      
+#if 0
+    // Set the beacon and start the advertisement
+
+    char lDeviceMAC[BTRMGR_MAX_STR_LEN] = "";
+
+    BTRMGR_SysDiagInfo(0, BTRMGR_DEVICE_MAC, lDeviceMAC, BTRMGR_LE_OP_READ_VALUE);
+    strncpy((char*)stCoreCustomAdv.device_mac, lDeviceMAC, strlen(lDeviceMAC));
+    /* Add Columbo Gatt info */
+    btrMgr_AddColumboGATTInfo();
+
+    BTRMGR_LE_StartAdvertisement(0, &stCoreCustomAdv);
+#endif
     pMainLoop   = g_main_loop_new (NULL, FALSE);
     gpvMainLoop = (void*)pMainLoop;
 
@@ -2111,7 +2277,7 @@ BTRMGR_DeInit (
 
     lenBtrMgrResult =  ((lenBtrMgrRet == eBTRMgrSuccess) &&
                         (lenBtrCoreRet == enBTRCoreSuccess)) ? BTRMGR_RESULT_SUCCESS : BTRMGR_RESULT_GENERIC_FAILURE;
-    BTRMGRLOG_DEBUG ("Exit Status = %d\n", lenBtrMgrResult)
+    BTRMGRLOG_DEBUG ("Exit Status = %d\n", lenBtrMgrResult);
 
 
     return lenBtrMgrResult;
@@ -2709,9 +2875,9 @@ BTRMGR_StopDeviceDiscovery (
 
 BTRMGR_Result_t
 BTRMGR_GetDiscoveryStatus (
-        unsigned char                aui8AdapterIdx, 
-        BTRMGR_DiscoveryStatus_t     *isDiscoveryInProgress,
-        BTRMGR_DeviceOperationType_t *aenBTRMgrDevOpT
+    unsigned char                   aui8AdapterIdx, 
+    BTRMGR_DiscoveryStatus_t*       isDiscoveryInProgress,
+    BTRMGR_DeviceOperationType_t*   aenBTRMgrDevOpT
 ) {
     BTRMGR_Result_t result = BTRMGR_RESULT_SUCCESS;
     BTRMGR_DiscoveryHandle_t* ldiscoveryHdl  = NULL;
@@ -2758,8 +2924,6 @@ BTRMGR_GetDiscoveredDevices (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-
-    memset (&lstBtrCoreListOfSDevices, 0, sizeof(lstBtrCoreListOfSDevices));
 
     lenBtrCoreRet = BTRCore_GetListOfScannedDevices(ghBTRCoreHdl, &lstBtrCoreListOfSDevices);
     if (lenBtrCoreRet != enBTRCoreSuccess) {
@@ -3037,8 +3201,11 @@ BTRMGR_GetPairedDevices (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
+    lstBtrCoreListOfPDevices.numberOfDevices = 0;
+    for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        memset (&lstBtrCoreListOfPDevices.devices[i], 0, sizeof(stBTRCoreBTDevice));
+    }
 
-    memset (&lstBtrCoreListOfPDevices, 0, sizeof(lstBtrCoreListOfPDevices));
 
     lenBtrCoreRet = BTRCore_GetListOfPairedDevices(ghBTRCoreHdl, &lstBtrCoreListOfPDevices);
     if (lenBtrCoreRet != enBTRCoreSuccess) {
@@ -3046,7 +3213,11 @@ BTRMGR_GetPairedDevices (
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     else {
-        memset (pPairedDevices, 0, sizeof(BTRMGR_PairedDevicesList_t));     /* Reset the values to 0 */
+        pPairedDevices->m_numOfDevices = 0;
+        for (i = 0; i < BTRMGR_DEVICE_COUNT_MAX; i++) {
+            memset (&pPairedDevices->m_deviceProperty[i], 0, sizeof(BTRMGR_PairedDevices_t));     /* Reset the values to 0 */
+        }
+
         if (lstBtrCoreListOfPDevices.numberOfDevices) {
             BTRMGR_PairedDevices_t* lpstBtrMgrPDevice = NULL;
 
@@ -4049,6 +4220,12 @@ BTRMGR_SetEventResponse (
         break;
     case BTRMGR_EVENT_DEVICE_FOUND:
         break;
+    case BTRMGR_EVENT_DEVICE_OP_INFORMATION:
+        if (apstBTRMgrEvtRsp->m_eventResp) {
+            strncpy(gLeReadOpResponse, apstBTRMgrEvtRsp->m_writeData, BTRMGR_MAX_DEV_OP_DATA_LEN - 1);
+            gEventRespReceived = 1;
+        }
+        break;
     case BTRMGR_EVENT_MAX:
     default:
         break;
@@ -4455,6 +4632,125 @@ BTRMGR_SelectMediaElement (
 }
 
 
+const char*
+BTRMGR_GetDeviceTypeAsString (
+    BTRMGR_DeviceType_t  type
+) {
+    if (type == BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET)
+        return "WEARABLE HEADSET";
+    else if (type == BTRMGR_DEVICE_TYPE_HANDSFREE)
+        return "HANDSFREE";
+    else if (type == BTRMGR_DEVICE_TYPE_MICROPHONE)
+        return "MICROPHONE";
+    else if (type == BTRMGR_DEVICE_TYPE_LOUDSPEAKER)
+        return "LOUDSPEAKER";
+    else if (type == BTRMGR_DEVICE_TYPE_HEADPHONES)
+        return "HEADPHONES";
+    else if (type == BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO)
+        return "PORTABLE AUDIO DEVICE";
+    else if (type == BTRMGR_DEVICE_TYPE_CAR_AUDIO)
+        return "CAR AUDIO";
+    else if (type == BTRMGR_DEVICE_TYPE_STB)
+        return "STB";
+    else if (type == BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)
+        return "HIFI AUDIO DEVICE";
+    else if (type == BTRMGR_DEVICE_TYPE_VCR)
+        return "VCR";
+    else if (type == BTRMGR_DEVICE_TYPE_VIDEO_CAMERA)
+        return "VIDEO CAMERA";
+    else if (type == BTRMGR_DEVICE_TYPE_CAMCODER)
+        return "CAMCODER";
+    else if (type == BTRMGR_DEVICE_TYPE_VIDEO_MONITOR)
+        return "VIDEO MONITOR";
+    else if (type == BTRMGR_DEVICE_TYPE_TV)
+        return "TV";
+    else if (type == BTRMGR_DEVICE_TYPE_VIDEO_CONFERENCE)
+        return "VIDEO CONFERENCING";
+    else if (type == BTRMGR_DEVICE_TYPE_SMARTPHONE)
+        return "SMARTPHONE";
+    else if (type == BTRMGR_DEVICE_TYPE_TABLET)
+        return "TABLET";
+    else if (type == BTRMGR_DEVICE_TYPE_TILE)
+        return "LE TILE";
+    else if (type == BTRMGR_DEVICE_TYPE_HID)
+        return "HUMAN INTERFACE DEVICE";
+    else
+        return "UNKNOWN DEVICE";
+}
+
+
+BTRMGR_Result_t
+BTRMGR_SetAudioInServiceState (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   aui8State
+) {
+    if ((gIsAudioInEnabled = aui8State)) {
+        BTRMGRLOG_INFO ("AudioIn Service is Enabled.\n");
+    }
+    else {
+        BTRMGRLOG_INFO ("AudioIn Service is Disabled.\n");
+    }
+    return BTRMGR_RESULT_SUCCESS;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetLimitBeaconDetection (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   *pLimited
+) {
+
+    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt())) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    BTRMGR_Beacon_PersistentData_t BeaconPersistentData;
+    if (BTRMgr_PI_GetLEBeaconLimitingStatus(&BeaconPersistentData) == eBTRMgrFailure) {
+        BTRMGRLOG_INFO ("Failed to get limit for beacon detection from json.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    *pLimited =  (unsigned char)((!strncasecmp(BeaconPersistentData.limitBeaconDetection, "true", 4)) ? 1 : 0 );
+    if (pLimited != NULL) {
+        BTRMGRLOG_INFO ("the beacon detection detection : %s\n", *pLimited? "true":"false");
+    }
+    else {
+        BTRMGRLOG_INFO ("Failed to get limit for beacon detection.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    return BTRMGR_RESULT_SUCCESS;
+}
+
+BTRMGR_Result_t
+BTRMGR_SetLimitBeaconDetection (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   limited
+) {
+
+    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt())) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    BTRMGR_Beacon_PersistentData_t BeaconPersistentData;
+    sprintf(BeaconPersistentData.limitBeaconDetection, "%s", limited ? "true" : "false");
+    if (BTRMgr_PI_SetLEBeaconLimitingStatus(&BeaconPersistentData) == eBTRMgrFailure) {
+        BTRMGRLOG_ERROR ("Failed to set limit for beacon detection from json.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    if (limited) {
+        BTRMGRLOG_INFO ("Limiting the beacon detection.\n");
+     }
+     else {
+        BTRMGRLOG_INFO ("Removing the limit for beacon detection\n");
+     }
+    return BTRMGR_RESULT_SUCCESS;
+}
+
+
 BTRMGR_Result_t
 BTRMGR_GetLeProperty (
     unsigned char                aui8AdapterIdx,
@@ -4561,8 +4857,11 @@ BTRMGR_PerformLeOp (
     }
 
     if (!isConnected) {
-       BTRMGRLOG_ERROR ("LE Device %lld is not connected to perform LE Op!!!\n", ahBTRMgrDevHdl);
-       return BTRMGR_RESULT_GENERIC_FAILURE;
+#if 0
+        //TODO: Check if ahBTRMgrDevHdl corresponds to the current adapter
+        BTRMGRLOG_ERROR ("LE Device %lld is not connected to perform LE Op!!!\n", ahBTRMgrDevHdl);
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+#endif
     }
 
 
@@ -4596,67 +4895,351 @@ BTRMGR_PerformLeOp (
     return lenBtrMgrResult;
 }
 
+
 BTRMGR_Result_t
-BTRMGR_SetAudioInServiceState (
-    unsigned char   aui8AdapterIdx,
-    unsigned char   aui8State
+BTRMGR_LE_StartAdvertisement (
+    unsigned char                   aui8AdapterIdx,
+    BTRMGR_LeCustomAdvertisement_t* pstBTMGR_LeCustomAdvt
 ) {
-    if ((gIsAudioInEnabled = aui8State)) {
-        BTRMGRLOG_INFO ("AudioIn Service is Enabled.\n");
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+    char *lAdvtType = "peripheral";
+    int lLenServiceUUID = 0;
+    int lComcastFlagType = 0;
+    int lLenManfData = 0;
+    unsigned short lManfId = 0;
+    unsigned char laDeviceDetails[BTRMGR_DEVICE_COUNT_MAX] = {'\0'};
+    unsigned char lManfType;
+
+    /* Parse the adv data  */
+
+    /* Set advertisement type */
+    BTRCore_SetAdvertisementType(ghBTRCoreHdl, lAdvtType);
+
+    /* Parse and set the services supported by the device */
+    lLenServiceUUID = (int)pstBTMGR_LeCustomAdvt->len_comcastflags;
+
+    lComcastFlagType = (int)pstBTMGR_LeCustomAdvt->type_comcastflags;
+    lLenServiceUUID -= 1;
+
+    if ((2 == lComcastFlagType) || (3 == lComcastFlagType)) { /* TODO use macro/enum */
+        char lUUID[10];
+        unsigned short lu16UUID = ((unsigned short)pstBTMGR_LeCustomAdvt->deviceInfo_UUID_HI << 8) | (unsigned short)pstBTMGR_LeCustomAdvt->deviceInfo_UUID_LO;
+        snprintf(lUUID, sizeof(lUUID), "%x", lu16UUID);
+        if (enBTRCoreSuccess != BTRCore_SetServiceUUIDs(ghBTRCoreHdl, lUUID)) {
+            lenBtrMgrResult = BTRMGR_RESULT_INVALID_INPUT;
+        }
+
+        lu16UUID = ((unsigned short)pstBTMGR_LeCustomAdvt->rdk_diag_UUID_HI << 8) | (unsigned short)pstBTMGR_LeCustomAdvt->rdk_diag_UUID_LO;
+        snprintf(lUUID, sizeof(lUUID), "%x", lu16UUID);
+        if (enBTRCoreSuccess != BTRCore_SetServiceUUIDs(ghBTRCoreHdl, lUUID)) {
+            lenBtrMgrResult = BTRMGR_RESULT_INVALID_INPUT;
+        }
+    }
+
+    /* Parse and set the manufacturer specific data for the device */
+    lLenManfData = (int)pstBTMGR_LeCustomAdvt->len_manuf;
+    BTRMGRLOG_INFO("Length of manf data is %d \n", lLenManfData);
+
+    lManfType = pstBTMGR_LeCustomAdvt->type_manuf;
+    lLenManfData -= sizeof(lManfType);
+
+    lManfId = ((unsigned short)pstBTMGR_LeCustomAdvt->company_HI << 8) | ((unsigned short)pstBTMGR_LeCustomAdvt->company_LO);
+    lLenManfData -= sizeof(lManfId);
+    BTRMGRLOG_INFO("manf id is %d \n", lManfId);
+
+    int index = 0;
+    laDeviceDetails[index + 1] = pstBTMGR_LeCustomAdvt->device_model & 0xF;
+    laDeviceDetails[index] = (pstBTMGR_LeCustomAdvt->device_model >> 8) & 0xF;
+    index += sizeof(pstBTMGR_LeCustomAdvt->device_model);
+
+    for (int count = 0; count < BTRMGR_DEVICE_MAC_LEN; count++) {
+        laDeviceDetails[index] = pstBTMGR_LeCustomAdvt->device_mac[count];
+        index += 1;
+    }
+
+    BTRCore_SetManufacturerData(ghBTRCoreHdl, lManfId, laDeviceDetails, lLenManfData);
+
+    /* Set the Tx Power */
+    BTRCore_SetEnableTxPower(ghBTRCoreHdl, TRUE);
+
+    gIsAdvertisementSet = TRUE;
+
+    /* Add standard advertisement Gatt Info */
+    //btrMgr_AddStandardAdvGattInfo();
+
+    /* Start advertising */
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR("BTRCore is not Inited\n");
+        lenBtrMgrResult = BTRMGR_RESULT_INIT_FAILED;
+    }
+    else if (FALSE == gIsAdvertisementSet) {
+        BTRMGRLOG_ERROR("Advertisement data has not been set\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    else if (TRUE == gIsDeviceAdvertising) {
+        BTRMGRLOG_ERROR("Device is already advertising\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
     else {
-        BTRMGRLOG_INFO ("AudioIn Service is Disabled.\n");
+        /* start advertisement */
+        if (enBTRCoreSuccess != BTRCore_StartAdvertisement(ghBTRCoreHdl)) {
+            BTRMGRLOG_ERROR("Starting advertisement has failed\n");
+            lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        }
+        else {
+            BTRMGRLOG_INFO("Device is advertising\n");
+            gIsDeviceAdvertising = TRUE;
+        }
     }
-    return BTRMGR_RESULT_SUCCESS;
+
+    return lenBtrMgrResult;
 }
 
-
-const char*
-BTRMGR_GetDeviceTypeAsString (
-    BTRMGR_DeviceType_t  type
+BTRMGR_Result_t
+BTRMGR_LE_StopAdvertisement (
+    unsigned char aui8AdapterIdx
 ) {
-    if (type == BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET)
-        return "WEARABLE HEADSET";
-    else if (type == BTRMGR_DEVICE_TYPE_HANDSFREE)
-        return "HANDSFREE";
-    else if (type == BTRMGR_DEVICE_TYPE_MICROPHONE)
-        return "MICROPHONE";
-    else if (type == BTRMGR_DEVICE_TYPE_LOUDSPEAKER)
-        return "LOUDSPEAKER";
-    else if (type == BTRMGR_DEVICE_TYPE_HEADPHONES)
-        return "HEADPHONES";
-    else if (type == BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO)
-        return "PORTABLE AUDIO DEVICE";
-    else if (type == BTRMGR_DEVICE_TYPE_CAR_AUDIO)
-        return "CAR AUDIO";
-    else if (type == BTRMGR_DEVICE_TYPE_STB)
-        return "STB";
-    else if (type == BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)
-        return "HIFI AUDIO DEVICE";
-    else if (type == BTRMGR_DEVICE_TYPE_VCR)
-        return "VCR";
-    else if (type == BTRMGR_DEVICE_TYPE_VIDEO_CAMERA)
-        return "VIDEO CAMERA";
-    else if (type == BTRMGR_DEVICE_TYPE_CAMCODER)
-        return "CAMCODER";
-    else if (type == BTRMGR_DEVICE_TYPE_VIDEO_MONITOR)
-        return "VIDEO MONITOR";
-    else if (type == BTRMGR_DEVICE_TYPE_TV)
-        return "TV";
-    else if (type == BTRMGR_DEVICE_TYPE_VIDEO_CONFERENCE)
-        return "VIDEO CONFERENCING";
-    else if (type == BTRMGR_DEVICE_TYPE_SMARTPHONE)
-        return "SMARTPHONE";
-    else if (type == BTRMGR_DEVICE_TYPE_TABLET)
-        return "TABLET";
-    else if (type == BTRMGR_DEVICE_TYPE_TILE)
-        return "LE TILE";
-    else if (type == BTRMGR_DEVICE_TYPE_HID)
-        return "HUMAN INTERFACE DEVICE";
-    else
-        return "UNKNOWN DEVICE";
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR("BTRCore is not Inited\n");
+        lenBtrMgrResult = BTRMGR_RESULT_INIT_FAILED;
+    }
+    else if (FALSE == gIsDeviceAdvertising) {
+        BTRMGRLOG_ERROR("Device is not advertising yet\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    else {
+        /* stop advertisement */
+        BTRMGRLOG_INFO("Stopping advertisement\n");
+        if (enBTRCoreSuccess != BTRCore_StopAdvertisement(ghBTRCoreHdl)) {
+            BTRMGRLOG_ERROR("Stopping advertisement has failed\n");
+            lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        }
+        gIsDeviceAdvertising = FALSE;
+    }
+
+    return lenBtrMgrResult;
 }
 
+BTRMGR_Result_t
+BTRMGR_LE_GetPropertyValue (
+    unsigned char       aui8AdapterIdx,
+    char*               aUUID,
+    char*               aValue,
+    BTRMGR_LeProperty_t aElement
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    char lPropValue[BTRMGR_MAX_STR_LEN] = "";
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR("BTRCore is not Inited\n");
+        lenBtrMgrResult = BTRMGR_RESULT_INIT_FAILED;
+    }
+    else if (FALSE == gIsDeviceAdvertising) {
+        BTRMGRLOG_ERROR("Device is not advertising yet\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    else {
+        if (enBTRCoreSuccess != BTRCore_GetPropertyValue(ghBTRCoreHdl, aUUID, lPropValue, aElement)) {
+            BTRMGRLOG_ERROR("Getting property value has failed\n");
+            lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        }
+        else {
+            strncpy(aValue, lPropValue, (BTRMGR_MAX_STR_LEN - 1));
+        }
+    }
+
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_LE_SetServiceUUIDs (
+    unsigned char   aui8AdapterIdx,
+    char*           aUUID
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+
+    if (enBTRCoreSuccess != BTRCore_SetServiceUUIDs(ghBTRCoreHdl, aUUID)) {
+        lenBtrMgrResult = BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_LE_SetServiceInfo (
+    unsigned char   aui8AdapterIdx,
+    char*           aUUID,
+    unsigned char   aServiceType
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+    if (enBTRCoreSuccess != BTRCore_SetServiceInfo(ghBTRCoreHdl, aUUID, (BOOLEAN)aServiceType)) {
+        BTRMGRLOG_ERROR("Could not add service info\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_LE_SetGattInfo (
+    unsigned char       aui8AdapterIdx,
+    char*               aParentUUID,
+    char*               aCharUUID,
+    unsigned short      aFlags,
+    char*               aValue,
+    BTRMGR_LeProperty_t aElement
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+    if (enBTRCoreSuccess != BTRCore_SetGattInfo(ghBTRCoreHdl, aParentUUID, aCharUUID, aFlags, aValue, aElement)) {
+        BTRMGRLOG_ERROR("Could not add gatt info\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_LE_SetGattPropertyValue (
+    unsigned char       aui8AdapterIdx,
+    char*               aUUID,
+    char*               aValue,
+    BTRMGR_LeProperty_t aElement
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR("BTRCore is not Inited\n");
+        lenBtrMgrResult = BTRMGR_RESULT_INIT_FAILED;
+    }
+    else if (FALSE == gIsDeviceAdvertising) {
+        BTRMGRLOG_ERROR("Device is not advertising yet\n");
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    else {
+        BTRMGRLOG_DEBUG("Value is %s\n", aValue);
+
+#if 1
+        if (enBTRCoreSuccess != BTRCore_SetPropertyValue(ghBTRCoreHdl, aUUID, aValue, aElement)) {
+            BTRMGRLOG_ERROR("Setting property value has failed\n");
+            lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        }
+#else
+        BTRCore_PerformLEOp
+#endif
+    }
+
+    return lenBtrMgrResult;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_SysDiagInfo(
+    unsigned char aui8AdapterIdx,
+    char *apDiagElement,
+    char *apValue,
+    BTRMGR_LeOp_t aOpType
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    int lenDiagElement = 0;
+    char lPropValue[BTRMGR_MAX_STR_LEN] = "";
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt() || !apDiagElement) {
+        BTRMGRLOG_ERROR("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    lenDiagElement = btrMgr_MapUUIDtoDiagElement(apDiagElement);
+
+    if ((BTRMGR_SYS_DIAG_BEGIN < (BTRMGR_SysDiagChar_t)lenDiagElement) && (BTRMGR_SYS_DIAG_END > (BTRMGR_SysDiagChar_t)lenDiagElement)) {
+        if (BTRMGR_LE_OP_READ_VALUE == aOpType) {
+            if (eBTRMgrSuccess != BTRMGR_SysDiag_GetData(lenDiagElement, lPropValue)) {
+                BTRMGRLOG_ERROR("Could not get diagnostic data\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+            else {
+                strncpy(apValue, lPropValue, BTRMGR_MAX_STR_LEN - 1);
+            }
+        }
+    }
+    else if ((BTRMGR_SYSDIAG_COLUMBO_BEGIN < (BTRMGR_ColumboChar_t)lenDiagElement) && (BTRMGR_SYSDIAG_COLUMBO_END > (BTRMGR_ColumboChar_t)lenDiagElement)) {
+        if (BTRMGR_LE_OP_READ_VALUE == aOpType) {
+            if (eBTRMgrSuccess != BTRMGR_Columbo_GetData(lenDiagElement, lPropValue)) {
+                BTRMGRLOG_ERROR("Could not get diagnostic data\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+            else {
+                strncpy(apValue, lPropValue, BTRMGR_MAX_STR_LEN - 1);
+            }
+        }
+        else if (BTRMGR_LE_OP_WRITE_VALUE == aOpType) {
+            if (eBTRMgrSuccess != BTRMGR_Columbo_SetData(lenDiagElement, lPropValue)) {
+                BTRMGRLOG_ERROR("Could not get diagnostic data\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+        }
+    }
+    else if ((BTRMGR_LE_ONBRDG_BEGIN < (BTRMGR_LeOnboardingChar_t)lenDiagElement) && (BTRMGR_LE_ONBRDG_END > (BTRMGR_LeOnboardingChar_t)lenDiagElement)) {
+        if (BTRMGR_LE_OP_READ_VALUE == aOpType) {
+            if (eBTRMgrSuccess != BTRMGR_LeOnboarding_GetData(lenDiagElement, lPropValue)) {
+                BTRMGRLOG_ERROR("Could not get diagnostic data\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+            else {
+                strncpy(apValue, lPropValue, BTRMGR_MAX_STR_LEN - 1);
+            }
+        }
+        else if (BTRMGR_LE_OP_WRITE_VALUE == aOpType) {
+            if (eBTRMgrSuccess != BTRMGR_LeOnboarding_SetData(lenDiagElement, apValue)) {
+                BTRMGRLOG_ERROR("Could not set diagnostic data\n");
+                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            }
+            else {
+                
+            }
+        }
+    }
+    else {
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    
+    
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_ConnectToWifi(
+    unsigned char   aui8AdapterIdx,
+    char*           apSSID,
+    char*           apPassword,
+    int             aSecMode
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    lenBtrMgrResult = BTRMGR_Wifi_ConnectToWifi(apSSID, apPassword, aSecMode);
+
+    return lenBtrMgrResult;
+}
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t
@@ -4901,7 +5484,7 @@ btrMgr_DeviceStatusCb (
                 }
             }
             else if (enBTRCoreDevStInitialized != p_StatusCB->eDevicePrevState) {
-                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);  
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);
 
                 if ((lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET) &&
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HANDSFREE) &&
@@ -5022,24 +5605,68 @@ btrMgr_DeviceStatusCb (
             break;
         case enBTRCoreDevStOpReady:
             if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TILE) {
+                memset(lstEventMessage.m_deviceOpInfo.m_deviceAddress, '\0', BTRMGR_NAME_LEN_MAX);
+                memset(lstEventMessage.m_deviceOpInfo.m_name, '\0', BTRMGR_NAME_LEN_MAX);
+                memset(lstEventMessage.m_deviceOpInfo.m_uuid, '\0', BTRMGR_MAX_STR_LEN);
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_READY);
                 //Not a big fan of devOpResponse. We should think of a better way to do this
-                strncpy(lstEventMessage.m_deviceOpInfo.m_notifyData, p_StatusCB->devOpResponse, BTRMGR_MAX_STR_LEN-1);
+                memset(lstEventMessage.m_deviceOpInfo.m_notifyData, '\0', BTRMGR_MAX_DEV_OP_DATA_LEN);
+                strncpy(lstEventMessage.m_deviceOpInfo.m_notifyData, p_StatusCB->devOpResponse,
+                            strlen(p_StatusCB->devOpResponse) < BTRMGR_MAX_DEV_OP_DATA_LEN ? strlen(p_StatusCB->devOpResponse) : BTRMGR_MAX_DEV_OP_DATA_LEN - 1);
 
+                /* Post a callback */
                 if (gfpcBBTRMgrEventOut) {
-                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+                    gfpcBBTRMgrEventOut(lstEventMessage);
                 }
             }
             break;
         case enBTRCoreDevStOpInfo:
             if (btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass) == BTRMGR_DEVICE_TYPE_TILE) {
+                memset(lstEventMessage.m_deviceOpInfo.m_deviceAddress, '\0', BTRMGR_NAME_LEN_MAX);
+                memset(lstEventMessage.m_deviceOpInfo.m_name, '\0', BTRMGR_NAME_LEN_MAX);
+                memset(lstEventMessage.m_deviceOpInfo.m_uuid, '\0', BTRMGR_MAX_STR_LEN);
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_INFORMATION);
                 //Not a big fan of devOpResponse. We should think of a better way to do this
-                strncpy(lstEventMessage.m_deviceOpInfo.m_notifyData, p_StatusCB->devOpResponse, BTRMGR_MAX_STR_LEN-1);
+                memset(lstEventMessage.m_deviceOpInfo.m_notifyData, '\0', BTRMGR_MAX_DEV_OP_DATA_LEN);
+                strncpy(lstEventMessage.m_deviceOpInfo.m_notifyData, p_StatusCB->devOpResponse,
+                            strlen(p_StatusCB->devOpResponse) < BTRMGR_MAX_DEV_OP_DATA_LEN ? strlen(p_StatusCB->devOpResponse) : BTRMGR_MAX_DEV_OP_DATA_LEN - 1);
 
+                /* Post a callback */
                 if (gfpcBBTRMgrEventOut) {
-                    gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
+                    gfpcBBTRMgrEventOut(lstEventMessage);
                 }
+            }
+            else if (BTRMGR_LE_OP_READ_VALUE == (BTRMGR_LeOp_t)p_StatusCB->eCoreLeOper) {
+                btrMgr_MapDevstatusInfoToEventInfo((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_INFORMATION);
+                /* Post a callback */
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);
+                }
+
+                /* Max 10 sec timeout - Polled at 100ms second interval */
+                {
+                    unsigned int ui32sleepIdx = 100;
+
+                    do {
+                        usleep(100000);
+                    } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+
+                }
+
+                strncpy(p_StatusCB->devOpResponse, gLeReadOpResponse, BTRMGR_MAX_STR_LEN - 1);
+            }
+            else if(BTRMGR_LE_OP_WRITE_VALUE == (BTRMGR_LeOp_t)p_StatusCB->eCoreLeOper) {
+                btrMgr_MapDevstatusInfoToEventInfo((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_OP_INFORMATION);
+                memset(lstEventMessage.m_deviceOpInfo.m_writeData, '\0', BTRMGR_MAX_DEV_OP_DATA_LEN);
+                strncpy(lstEventMessage.m_deviceOpInfo.m_writeData, p_StatusCB->devOpResponse,
+                            strlen(p_StatusCB->devOpResponse) < BTRMGR_MAX_DEV_OP_DATA_LEN ? strlen(p_StatusCB->devOpResponse) : BTRMGR_MAX_DEV_OP_DATA_LEN - 1);
+                
+                /* Post a callback */
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);
+                }
+            }
+            else {
             }
             break;
         default:
@@ -5061,14 +5688,55 @@ btrMgr_DeviceDiscoveryCb (
     BTRMGRLOG_TRACE ("callback type = %d\n", astBTRCoreDiscoveryCbInfo->type);
 
     if (astBTRCoreDiscoveryCbInfo->type == enBTRCoreOpTypeDevice) {
-        if (btrMgr_GetDiscoveryInProgress() || (astBTRCoreDiscoveryCbInfo->device.bFound == FALSE)) { /* Not a big fan of this */
-            BTRMGR_EventMessage_t lstEventMessage;
-            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+        BTRMGR_DiscoveryHandle_t* ldiscoveryHdl  = NULL;
 
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)&astBTRCoreDiscoveryCbInfo->device, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
+        if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress()) || (astBTRCoreDiscoveryCbInfo->device.bFound == FALSE)) { /* Not a big fan of this */
+            if (ldiscoveryHdl &&
+                (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl) == BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT)) {
+                //TODO: Horrible, bad bad bad hack for DELIA-39526, not happy about this.
+                //      We would have already reported a list of discovered devices to XRE/Client of BTRMgr if
+                //      they have requested for the same. But this list will be invalidated by the Resume and if
+                //      a Pairing Op is requested based on this stale information it will fail, but we will not end up
+                //      in a loop repeating the same sequence of events as we understand that on the first resume
+                //      Bluez/BTRCore will correctly give us the device Name. But if we get a new device which exhibits the
+                //      same behavior then we will repeat this again
+                if ((strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceName) == strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceAddress)) &&
+                     btrMgr_IsDevNameSameAsAddress(astBTRCoreDiscoveryCbInfo->device.pcDeviceName, astBTRCoreDiscoveryCbInfo->device.pcDeviceAddress, strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceName)) &&
+                     !btrMgr_CheckIfDevicePrevDetected(astBTRCoreDiscoveryCbInfo->device.tDeviceId)) {
 
-            if (gfpcBBTRMgrEventOut) {
-                gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+                    BTRMGR_DiscoveredDevicesList_t  lstDiscDevices;
+                    eBTRMgrRet                      lenBtrMgrRet    = eBTRMgrFailure;
+                    BTRMGR_Result_t                 lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+
+                    lenBtrMgrRet = btrMgr_PauseDeviceDiscovery(0, ldiscoveryHdl);
+                    BTRMGRLOG_WARN ("Called btrMgr_PauseDeviceDiscovery = %d\n", lenBtrMgrRet);
+
+                    lenBtrMgrResult = BTRMGR_GetDiscoveredDevices(0, &lstDiscDevices);
+                    BTRMGRLOG_WARN ("Stored BTRMGR_GetDiscoveredDevices = %d\n", lenBtrMgrResult);
+
+                    lenBtrMgrRet = btrMgr_ResumeDeviceDiscovery(0, ldiscoveryHdl);
+                    BTRMGRLOG_WARN ("Called btrMgr_ResumeDeviceDiscovery = %d\n", lenBtrMgrRet);
+                }
+                else {
+                    BTRMGR_EventMessage_t lstEventMessage;
+                    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+                    btrMgr_MapDevstatusInfoToEventInfo ((void*)&astBTRCoreDiscoveryCbInfo->device, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
+
+                    if (gfpcBBTRMgrEventOut) {
+                        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+                    }
+                }
+            }
+            else {
+                BTRMGR_EventMessage_t lstEventMessage;
+                memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)&astBTRCoreDiscoveryCbInfo->device, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
+
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+                }
             }
         }
     }
@@ -5351,9 +6019,10 @@ btrMgr_ConnectionInAuthenticationCb (
     else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Keyboard)      ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Mouse)         ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_MouseKeyBoard) ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_AudioRemote)   ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Joystick)      ){
 
-        BTRMGRLOG_WARN ("Incoming Connection from BT Keyboard\n");
+        BTRMGRLOG_WARN ("Incoming Connection from BT HID device\n");
         /* PairedList updation is necessary for Connect event than Disconnect event */
         BTRMGR_GetPairedDevices (gDefaultAdapterContext.adapter_number, &gListOfPairedDevices);
 

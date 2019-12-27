@@ -77,6 +77,14 @@
 #define BTRMGR_IARM_METHOD_DEINIT                                    "DeInit"
 #define BTRMGR_IARM_METHOD_SET_LIMIT_BEACON_DETECTION                "SetLimitBeaconDetection"
 #define BTRMGR_IARM_METHOD_GET_LIMIT_BEACON_DETECTION                "GetLimitBeaconDetection"
+#define BTRMGR_IARM_METHOD_LE_START_ADVERTISEMENT                    "StartAdvertisement"
+#define BTRMGR_IARM_METHOD_LE_STOP_ADVERTISEMENT                     "StopAdvertisement"
+#define BTRMGR_IARM_METHOD_LE_GET_PROP_VALUE                         "GetPropertyValue"
+#define BTRMGR_IARM_METHOD_LE_SET_GATT_SERVICE_INFO                  "SetGattServiceInfo"
+#define BTRMGR_IARM_METHOD_LE_SET_GATT_CHAR_INFO                     "SetGattCharInfo"
+#define BTRMGR_IARM_METHOD_LE_SET_GATT_PROPERTY_VALUE                "SetGattPropertyValue"
+#define BTRMGR_IARM_METHOD_GET_SYS_DIAG_INFO                         "SysDiagInfo"
+#define BTRMGR_IARM_METHOD_WIFI_CONNECT_INFO                         "ConnectToWifi"
 
 /**
  * @brief Represents the events supported by bluetooth manager.
@@ -276,6 +284,45 @@ typedef struct _BTRMGR_IARMAudioInServiceState_t {
     unsigned char m_serviceState;
 } BTRMGR_IARMAudioInServiceState_t;
 
+typedef struct _BTRMGR_IARMGATTValue_t {
+    unsigned char   m_adapterIndex;
+    char m_UUID[BTRMGR_MAX_STR_LEN];
+    char m_Value[BTRMGR_MAX_STR_LEN];
+    BTRMGR_LeProperty_t aElement;
+}BTRMGR_IARMGATTValue_t;
 
+typedef struct _BTRMGR_IARMGATTServiceInfo_t {
+    unsigned char m_adapterIndex;
+    char m_UUID[BTRMGR_MAX_STR_LEN];
+    unsigned char m_ServiceType;
+}BTRMGR_IARMGATTServiceInfo_t;
+
+typedef struct _BTRMGR_IARMGATTInfo_t {
+    unsigned char m_adapterIndex;
+    char m_ParentUUID[BTRMGR_MAX_STR_LEN];
+    char m_UUID[BTRMGR_MAX_STR_LEN];
+    unsigned short m_Flags;
+    char m_Value[BTRMGR_MAX_STR_LEN];
+    BTRMGR_LeProperty_t m_Element;
+}BTRMGR_IARMGATTInfo_t;
+
+typedef struct _BTRMGR_IARMAdvtInfo_t {
+    unsigned char                   m_adapterIndex;
+    BTRMGR_LeCustomAdvertisement_t  m_CustAdvt;
+}BTRMGR_IARMAdvtInfo_t;
+
+typedef struct _BTRMGR_IARMDiagInfo_t {
+    unsigned char m_adapterIndex;
+    char          m_UUID[BTRMGR_MAX_STR_LEN];
+    char          m_DiagInfo[BTRMGR_MAX_STR_LEN];
+    BTRMGR_LeOp_t m_OpType;
+}BTRMGR_IARMDiagInfo_t;
+
+typedef struct _BTRMGR_IARMWifiConnectInfo_t {
+    unsigned char m_adapterIndex;
+    char          m_SSID[BTRMGR_MAX_STR_LEN];
+    char          m_Password[BTRMGR_MAX_STR_LEN];
+    int           m_SecMode;
+}BTRMGR_IARMWifiConnectInfo_t;
 /** @} */
 #endif /* __BT_MGR_IARM_INTERFACE_H__ */

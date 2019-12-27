@@ -176,6 +176,18 @@ AC_ARG_ENABLE([rpc],
     	      ],
     	      [echo "rpc plugin is disabled"])
 
+SYS_DIAG_ENABLE="" #true"
+AC_ARG_ENABLE([sys-diag],
+              AS_HELP_STRING([--enable-sys-diag],[enable system diagnostics (default is no)]),
+              [
+      		case "${enableval}" in
+        	 yes) SYS_DIAG_ENABLE=true ;;
+        	 no)  SYS_DIAG_ENABLE=false AC_MSG_ERROR([system diagnostics is disabled]) ;;
+        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-sys-diag]) ;;
+       		esac
+    	      ],
+    	      [echo "system diagnostics is disabled"])
+
 # Check for breakpad
 BREAKPAD_CFLAGS=" "
 BREAKPAD_LFLAGS=" "
@@ -246,6 +258,7 @@ BTR_MGR_SRC="src"
 BTR_MGR_TEST="tests"
 
 AM_CONDITIONAL(USE_RPC, test "x$RPC_ENABLE" = xtrue)
+AM_CONDITIONAL(USE_SYS_DIAG, test "x$SYS_DIAG_ENABLE" = xtrue)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
@@ -269,6 +282,9 @@ AC_CONFIG_FILES([Makefile
                  src/audioCap/Makefile
                  src/streamOut/Makefile
                  src/streamIn/Makefile
+                 src/sysDiag/Makefile
+                 src/columbo/Makefile
+                 src/leOnboarding/Makefile
                  tests/Makefile
                  tests/streamInOut/Makefile])
 
