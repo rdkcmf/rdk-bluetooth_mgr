@@ -1046,7 +1046,7 @@ main (
         case 46:
             {
                 char leUuidString[BTRCORE_UUID_LEN] = "\0";
-                char leWriteArg[BTRCORE_STRINGS_MAX_LEN] = "\0";
+                char leWriteArg[BTRCORE_STR_LEN] = "\0";
                 printf("%d\t: %s - Pick a connected LE Device to Perform Operation.\n", __LINE__, __FUNCTION__);
                 printf("Pick a Device to Connect...\n");
                 devnum = getChoice();

@@ -65,7 +65,8 @@ main (
     void
 ) {
     time_t curr = 0;
-    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t lenBtrMgrResult     = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_Result_t lenBtrMgrSoResult   = BTRMGR_RESULT_SUCCESS;
 
 
     if ((lenBtrMgrResult = BTRMGR_Init()) == BTRMGR_RESULT_SUCCESS) {
@@ -82,17 +83,19 @@ main (
 
         BTRMgr_BeginIARMMode();
 
+#ifdef INCLUDE_BREAKPAD
+        breakpad_ExceptionHandler();
+#endif
+
+        lenBtrMgrSoResult = BTRMGR_StartAudioStreamingOut_StartUp(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
+        printf ("BTRMGR_StartAudioStreamingOut_StartUp - %d\n", lenBtrMgrSoResult);
+        fflush(stdout);
+
 #if defined(ENABLE_SD_NOTIFY)
         sd_notifyf(0, "READY=1\n"
                       "STATUS=BTRMgr Successfully Initialized  - Processing requests…\n"
                       "MAINPID=%lu", (unsigned long) getpid());
 #endif
-#ifdef INCLUDE_BREAKPAD
-        breakpad_ExceptionHandler();
-#endif
-        lenBtrMgrResult = BTRMGR_StartAudioStreamingOut_StartUp(0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
-        printf ("BTRMGR_StartAudioStreamingOut_StartUp - %d\n", lenBtrMgrResult);
-        fflush(stdout);
 
         while (gbExitBTRMgr == false) {
             time(&curr);

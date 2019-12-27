@@ -24,20 +24,19 @@
 #include "rfcapi.h"
 
 /* Tile Specific TOA msg feilds */
-# define _1_BYTE_TOA_CID                 "00"
-# define _4_BYTE_TOA_SESSION_TOKEN       "00000000"
-# define _14_BYTE_TOA_RAND_A             "0000000000000000000000000000"
-# define _14_BYTE_TOA_MSG_PAYLOAD        "0000000000000000000000000000"
-# define _14_BYTE_TOA_SONG_PAYLOAD       "020103"
-# define _4_BYTE_TOA_MIC                 "00000000"
+# define _1_BYTE_TOA_CID                    "00"
+# define _4_BYTE_TOA_SESSION_TOKEN          "00000000"
+# define _14_BYTE_TOA_RAND_A                "0000000000000000000000000000"
+# define _14_BYTE_TOA_MSG_PAYLOAD           "0000000000000000000000000000"
+# define _14_BYTE_TOA_SONG_PAYLOAD          "020103"
+# define _4_BYTE_TOA_MIC                    "00000000"
 
-# define _1_BYTE_TOA_CMD_OPEN_CHANNEL    "10"
-# define _1_BYTE_TOA_CMD_READY           "12"
-# define _1_BYTE_TOA_CMD_SONG_PLAY       "05"
+# define _1_BYTE_TOA_CMD_OPEN_CHANNEL       "10"
+# define _1_BYTE_TOA_CMD_READY              "12"
+# define _1_BYTE_TOA_CMD_SONG_PLAY          "05"
 
-# define _1_BYTE_TOA_RSP_OPEN_CHANNEL    "12"
-# define _1_BYTE_TOA_RSP_READY           "01"
-
+# define _1_BYTE_TOA_RSP_OPEN_CHANNEL       "12"
+# define _1_BYTE_TOA_RSP_READY              "01"
 
 volatile int           wait                  = 1;
 volatile unsigned char gReceivedNotification = 0;
@@ -49,6 +48,31 @@ char**  gArgv;
 int     gArgc;
 BTRMgrDeviceHandle gDeviceHandle = 0;
 
+BTRMGR_LeCustomAdvertisement_t stCustomAdv =
+{
+    0x02 ,
+    0x01 ,
+    0x06 ,
+    0x05 ,
+    0x03 ,
+    0x0A ,
+    0x18 ,
+    0xB9 ,
+    0xFD ,
+    0x0B ,
+    0xFF ,
+    0xA3 ,
+    0x07 ,
+    0x0101,
+    {
+        0xC8,
+        0xB3,
+        0x73,
+        0x32,
+        0xEA,
+        0x3D
+    }
+};
 
 static void printOptions (void)
 {
@@ -96,6 +120,10 @@ static void printOptions (void)
     printf ("43. Set Media Element Active\n");
     printf ("44. Get Media Element List\n");
     printf ("45. Select Media Element to Play/Explore\n");
+    printf ("50. Set advertisement data and services and start advertisement\n");
+    printf ("51. Add service/gatt/descriptor info\n");
+    printf ("52. Stop Advertisement\n");
+    printf ("53. Begin advertisement for Xcam2\n");
     printf ("55. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
@@ -161,13 +189,13 @@ static int getUserSelection (void)
     }
     else
     {
-	cliArgCounter++;
-	if (cliArgCounter < gArgc){
-	   mychoice = atoi(gArgv[cliArgCounter]);	
-	}
-	else{
-	   printf("\n No Value entered , Sending 0\n");
-	}
+    cliArgCounter++;
+    if (cliArgCounter < gArgc){
+       mychoice = atoi(gArgv[cliArgCounter]);
+    }
+    else{
+       printf("\n No Value entered , Sending 0\n");
+    }
     }
     return mychoice;
 }
@@ -413,7 +441,35 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_DEVICE_OP_INFORMATION:
         printf("\tRecieved %s Event from BTRMgr\n", getEventAsString(event.m_eventType));
         printf("\tDevice %s Op Information\n", event.m_deviceOpInfo.m_name);
-        printf("\t%s\n", event.m_deviceOpInfo.m_notifyData);
+        printf("\tUUID is %s\n", event.m_deviceOpInfo.m_uuid);
+        if (BTRMGR_DEVICE_TYPE_TILE == event.m_deviceOpInfo.m_deviceType)
+        {
+            printf("\t%s\n", event.m_deviceOpInfo.m_notifyData);
+        }
+        else if(BTRMGR_LE_OP_WRITE_VALUE == event.m_deviceOpInfo.m_leOpType)
+        {
+            printf("\t%s\n", event.m_deviceOpInfo.m_writeData);
+            {
+                BTRMGR_SysDiagInfo(0, event.m_deviceOpInfo.m_uuid, event.m_deviceOpInfo.m_writeData, event.m_deviceOpInfo.m_leOpType);
+            }
+        }
+        else if (BTRMGR_LE_OP_READ_VALUE == event.m_deviceOpInfo.m_leOpType)
+        {
+            BTRMGR_SysDiagInfo(0, event.m_deviceOpInfo.m_uuid, event.m_deviceOpInfo.m_writeData, event.m_deviceOpInfo.m_leOpType);
+            printf("Writing %s for UUID %s\n", event.m_deviceOpInfo.m_writeData, event.m_deviceOpInfo.m_uuid);
+
+            /* Send event response */
+            BTRMGR_EventResponse_t  lstBtrMgrEvtRsp;
+            
+            memset(&lstBtrMgrEvtRsp, 0, sizeof(lstBtrMgrEvtRsp));
+            lstBtrMgrEvtRsp.m_eventResp = 1;
+            lstBtrMgrEvtRsp.m_eventType = BTRMGR_EVENT_DEVICE_OP_INFORMATION;
+            strncpy(lstBtrMgrEvtRsp.m_writeData, event.m_deviceOpInfo.m_writeData, BTRMGR_MAX_DEV_OP_DATA_LEN - 1);
+            if (BTRMGR_RESULT_SUCCESS != BTRMGR_SetEventResponse(0, &lstBtrMgrEvtRsp)) {
+                printf("Failed to send event response");
+            }
+            gDeviceHandle = 0;
+        }
         break;
     case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE:
         printf ("\n\tDiscovered %s device of type %s\n", event.m_discoveredDevice.m_name, BTRMGR_GetDeviceTypeAsString(event.m_discoveredDevice.m_deviceType));
@@ -474,31 +530,31 @@ int main(int argc, char *argv[])
 
     if (BTRMGR_RESULT_SUCCESS != rc)
     {
-	    printf ("Failed to init BTRMgr.. Quiting.. \n");
-	    loop = 0;
-	    return 0;
+        printf ("Failed to init BTRMgr.. Quiting.. \n");
+        loop = 0;
+        return 0;
     }
 
     BTRMGR_RegisterEventCallback (eventCallback);
     if(argc==1){
-	    printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
-	    cliDisabled = 1;
+        printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
+        cliDisabled = 1;
     }
     else
     {
-	    printf("\n Executing in CLI mode\n");
+        printf("\n Executing in CLI mode\n");
             printOptionsCli();
-	    gArgv = malloc(argc * sizeof (char*));
-	    gArgc = argc;
-	    for (counter = 0; counter < argc; ++counter) {
-		    sz = strlen(argv[counter]) + 1;
-		    gArgv[counter] = malloc(sz * sizeof (char));
-		    strcpy(gArgv[counter], argv[counter]);
-	    }
+        gArgv = malloc(argc * sizeof (char*));
+        gArgc = argc;
+        for (counter = 0; counter < argc; ++counter) {
+            sz = strlen(argv[counter]) + 1;
+            gArgv[counter] = malloc(sz * sizeof (char));
+            strcpy(gArgv[counter], argv[counter]);
+        }
 
-	    for (counter = 0; counter < argc; ++counter) {
-		    printf("%s\n", gArgv[counter]);
-	    }
+        for (counter = 0; counter < argc; ++counter) {
+            printf("%s\n", gArgv[counter]);
+        }
 
     }
     do
@@ -1107,10 +1163,10 @@ int main(int argc, char *argv[])
                     handle = getDeviceSelection();
                     printf ("Enter the Char UUID : ");
                     getString (luuid);
-                    printf ("Enter Option : [ReadValue - 0 | WriteValue - 1 | StartNotify - 2 | StopNotify - 3]\n");
+                    printf ("Enter Option : [ReadValue - 1 | WriteValue - 2 | StartNotify - 3 | StopNotify - 4]\n");
                     opt = getDeviceSelection();
 
-                    if (opt == 1) {
+                    if (opt == 2) {
                         printf ("Enter the Value to be Written : ");
                         getString (arg);
                     }
@@ -1138,10 +1194,10 @@ int main(int argc, char *argv[])
                 break;
             case 36:
                 {
-                	BTRMGR_DiscoveryStatus_t aeDiscoveryStatus;
-                	BTRMGR_DeviceOperationType_t aenBTRMgrDevOpType;
+                    BTRMGR_DiscoveryStatus_t aeDiscoveryStatus;
+                    BTRMGR_DeviceOperationType_t aenBTRMgrDevOpType;
 
-                	rc = BTRMGR_GetDiscoveryStatus (0, &aeDiscoveryStatus, &aenBTRMgrDevOpType);
+                    rc = BTRMGR_GetDiscoveryStatus (0, &aeDiscoveryStatus, &aenBTRMgrDevOpType);
 
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
@@ -1378,7 +1434,201 @@ int main(int argc, char *argv[])
                     }
                 }
                 break;
+            case 50:
+                {
+                    char lPropertyValue[BTRMGR_MAX_STR_LEN] = "";
 
+                    BTRMGR_SysDiagInfo(0, BTRMGR_DEVICE_MAC, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    strncpy((char*)stCustomAdv.device_mac, lPropertyValue, strlen(lPropertyValue));
+
+                    printf("Adding default local services : DEVICE_INFORMATION_UUID - 0x180a, RDKDIAGNOSTICS_UUID - 0xFDB9\n");
+                    BTRMGR_LE_SetServiceInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, 1);
+                    BTRMGR_LE_SetServiceInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, 1);
+
+                    /* Get model number */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_SYSTEM_ID_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    printf("Adding char for the default local services : 0x180a, 0xFDB9\n");
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SYSTEM_ID_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                                /* system ID            */
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_MODEL_NUMBER_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                             /* model number         */
+                    /*Get HW revision*/
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_HARDWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Hardware revision    */
+                    /* Get serial number */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_SERIAL_NUMBER_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SERIAL_NUMBER_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                            /* serial number        */
+                    /* Get firmware revision */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_FIRMWARE_REVISION_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_FIRMWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Firmware revision    */
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SOFTWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Software revision    */
+                    /* Get manufacturer name */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_MANUFACTURER_NAME_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_MANUFACTURER_NAME_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                        /* Manufacturer name    */
+
+                    /* 0xFDB9 */
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_DEVICE_STATUS_UUID, 0x1, "READY", BTRMGR_LE_PROP_CHAR);                                       /* DeviceStatus         */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_FWDOWNLOAD_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_FWDOWNLOAD_STATUS_UUID, 0x103, lPropertyValue, BTRMGR_LE_PROP_CHAR);                          /* FWDownloadStatus     */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_WEBPA_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_WEBPA_STATUS_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                                 /* WebPAStatus          */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_WIFIRADIO1_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_WIFIRADIO1_STATUS_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                            /* WiFiRadio1Status     */
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_WIFIRADIO2_STATUS_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);                            /* WiFiRadio2Status     */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_RF_STATUS_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_RDKDIAGNOSTICS_UUID, BTRMGR_RF_STATUS_UUID, 0x1, "NOT CONNECTED", BTRMGR_LE_PROP_CHAR);                                   /* RFStatus             */
+
+                    /* Begin advertisement */
+                    BTRMGR_LE_StartAdvertisement(0, &stCustomAdv);
+                }
+                break;
+            case 51:
+                {
+                    int lChoice = 1;
+                    char lUUID[BTRMGR_MAX_STR_LEN] = "";
+                    unsigned char lServiceType = 1;
+                    char lParentUUID[BTRMGR_MAX_STR_LEN] = "";
+                    int lFlag = 0;
+                    unsigned short lFlagMask = 0x0;
+                    char lValue[BTRMGR_MAX_STR_LEN] = "";
+
+                    do
+                    {
+                        printf("\nAdd test Gatt info\n");
+                        printf("0 - No | 1 - Service | 2 - Characteristic | 3 - Descriptor\n");
+                        scanf("%d", &lChoice);
+                        switch (lChoice)
+                        {
+                            case 1:
+                            {
+                                printf("Enter UUID of Service\n");
+                                scanf("%s", lUUID);
+                                printf("Enter Service Type\n");
+                                printf("1 - Primary | 0 - Secondary\n");
+                                scanf("%d", (int*)&lServiceType);
+                                BTRMGR_LE_SetServiceInfo(0, lUUID, (lServiceType != 0 ? 1 : 0));
+                            }
+                            break;
+                            case 2:
+                            case 3:
+                            {
+                                printf("Enter UUID\n");
+                                scanf("%s", lUUID);
+                                printf("Enter UUID of parent\n");
+                                scanf("%s", lParentUUID);
+                                do {
+                                    printf("Enter the characteristic flags \n");
+                                    printf("\n"
+                                        "0  - read\n"
+                                        "1  - write\n"
+                                        "2  - encrypt-read\n"
+                                        "3  - encrypt-write\n"
+                                        "4  - encrypt-authenticated-read\n"
+                                        "5  - encrypt-authenticated-write\n"
+                                        "6  - secure-read (Server only)\n"
+                                        "7  - secure-write (Server only)\n"
+                                        "8  - notify\n"
+                                        "9  - indicate\n"
+                                        "10 - broadcast\n"
+                                        "11 - write-without-response\n"
+                                        "12 - authenticated-signed-writes\n"
+                                        "13 - reliable-write\n"
+                                        "14 - writable-auxiliaries\n"
+                                        "15 - Done");
+                                    printf("\nPress enter when done");
+                                    scanf("%d", &lFlag);
+                                    if ((lFlag >= 0) || (lFlag <= 14))
+                                    {
+                                        lFlagMask |= (1 << lFlag);
+                                    }
+                                } while (lFlag != 15);
+                                if (0x1 == (lFlagMask & 0x1))
+                                {
+                                    printf("Enter value of the characteristic\n");
+                                    scanf("%s", lValue);
+                                }
+                                BTRMGR_LE_SetGattInfo(0, lParentUUID, lUUID, lFlagMask, lValue, (lChoice == 2?BTRMGR_LE_PROP_CHAR: BTRMGR_LE_PROP_DESC));
+                            }
+                            break;
+                            default:
+                            break;
+                        }
+                    } while (lChoice);
+                    BTRMGR_LE_StopAdvertisement(0);
+                    BTRMGR_LE_StartAdvertisement(0, &stCustomAdv);
+                }
+                break;
+            case 52:
+                {
+                    BTRMGR_LE_StopAdvertisement(0);
+                }
+                break;
+            case 53:
+                {
+                    char lPropertyValue[BTRMGR_MAX_STR_LEN] = "";
+
+                    printf("Adding char for the default local services \n");
+                    BTRMGR_LE_SetServiceInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, 1);
+                    BTRMGR_LE_SetServiceInfo(0, BTRMGR_LEONBRDG_SERVICE_UUID_SETUP, 1);
+
+                    /* Get system ID - device MAC */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_SYSTEM_ID_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SYSTEM_ID_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);          /* system ID            */
+                    /* Get model number */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_MODEL_NUMBER_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);                                           
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_MODEL_NUMBER_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);       /* model number         */
+                    /*Get HW revision*/
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_HARDWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);  /* Hardware revision    */
+                    /* Get serial number */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_SERIAL_NUMBER_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);                                          
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SERIAL_NUMBER_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);      /* serial number        */
+                    /* Get firmware revision */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_FIRMWARE_REVISION_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_FIRMWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);  /* Firmware revision    */
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_SOFTWARE_REVISION_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);  /* Software revision    */
+                    /* Get manufacturer name */
+                    BTRMGR_SysDiagInfo(0, BTRMGR_MANUFACTURER_NAME_UUID, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_DEVICE_INFORMATION_UUID, BTRMGR_MANUFACTURER_NAME_UUID, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);  /* Manufacturer name    */
+
+                    BTRMGR_SysDiagInfo(0, BTRMGR_LEONBRDG_UUID_QR_CODE, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_LEONBRDG_SERVICE_UUID_SETUP, BTRMGR_LEONBRDG_UUID_QR_CODE, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);
+                    BTRMGR_SysDiagInfo(0, BTRMGR_LEONBRDG_UUID_PROVISION_STATUS, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_LEONBRDG_SERVICE_UUID_SETUP, BTRMGR_LEONBRDG_UUID_PROVISION_STATUS, 0x101, lPropertyValue, BTRMGR_LE_PROP_CHAR);
+                    BTRMGR_SysDiagInfo(0, BTRMGR_LEONBRDG_UUID_PUBLIC_KEY, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_LEONBRDG_SERVICE_UUID_SETUP, BTRMGR_LEONBRDG_UUID_PUBLIC_KEY, 0x1, lPropertyValue, BTRMGR_LE_PROP_CHAR);
+                    //BTRMGR_SysDiagInfo(0, BTRMGR_LEONBRDG_UUID_WIFI_CONFIG, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_LEONBRDG_SERVICE_UUID_SETUP, BTRMGR_LEONBRDG_UUID_WIFI_CONFIG, 0x2, lPropertyValue, BTRMGR_LE_PROP_CHAR);
+                    BTRMGR_LE_SetGattInfo(0, BTRMGR_LEONBRDG_SERVICE_UUID_SETUP, BTRMGR_LEONBRDG_UUID_SSID_LIST, 0x1, " ", BTRMGR_LE_PROP_CHAR);
+                    //BTRMGR_LE_SetGattInfo(0, BTRMGR_LEONBRDG_UUID_PROVISION_STATUS, "0x2902", 0x1, "0x0100", BTRMGR_LE_PROP_DESC);
+                    printf("Starting the ad\n");
+                    BTRMGR_LE_StartAdvertisement(0, &stCustomAdv);
+                    
+                    usleep(40000000);
+                    //BTRMGR_LE_SetGattPropertyValue(0, "0x2902", "0x01", BTRMGR_LE_PROP_DESC);
+#if 1
+ 
+                    //char lPropertyValue[BTRMGR_MAX_STR_LEN] = "";
+                    //usleep(10000000);
+
+                    do {
+                        printf("Getting the provision status\n");
+                        BTRMGR_SysDiagInfo(0, BTRMGR_LEONBRDG_UUID_PROVISION_STATUS, lPropertyValue, BTRMGR_LE_OP_READ_VALUE);
+
+                        printf("BTRMGR_LEONBRDG_UUID_PROVISION_STATUS is %s\n", lPropertyValue);
+                        /* Add condition to notify only if different from the last */
+                        {
+                            BTRMGR_LE_SetGattPropertyValue(0, BTRMGR_LEONBRDG_UUID_PROVISION_STATUS, lPropertyValue, BTRMGR_LE_PROP_CHAR);
+                        }
+                        if (!strncmp("0x102", lPropertyValue, 4))
+                        {
+                            printf("Waiting for wifi config\n");
+                            break;
+                        }
+
+                        usleep(1000000);
+
+                    } while (1);
+                    
+#endif              
+                }
+                break;
             case 55:
                 loop = 0;
                 break;
@@ -1390,8 +1640,8 @@ int main(int argc, char *argv[])
 
     if (cliDisabled ==0)
     {
-	    for(counter = 0; counter < argc; ++counter) free(gArgv[counter]);
-	    free(gArgv);
+        for(counter = 0; counter < argc; ++counter) free(gArgv[counter]);
+        free(gArgv);
     }
     BTRMGR_DeInit();
     return 0;

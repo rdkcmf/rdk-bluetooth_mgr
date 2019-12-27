@@ -16,4 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = audioCap streamOut streamIn persistIf rpc ifce sysDiag columbo leOnboarding main
+SUBDIRS =
+
+INCLUDE_FILES =
+
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/columbo -I${top_srcdir}/include/logger
+AM_LDFLAGS = -lrdkloggers
+
+lib_LTLIBRARIES = libbtrMgrColumbo.la
+libbtrMgrColumbo_la_SOURCES = btrMgr_Columbo.c
+libbtrMgrColumbo_la_CFLAGS = $(INCLUDE_FILES) 
+
+include_HEADERS = $(top_srcdir)/include/columbo/btrMgr_Columbo.h

@@ -61,9 +61,17 @@ static IARM_Result_t btrMgr_SelectMediaElement (void* arg);
 static IARM_Result_t btrMgr_GetLeProperty (void* arg);
 static IARM_Result_t btrMgr_PerformLeOp (void* arg);
 static IARM_Result_t btrMgr_SetAudioInServiceState (void* arg);
+static IARM_Result_t btrMgr_SysDiagInfo(void* arg);
+static IARM_Result_t btrMgr_ConnectToWifi(void* arg);
 static IARM_Result_t btrMgr_GetLimitBeaconDetection (void* arg);
 static IARM_Result_t btrMgr_SetLimitBeaconDetection (void* arg);
 static IARM_Result_t btrMgr_DeInit (void* arg);
+static IARM_Result_t btrMgr_LeStartAdvertisement(void* arg);
+static IARM_Result_t btrMgr_LeStopAdvertisement(void *arg);
+static IARM_Result_t btrMgr_LeGetPropertyValue(void* arg);
+static IARM_Result_t btrMgr_LeSetServiceInfo(void* arg);
+static IARM_Result_t btrMgr_LeSetGattInfo(void* arg);
+static IARM_Result_t btrMgr_LeSetGattPropertyValue(void* arg);
 
 /* Callbacks Prototypes */
 static BTRMGR_Result_t btrMgr_EventCallback (BTRMGR_EventMessage_t astEventMessage); 
@@ -1367,6 +1375,203 @@ btrMgr_SetLimitBeaconDetection (
     return retCode;
 }
 
+static IARM_Result_t btrMgr_LeStartAdvertisement(void* arg)
+{
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+
+    BTRMGR_IARMAdvtInfo_t* lpstAdvtInfo = (BTRMGR_IARMAdvtInfo_t *)arg;
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+    }
+    else if (NULL == lpstAdvtInfo)
+    {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+    else
+    {
+        rc = BTRMGR_LE_StartAdvertisement(lpstAdvtInfo->m_adapterIndex, &lpstAdvtInfo->m_CustAdvt);
+
+        if (BTRMGR_RESULT_SUCCESS == rc)
+        {
+            BTRMGRLOG_INFO("Success\n");
+        }
+        else
+        {
+            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+            BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+        }
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t btrMgr_LeStopAdvertisement(void *arg)
+{
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    unsigned char* lpAdapterIndex = (unsigned char*)arg;
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+    }
+    else if (NULL == lpAdapterIndex)
+    {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+    else
+    {
+        rc = BTRMGR_LE_StopAdvertisement(*lpAdapterIndex);
+
+        if (BTRMGR_RESULT_SUCCESS == rc)
+        {
+            BTRMGRLOG_INFO("Success\n");
+        }
+        else
+        {
+            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+            BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+        }
+    }
+    return retCode;
+}
+
+static IARM_Result_t btrMgr_LeGetPropertyValue(void* arg)
+{
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+
+    BTRMGR_IARMGATTValue_t* lpstGattInfo = (BTRMGR_IARMGATTValue_t *)arg;
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+    }
+    else if (NULL == lpstGattInfo)
+    {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+    else
+    {
+        rc = BTRMGR_LE_GetPropertyValue(lpstGattInfo->m_adapterIndex, lpstGattInfo->m_UUID, lpstGattInfo->m_Value, lpstGattInfo->aElement);
+
+        if (BTRMGR_RESULT_SUCCESS == rc)
+        {
+            BTRMGRLOG_INFO("Success\n");
+        }
+        else
+        {
+            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+            BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+        }
+    }
+    return retCode;
+}
+
+static IARM_Result_t btrMgr_LeSetServiceInfo(void* arg)
+{
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+
+    BTRMGR_IARMGATTServiceInfo_t* lpstGattServiceInfo = (BTRMGR_IARMGATTServiceInfo_t *)arg;
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+    }
+    else if (NULL == lpstGattServiceInfo)
+    {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+    else
+    {
+        rc = BTRMGR_LE_SetServiceInfo(lpstGattServiceInfo->m_adapterIndex, lpstGattServiceInfo->m_UUID, lpstGattServiceInfo->m_ServiceType);
+
+        if (BTRMGR_RESULT_SUCCESS == rc)
+        {
+            BTRMGRLOG_INFO("Success\n");
+        }
+        else
+        {
+            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+            BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+        }
+    }
+    return retCode;
+}
+
+static IARM_Result_t btrMgr_LeSetGattInfo(void* arg)
+{
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+
+    BTRMGR_IARMGATTInfo_t* lpstGattInfo = (BTRMGR_IARMGATTInfo_t *)arg;
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+    }
+    else if (NULL == lpstGattInfo)
+    {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+    else
+    {
+        rc = BTRMGR_LE_SetGattInfo(lpstGattInfo->m_adapterIndex, lpstGattInfo->m_ParentUUID, lpstGattInfo->m_UUID, lpstGattInfo->m_Flags, lpstGattInfo->m_Value, lpstGattInfo->m_Element);
+
+        if (BTRMGR_RESULT_SUCCESS == rc)
+        {
+            BTRMGRLOG_INFO("Success\n");
+        }
+        else
+        {
+            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+            BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+        }
+    }
+    return retCode;
+}
+
+static IARM_Result_t btrMgr_LeSetGattPropertyValue(void* arg) {
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+
+    BTRMGR_IARMGATTValue_t* lpstGattInfo = (BTRMGR_IARMGATTValue_t *)arg;
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+    }
+    else if (NULL == lpstGattInfo)
+    {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+    else
+    {
+        rc = BTRMGR_LE_SetGattPropertyValue(lpstGattInfo->m_adapterIndex, lpstGattInfo->m_UUID, lpstGattInfo->m_Value, lpstGattInfo->aElement);
+
+        if (BTRMGR_RESULT_SUCCESS == rc)
+        {
+            BTRMGRLOG_INFO("Success\n");
+        }
+        else
+        {
+            retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+            BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+        }
+    }
+    return retCode;
+}
+ 
 static IARM_Result_t
 btrMgr_SetAudioInServiceState (
     void* arg
@@ -1396,6 +1601,63 @@ btrMgr_SetAudioInServiceState (
     else {
         retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
         BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t
+btrMgr_SysDiagInfo(
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMDiagInfo_t *lDiagInfo = (BTRMGR_IARMDiagInfo_t*)arg;
+
+    BTRMGRLOG_INFO("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    rc = BTRMGR_SysDiagInfo(lDiagInfo->m_adapterIndex, lDiagInfo->m_UUID, lDiagInfo->m_DiagInfo, lDiagInfo->m_OpType);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t
+btrMgr_ConnectToWifi(
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMWifiConnectInfo_t* lWifiInfo = (BTRMGR_IARMWifiConnectInfo_t*)arg;
+
+    BTRMGRLOG_INFO("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    rc = BTRMGR_ConnectToWifi(lWifiInfo->m_adapterIndex, lWifiInfo->m_SSID, lWifiInfo->m_Password, lWifiInfo->m_SecMode);
+
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", rc);
     }
 
     return retCode;
@@ -1501,6 +1763,14 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE, btrMgr_SetAudioInServiceState);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_LIMIT_BEACON_DETECTION, btrMgr_SetLimitBeaconDetection);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LIMIT_BEACON_DETECTION, btrMgr_GetLimitBeaconDetection);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_START_ADVERTISEMENT, btrMgr_LeStartAdvertisement);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_STOP_ADVERTISEMENT, btrMgr_LeStopAdvertisement);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_GET_PROP_VALUE, btrMgr_LeGetPropertyValue);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_SET_GATT_SERVICE_INFO, btrMgr_LeSetServiceInfo);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_SET_GATT_CHAR_INFO, btrMgr_LeSetGattInfo);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_SET_GATT_PROPERTY_VALUE, btrMgr_LeSetGattPropertyValue);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_SYS_DIAG_INFO, btrMgr_SysDiagInfo);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_WIFI_CONNECT_INFO, btrMgr_ConnectToWifi);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_DEINIT, btrMgr_DeInit);
 
         IARM_Bus_RegisterEvent(BTRMGR_IARM_EVENT_MAX);

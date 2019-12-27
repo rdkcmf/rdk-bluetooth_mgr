@@ -47,14 +47,51 @@ extern "C"
  * @{
  */
 
-#define BTRMGR_MAX_STR_LEN             256
-#define BTRMGR_NAME_LEN_MAX            64
-#define BTRMGR_STR_LEN                 32
-#define BTRMGR_DEVICE_COUNT_MAX        32
-#define BTRMGR_ADAPTER_COUNT_MAX       16
-#define BTRMGR_MAX_DEVICE_PROFILE      32
-#define BTRMGR_LE_FLAG_LIST_SIZE       10
-#define BTRMGR_MEDIA_ELEMENT_COUNT_MAX 64
+#define BTRMGR_MAX_STR_LEN                  256
+#define BTRMGR_NAME_LEN_MAX                 64
+#define BTRMGR_STR_LEN                      32
+#define BTRMGR_DEVICE_COUNT_MAX             32
+#define BTRMGR_ADAPTER_COUNT_MAX            16
+#define BTRMGR_MAX_DEVICE_PROFILE           32
+#define BTRMGR_LE_FLAG_LIST_SIZE            10
+#define BTRMGR_MEDIA_ELEMENT_COUNT_MAX      64
+#define BTRMGR_DEVICE_MAC_LEN               6
+#define BTRMGR_MAX_DEV_OP_DATA_LEN          BTRMGR_MAX_STR_LEN * 3
+
+#define BTRMGR_DEVICE_INFORMATION_UUID      "0x180a"
+#define BTRMGR_RDKDIAGNOSTICS_UUID          "0xFDB9"
+#define BTRMGR_COLUMBO_UUID                 "64d9f574-7756-4ebc-9ebe-ed5f7f2871ab"
+
+#define BTRMGR_SYSTEM_ID_UUID               "0x2a23"
+#define BTRMGR_MODEL_NUMBER_UUID            "0x2a24"
+#define BTRMGR_SERIAL_NUMBER_UUID           "0x2a25"
+#define BTRMGR_FIRMWARE_REVISION_UUID       "0x2a26"
+#define BTRMGR_HARDWARE_REVISION_UUID       "0x2a27"
+#define BTRMGR_SOFTWARE_REVISION_UUID       "0x2a28"
+#define BTRMGR_MANUFACTURER_NAME_UUID       "0x2a29"
+
+#define BTRMGR_DEVICE_STATUS_UUID           "1f113f2c-cc01-4f03-9c5c-4b273ed631bb"
+#define BTRMGR_FWDOWNLOAD_STATUS_UUID       "915f96a6-3788-4271-a7ea-6820e98896b8"
+#define BTRMGR_WEBPA_STATUS_UUID            "9d5d3aae-51e3-4767-a055-59febd71de9d"
+#define BTRMGR_WIFIRADIO1_STATUS_UUID       "59a99d5a-3d2f-4265-af13-316c7c76b1f0"
+#define BTRMGR_WIFIRADIO2_STATUS_UUID       "9d6cf473-4fa6-4868-bf2b-c310f38df0c8"
+#define BTRMGR_RF_STATUS_UUID               "91b9497e-634c-408a-9f77-8375b1461b8b"
+
+#define BTRMGR_COLUMBO_START                 "7c3fea2e-c082-4e17-b78b-1e69ca3889b9"
+#define BTRMGR_COLUMBO_STOP                  "5a7e479b-9fac-4d73-b5b0-906669946720"
+#define BTRMGR_COLUMBO_STATUS                "26f05ee1-cefa-460d-8985-98c0dc078d6c"
+#define BTRMGR_COLUMBO_REPORT                "c1e62616-b4de-4f72-86ca-9d9469041b6d"
+#define BTRMGR_DEVICE_MAC                    "device_mac"
+#define BTRMGR_WIFI_CONNECT_DUMMY_UUID              "4ffab12b-e545-1baf-1dc6-bd3fd749716a"
+#define BTRMGR_WIFI_SSID_DUMMY_UUID                 "22d68435-f7af-1156-b2e2-c7d17211b026"
+#define BTRMGR_WIFI_PWD_DUMMY_UUID                  "6bfebfe7-294d-2f4e-a4b3-b04f2a66f2f0"
+#define BTRMGR_WIFI_SEC_MODE_DUMMY_UUID             "112f9c72-82c1-93a3-d4fc-3dba3441b2c8"
+#define BTRMGR_LEONBRDG_SERVICE_UUID_SETUP          "8DF5AD72-9BBC-4167-BCD9-E8EB9E4D671B"
+#define BTRMGR_LEONBRDG_UUID_QR_CODE                "12984C43-3B43-4952-A387-715DCF9795C6"
+#define BTRMGR_LEONBRDG_UUID_PROVISION_STATUS       "79DEFBC1-EB45-448D-9F2A-1ECC3A47A242"
+#define BTRMGR_LEONBRDG_UUID_PUBLIC_KEY             "CB9FEE4D-C6ED-48C1-AB46-C3F2DA38EEDD"
+#define BTRMGR_LEONBRDG_UUID_WIFI_CONFIG            "B87A896B-4052-4CAB-A7E7-A71594D9C353"
+#define BTRMGR_LEONBRDG_UUID_SSID_LIST              "AAF92F88-7F35-48F1-9C3E-1FE5C3978B7A"
 
 typedef unsigned long long int BTRMgrDeviceHandle;
 typedef unsigned long long int BTRMgrMediaElementHandle;
@@ -234,7 +271,8 @@ typedef enum _BTRMGR_LeProperty_t {  // looking for a better enum name
     BTRMGR_LE_PROP_VALUE,
     BTRMGR_LE_PROP_NOTIFY,
     BTRMGR_LE_PROP_FLAGS,
-    BTRMGR_LE_PROP_CHAR
+    BTRMGR_LE_PROP_CHAR,
+    BTRMGR_LE_PROP_DESC
 } BTRMGR_LeProperty_t;
 
 /**
@@ -489,15 +527,18 @@ typedef struct _BTRMGR_MediaInfo_t {
     * @brief Represents the notification data
  */
 typedef struct _BTRMGR_DeviceOpInfo_t {
-    BTRMgrDeviceHandle     m_deviceHandle;
-    BTRMGR_DeviceType_t    m_deviceType;
-    char                   m_name [BTRMGR_NAME_LEN_MAX];
-    BTRMGR_LeOp_t          m_leOpType;
+    BTRMgrDeviceHandle              m_deviceHandle;
+    BTRMGR_DeviceType_t             m_deviceType;
+    BTRMGR_DeviceOperationType_t    m_deviceOpType;
+    char                            m_deviceAddress[BTRMGR_NAME_LEN_MAX];
+    char                            m_name[BTRMGR_NAME_LEN_MAX];
+    char                            m_uuid[BTRMGR_MAX_STR_LEN];
+    BTRMGR_LeOp_t                   m_leOpType;
 
     union {
-        char               m_readData[BTRMGR_MAX_STR_LEN];
-        char               m_writeData[BTRMGR_MAX_STR_LEN];
-        char               m_notifyData[BTRMGR_MAX_STR_LEN];
+        char                        m_readData[BTRMGR_MAX_DEV_OP_DATA_LEN];
+        char                        m_writeData[BTRMGR_MAX_DEV_OP_DATA_LEN];
+        char                        m_notifyData[BTRMGR_MAX_DEV_OP_DATA_LEN];
     };
 } BTRMGR_DeviceOpInfo_t;
 
@@ -522,6 +563,7 @@ typedef struct _BTRMGR_EventMessage_t {
 typedef struct _BTRMGR_EventResponse_t {
     BTRMGR_Events_t     m_eventType;
     BTRMgrDeviceHandle  m_deviceHandle;
+    char                m_writeData[BTRMGR_MAX_DEV_OP_DATA_LEN];
     union {
         unsigned char   m_eventResp;
     };
@@ -539,6 +581,28 @@ typedef struct _BTRMGR_DiscoveryFilterHandle_t {
     int                         m_pathloss;
     //BTRMGR_DeviceScanType_t     m_scanType;
 } BTRMGR_DiscoveryFilterHandle_t;
+
+/**
+ * @brief Structure for the custom advertisement payload
+ */
+typedef struct _BTRMGR_LeCustomAdvertisement_t {
+    unsigned char len_flags;
+    unsigned char type_flags;
+    unsigned char val_flags;
+    unsigned char len_comcastflags;
+    unsigned char type_comcastflags;
+    unsigned char deviceInfo_UUID_LO;
+    unsigned char deviceInfo_UUID_HI;
+    unsigned char rdk_diag_UUID_LO;
+    unsigned char rdk_diag_UUID_HI;
+    unsigned char len_manuf;
+    unsigned char type_manuf;
+    /* First two bytes must contain the manufacturer ID (little-endian order) */
+    unsigned char company_LO;
+    unsigned char company_HI;
+    unsigned short device_model;
+    unsigned char device_mac[BTRMGR_DEVICE_MAC_LEN];
+} BTRMGR_LeCustomAdvertisement_t;
 
 /* Fptr Callbacks types */
 typedef BTRMGR_Result_t (*BTRMGR_EventCallback)(BTRMGR_EventMessage_t astEventMessage);
@@ -981,6 +1045,41 @@ BTRMGR_Result_t BTRMGR_SelectMediaElement (unsigned char aui8AdapterIdx, BTRMgrD
  */
 const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
 
+/**
+ * @brief  This API Enable/Disables Audio-In on the specified bluetooth adapter.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  aui8State            0/1- Enable or Disable AudioIn service.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success.
+ */
+BTRMGR_Result_t BTRMGR_SetAudioInServiceState (unsigned char aui8AdapterIdx, unsigned char aui8State);
+
+/**
+ * @brief  This API Gets Beacon Detection status on the specified bluetooth adapter.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[out] isLimited            Current Beacon Detection Status.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success.
+ */
+BTRMGR_Result_t BTRMGR_GetLimitBeaconDetection(unsigned char aui8AdapterIdx, unsigned char *isLimited);
+
+/**
+ * @brief  This API Sets Beacon Detection status on the specified bluetooth adapter.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]   isLimited            Current Beacon Detection Status.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success.
+ */
+BTRMGR_Result_t BTRMGR_SetLimitBeaconDetection(unsigned char aui8AdapterIdx, unsigned char isLimited);
+
+
+
 BTRMGR_Result_t BTRMGR_GetLeProperty (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apBtrPropUuid, BTRMGR_LeProperty_t aenLeProperty, void* vpPropValue);
 
 /**
@@ -1010,19 +1109,24 @@ BTRMGR_Result_t BTRMGR_GetLeCharacteristicUUID (unsigned char aui8AdapterIdx, BT
  */
 BTRMGR_Result_t BTRMGR_PerformLeOp (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* aBtrLeUuid, BTRMGR_LeOp_t aLeOpType, char* aLeOpArg, char* rOpResult);
 
-/**
- * @brief  This API performs LE operations on the specified bluetooth adapter.
- *
- * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
- * @param[in]  aui8State            0/1- Enable or Disable AudioIn service.
- *
- * @return Returns the status of the operation.
- * @retval BTRMGR_RESULT_SUCCESS on success.
- */
-BTRMGR_Result_t BTRMGR_SetAudioInServiceState (unsigned char aui8AdapterIdx, unsigned char aui8State);
 
-BTRMGR_Result_t BTRMGR_SetLimitBeaconDetection(unsigned char aui8AdapterIdx, unsigned char isLimited);
-BTRMGR_Result_t BTRMGR_GetLimitBeaconDetection(unsigned char aui8AdapterIdx, unsigned char *isLimited);
+BTRMGR_Result_t BTRMGR_LE_StartAdvertisement(unsigned char aui8AdapterIdx, BTRMGR_LeCustomAdvertisement_t *pstBTMGR_LeCustomAdvt);
+
+BTRMGR_Result_t BTRMGR_LE_StopAdvertisement(unsigned char aui8AdapterIdx);
+
+BTRMGR_Result_t BTRMGR_LE_GetPropertyValue(unsigned char aui8AdapterIdx, char* lUUID, char *aValue, BTRMGR_LeProperty_t aElement);
+
+BTRMGR_Result_t BTRMGR_LE_SetServiceUUIDs(unsigned char aui8AdapterIdx, char *aUUID);
+
+BTRMGR_Result_t BTRMGR_LE_SetServiceInfo(unsigned char aui8AdapterIdx, char *aUUID, unsigned char aServiceType);
+
+BTRMGR_Result_t BTRMGR_LE_SetGattInfo(unsigned char aui8AdapterIdx, char *aParentUUID, char *aCharUUID, unsigned short aFlags, char *aValue, BTRMGR_LeProperty_t aElement);
+
+BTRMGR_Result_t BTRMGR_LE_SetGattPropertyValue(unsigned char aui8AdapterIdx, char* aUUID, char *aValue, BTRMGR_LeProperty_t aElement);
+
+BTRMGR_Result_t BTRMGR_SysDiagInfo(unsigned char aui8AdapterIdx, char *apDiagElement, char *apValue, BTRMGR_LeOp_t aOpType);
+
+BTRMGR_Result_t BTRMGR_ConnectToWifi(unsigned char aui8AdapterIdx, char *apSSID, char *apPassword, int aSecMode);
 
 // Outgoing callbacks Registration Interfaces
 BTRMGR_Result_t BTRMGR_RegisterEventCallback(BTRMGR_EventCallback afpcBBTRMgrEventOut);

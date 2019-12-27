@@ -176,6 +176,153 @@ BTRMGR_GetNumberOfAdapters (
     return rc;
 }
 
+BTRMGR_Result_t BTRMGR_LE_StartAdvertisement(unsigned char aui8AdapterIdx, BTRMGR_LeCustomAdvertisement_t *pstBTMGR_LeCustomAdvt)
+{
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMAdvtInfo_t lstAdvtInfo;
+
+    lstAdvtInfo.m_adapterIndex = aui8AdapterIdx;
+    memcpy(&lstAdvtInfo.m_CustAdvt, pstBTMGR_LeCustomAdvt, sizeof(BTRMGR_LeCustomAdvertisement_t));
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_LE_START_ADVERTISEMENT, (void *)&lstAdvtInfo, sizeof(BTRMGR_IARMAdvtInfo_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+    if (IARM_RESULT_SUCCESS == retCode) 
+    {
+        BTRMGRLOG_INFO("Success; Device is now advertising\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t BTRMGR_LE_StopAdvertisement(unsigned char aui8AdapterIdx)
+{
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_LE_STOP_ADVERTISEMENT, (void*)&aui8AdapterIdx, sizeof(unsigned char), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+    if (IARM_RESULT_SUCCESS == retCode)
+    {
+        BTRMGRLOG_INFO("Success; Device has stopped advertising\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t BTRMGR_LE_GetPropertyValue(unsigned char aui8AdapterIdx, char *aUUID, char *aValue, BTRMGR_LeProperty_t aElement)
+{
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMGATTValue_t lGattValue;
+
+    strncpy(lGattValue.m_UUID, aUUID, (BTRMGR_MAX_STR_LEN - 1));
+    lGattValue.aElement = aElement;
+    lGattValue.m_adapterIndex = aui8AdapterIdx;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_LE_GET_PROP_VALUE, (void *)&lGattValue, sizeof(lGattValue), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        strncpy(aValue, lGattValue.m_Value, (BTRMGR_MAX_STR_LEN - 1));
+        BTRMGRLOG_INFO("Success; Property value is = %s\n", lGattValue.m_Value);
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t BTRMGR_LE_SetServiceInfo(unsigned char aui8AdapterIdx, char *aUUID, unsigned char aServiceType)
+{
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMGATTServiceInfo_t lGattServiceInfo = {};
+
+    lGattServiceInfo.m_adapterIndex = aui8AdapterIdx;
+    strncpy(lGattServiceInfo.m_UUID, aUUID, (BTRMGR_MAX_STR_LEN - 1));
+    lGattServiceInfo.m_ServiceType = aServiceType;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_LE_SET_GATT_SERVICE_INFO, (void *)&lGattServiceInfo, sizeof(lGattServiceInfo), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) 
+    {
+        BTRMGRLOG_INFO("Success; \n");
+    }
+    else 
+    {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t BTRMGR_LE_SetGattInfo(unsigned char aui8AdapterIdx, char *aParentUUID, char *aUUID, unsigned short aFlags, char *aValue, BTRMGR_LeProperty_t aElement)
+{
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_INVALID_PARAM;
+    BTRMGR_IARMGATTInfo_t lGattCharInfo = {};
+
+    if ((NULL != aParentUUID) && (NULL != aUUID))
+    {
+        lGattCharInfo.m_adapterIndex = aui8AdapterIdx;
+        strncpy(lGattCharInfo.m_ParentUUID, aParentUUID, (BTRMGR_MAX_STR_LEN - 1));
+        strncpy(lGattCharInfo.m_UUID, aUUID, (BTRMGR_MAX_STR_LEN - 1));
+        lGattCharInfo.m_Flags = aFlags;
+        if (NULL != aValue)
+        {
+            strncpy(lGattCharInfo.m_Value, aValue, (BTRMGR_MAX_STR_LEN - 1));
+        }
+        lGattCharInfo.m_Element = aElement;
+
+        retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_LE_SET_GATT_CHAR_INFO, (void *)&lGattCharInfo, sizeof(lGattCharInfo), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+    }
+    
+    if (IARM_RESULT_SUCCESS == retCode)
+    {
+        BTRMGRLOG_INFO("Success; \n");
+    }
+    else
+    {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t BTRMGR_LE_SetGattPropertyValue(unsigned char aui8AdapterIdx, char *aUUID, char *aValue, BTRMGR_LeProperty_t aElement) {
+    BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMGATTValue_t lGattValue;
+
+    strncpy(lGattValue.m_UUID, aUUID, (BTRMGR_MAX_STR_LEN - 1));
+    lGattValue.aElement = aElement;
+    lGattValue.m_adapterIndex = aui8AdapterIdx;
+
+    strncpy(lGattValue.m_Value, aValue, (BTRMGR_MAX_STR_LEN - 1));
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_LE_SET_GATT_PROPERTY_VALUE, (void *)&lGattValue, sizeof(lGattValue), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        
+        BTRMGRLOG_INFO("Success; Property value is = %s\n", lGattValue.m_Value);
+    }
+
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
 
 BTRMGR_Result_t
 BTRMGR_ResetAdapter (
@@ -1381,7 +1528,9 @@ BTRMGR_PerformLeOp (
     retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_PERFORM_LE_OP, (void*)&leOp, sizeof(BTRMGR_IARMLeOp_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
     
     if (IARM_RESULT_SUCCESS == retCode) {
-        memcpy (rOpResult, leOp.m_opRes, BTRMGR_MAX_STR_LEN-1);
+        if (BTRMGR_LE_OP_READ_VALUE == aLeOpType) {
+            memcpy(rOpResult, leOp.m_opRes, BTRMGR_MAX_STR_LEN - 1);
+        }
         BTRMGRLOG_INFO ("Success\n");
     }
     else {
@@ -1425,6 +1574,85 @@ BTRMGR_SetAudioInServiceState (
     return rc;
 }
 
+BTRMGR_Result_t
+BTRMGR_SysDiagInfo(
+    unsigned char aui8AdapterIdx,
+    char *apDiagElement,
+    char *apValue,
+    BTRMGR_LeOp_t aOpType
+) {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMDiagInfo_t lDiagInfo;
+
+    memset(&lDiagInfo, 0, sizeof(BTRMGR_IARMDiagInfo_t));
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < aui8AdapterIdx) {
+        lenBtrMgrResult = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR("Input is invalid\n");
+        return lenBtrMgrResult;
+    }
+
+    lDiagInfo.m_adapterIndex = aui8AdapterIdx;
+    strncpy(lDiagInfo.m_UUID, apDiagElement, BTRMGR_MAX_STR_LEN - 1);
+    lDiagInfo.m_OpType = aOpType;
+    if (BTRMGR_LE_OP_WRITE_VALUE == aOpType)
+    {
+        strncpy(lDiagInfo.m_DiagInfo, apValue, BTRMGR_MAX_STR_LEN - 1);
+    }
+    BTRMGRLOG_INFO("calling BTRMGR_IARM_METHOD_GET_SYS_DIAG_INFO\n");
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_GET_SYS_DIAG_INFO, (void*)&lDiagInfo, sizeof(BTRMGR_IARMDiagInfo_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        if (BTRMGR_LE_OP_READ_VALUE == aOpType)
+        {
+            strncpy(apValue, lDiagInfo.m_DiagInfo, BTRMGR_MAX_STR_LEN - 1);
+        }
+        BTRMGRLOG_INFO("Success\n");
+    }
+    else {
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_ConnectToWifi(
+    unsigned char aui8AdapterIdx,
+    char *apSSID,
+    char *apPassword,
+    int aSecMode
+)     {
+    BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMWifiConnectInfo_t lWifiInfo;
+
+    memset(&lWifiInfo, 0, sizeof(BTRMGR_IARMWifiConnectInfo_t));
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < aui8AdapterIdx) {
+        lenBtrMgrResult = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR("Input is invalid\n");
+        return lenBtrMgrResult;
+    }
+
+    lWifiInfo.m_adapterIndex = aui8AdapterIdx;
+    strncpy(lWifiInfo.m_SSID, apSSID, BTRMGR_MAX_STR_LEN - 1);
+    strncpy(lWifiInfo.m_Password, apPassword, BTRMGR_MAX_STR_LEN - 1);
+    lWifiInfo.m_SecMode = aSecMode;
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_WIFI_CONNECT_INFO, (void*)&lWifiInfo, sizeof(BTRMGR_IARMWifiConnectInfo_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO("Success\n");
+    }
+    else {
+        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR("Failed; RetCode = %d\n", retCode);
+    }
+
+    return lenBtrMgrResult;
+}
 
 const char*
 BTRMGR_GetDeviceTypeAsString (
