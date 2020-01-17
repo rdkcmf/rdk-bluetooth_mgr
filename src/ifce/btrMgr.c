@@ -2035,14 +2035,45 @@ BTRMGR_Result_t
 BTRMGR_DeInit (
     void
 ) {
-    eBTRMgrRet      lenBtrMgrPiResult = eBTRMgrSuccess;
-    enBTRCoreRet 	lenBtrCoreRet     = enBTRCoreSuccess;
-    BTRMGR_Result_t lenBtrMgrResult   = BTRMGR_RESULT_SUCCESS;
+    eBTRMgrRet                      lenBtrMgrRet      = eBTRMgrSuccess;
+    enBTRCoreRet 	                lenBtrCoreRet     = enBTRCoreSuccess;
+    BTRMGR_Result_t                 lenBtrMgrResult   = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_DiscoveryHandle_t*       ldiscoveryHdl     = NULL;
+    unsigned short                  ui16LoopIdx       = 0;
+    BTRMGR_ConnectedDevicesList_t   lstConnectedDevices;
+    unsigned int                    ui32sleepTimeOut = 1;
+    unsigned int                    ui32confirmIdx = 2;
 
 
     if (btrMgr_isTimeOutSet()) {
         btrMgr_ClearDiscoveryHoldOffTimer();
         gDiscHoldOffTimeOutCbData = 0;
+    }
+
+    if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
+        lenBtrMgrRet = btrMgr_StopDeviceDiscovery (0, ldiscoveryHdl);
+        BTRMGRLOG_DEBUG ("Exit Discovery Status = %d\n", lenBtrMgrRet);
+    }
+
+    if ((lenBtrMgrResult = BTRMGR_GetConnectedDevices(0, &lstConnectedDevices)) == BTRMGR_RESULT_SUCCESS) {
+        BTRMGRLOG_DEBUG ("Connected Devices = %d\n", lstConnectedDevices.m_numOfDevices);
+        for (ui16LoopIdx = 0 ;ui16LoopIdx < lstConnectedDevices.m_numOfDevices; ui16LoopIdx++) {
+            enBTRCoreDeviceType     lenBtrCoreDevTy = enBTRCoreUnknown;
+            enBTRCoreDeviceClass    lenBtrCoreDevCl = enBTRCore_DC_Unknown;
+            BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle, &lenBtrCoreDevTy, &lenBtrCoreDevCl);
+            if (BTRCore_DisconnectDevice(ghBTRCoreHdl, lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle, lenBtrCoreDevTy) != enBTRCoreSuccess) {
+                BTRMGRLOG_ERROR ("Failed to Disconnect - %llu\n", lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle);
+            }
+
+            do {
+                unsigned int ui32sleepIdx = 2;
+
+                do {
+                    sleep(ui32sleepTimeOut);
+                    lenBtrCoreRet = BTRCore_GetDeviceDisconnected(ghBTRCoreHdl, lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle, lenBtrCoreDevTy);
+                } while ((lenBtrCoreRet != enBTRCoreSuccess) && (--ui32sleepIdx));
+            } while (--ui32confirmIdx);
+        }
     }
 
     if (gpvMainLoop) {
@@ -2066,9 +2097,9 @@ BTRMGR_DeInit (
     }
 
     if (ghBTRMgrPiHdl) {
-        lenBtrMgrPiResult = BTRMgr_PI_DeInit(ghBTRMgrPiHdl);
+        lenBtrMgrRet = BTRMgr_PI_DeInit(ghBTRMgrPiHdl);
         ghBTRMgrPiHdl = NULL;
-        BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app = %d\n", lenBtrMgrPiResult);
+        BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app = %d\n", lenBtrMgrRet);
     }
 
 
@@ -2078,7 +2109,7 @@ BTRMGR_DeInit (
         BTRMGRLOG_ERROR ("BTRCore DeInited; Now will we exit the app = %d\n", lenBtrCoreRet);
     }
 
-    lenBtrMgrResult =  ((lenBtrMgrPiResult == eBTRMgrSuccess) && 
+    lenBtrMgrResult =  ((lenBtrMgrRet == eBTRMgrSuccess) &&
                         (lenBtrCoreRet == enBTRCoreSuccess)) ? BTRMGR_RESULT_SUCCESS : BTRMGR_RESULT_GENERIC_FAILURE;
     BTRMGRLOG_DEBUG ("Exit Status = %d\n", lenBtrMgrResult)
 

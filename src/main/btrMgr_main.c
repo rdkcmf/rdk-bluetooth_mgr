@@ -25,12 +25,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#if 0
-//TODO: Having Signal handler delays process restart on crash. Fix it
-//Hint: All Dbus Bt-Ifce methods should be async or have short timeouts
 #include <signal.h>
 #include <string.h>
-#endif
 
 #include <time.h>
 #include <unistd.h>
@@ -49,9 +45,6 @@
 static bool gbExitBTRMgr = false;
 
 
-#if 0
-//TODO: Having Signal handler delays process restart on crash. Fix it
-//Hint: All Dbus Bt-Ifce methods should be async or have short timeouts
 static void
 btrMgr_SignalHandler (
     int i32SignalNumber
@@ -65,7 +58,6 @@ btrMgr_SignalHandler (
     if (i32SignalNumber == SIGTERM)
         gbExitBTRMgr = true;
 }
-#endif
 
 
 int
@@ -78,11 +70,7 @@ main (
 
     if ((lenBtrMgrResult = BTRMGR_Init()) == BTRMGR_RESULT_SUCCESS) {
 
-#if 0
-        //TODO: Having Signal handler delays process restart on crash. Fix it
-        //Hint: All Dbus Bt-Ifce methods should be async or have short timeouts
         signal(SIGTERM, btrMgr_SignalHandler);
-#endif
 
 #if defined(ENABLE_SD_NOTIFY)
         sd_notify(0, "READY=1");
