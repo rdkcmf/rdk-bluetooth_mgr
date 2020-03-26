@@ -3692,6 +3692,18 @@ BTRMGR_GetDeviceProperties (
                                                                                                        lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name);
                             pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
                             strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+
+                            if(0 != lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].len)
+                            {
+                                fprintf(stderr, "%d\t: %s - ServiceData for UUID : %s \n", __LINE__, __FUNCTION__, lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].pcUUIDs);
+                                strncpy (pDeviceProperty->m_adServiceData[j].m_UUIDs, lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].pcUUIDs, (BTRMGR_UUID_STR_LEN_MAX - 1));
+                                memcpy(pDeviceProperty->m_adServiceData[j].m_ServiceData, lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].pcData, lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].len);
+                                pDeviceProperty->m_adServiceData[j].m_len = lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].len;
+
+                                for (int k=0; k < pDeviceProperty->m_adServiceData[j].m_len; k++){
+                                    fprintf(stderr, "%d\t: %s - ServiceData[%d] = [%x]\n ", __LINE__, __FUNCTION__, k, pDeviceProperty->m_adServiceData[j].m_ServiceData[k]);
+                                }
+                            }
                         }
                     }
 
