@@ -57,6 +57,8 @@ extern "C"
 #define BTRMGR_MEDIA_ELEMENT_COUNT_MAX      64
 #define BTRMGR_DEVICE_MAC_LEN               6
 #define BTRMGR_MAX_DEV_OP_DATA_LEN          BTRMGR_MAX_STR_LEN * 3
+#define BTRMGR_SERVICE_DATA_LEN_MAX    32
+#define BTRMGR_UUID_STR_LEN_MAX        64
 
 #define BTRMGR_DEVICE_INFORMATION_UUID      "0x180a"
 #define BTRMGR_RDKDIAGNOSTICS_UUID          "0xFDB9"
@@ -377,6 +379,13 @@ typedef struct _BTRMGR_DeviceServiceList_t {
     };
 } BTRMGR_DeviceServiceList_t;
 
+
+typedef struct _BTRMGR_DeviceAdServiceData_t {
+    char            m_UUIDs[BTRMGR_UUID_STR_LEN_MAX];;
+    unsigned char   m_ServiceData[BTRMGR_SERVICE_DATA_LEN_MAX];
+    unsigned int    m_len;
+} BTRMGR_DeviceAdServiceData_t;
+
 /**
  * @brief Represents the property of the device.
  */
@@ -392,6 +401,7 @@ typedef struct _BTRMGR_DevicesProperty_t {
     unsigned char               m_isConnected; /* This must be used only when m_isPaired is TRUE */
     unsigned char               m_isLowEnergyDevice;
     BTRMGR_DeviceServiceList_t  m_serviceInfo;
+    BTRMGR_DeviceAdServiceData_t m_adServiceData[BTRMGR_MAX_DEVICE_PROFILE];
 } BTRMGR_DevicesProperty_t;
 
 /**
