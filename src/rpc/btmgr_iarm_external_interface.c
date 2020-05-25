@@ -1237,7 +1237,7 @@ BTRMGR_GetMediaElementList (
 
     if (IARM_RESULT_SUCCESS == retCode) {
         BTRMGRLOG_INFO ("Success\n");
-        memcpy (mediaElementListInfo, &mediaElementList.m_mediaTrackListInfo, sizeof(BTRMGR_IARMMediaElementListInfo_t));
+        memcpy (mediaElementListInfo, &mediaElementList.m_mediaTrackListInfo, sizeof(BTRMGR_MediaElementListInfo_t));
     }
     else {
         rc = BTRMGR_RESULT_GENERIC_FAILURE;
