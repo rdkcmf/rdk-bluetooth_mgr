@@ -134,7 +134,9 @@ AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_service.h])
 AC_CHECK_HEADERS([systemd/sd-daemon.h],
         [enable_sd_notify=yes])
 AS_IF([test "x$enable_sd_notify" == "xyes"],
-    [AC_DEFINE(ENABLE_SD_NOTIFY, 1, [Enabled Systemd Notifications])])
+    [AC_DEFINE(ENABLE_SD_NOTIFY, 1, [Enabled Systemd Notifications])
+    AM_CONDITIONAL(ENABLE_SD_NOTIFY, [test "x$enable_sd_notify" == xyes])
+    ])
 
 
 # Use Glib
