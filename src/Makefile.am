@@ -16,4 +16,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = audioCap streamOut streamIn persistIf rpc ifce sysDiag columbo leOnboarding main
+SUBDIRS = audioCap streamOut streamIn persistIf sysDiag columbo leOnboarding rpc ifce main
