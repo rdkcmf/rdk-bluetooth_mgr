@@ -943,6 +943,9 @@ btrMgr_MapDeviceTypeFromCore (
     case enBTRCore_DC_HID_Joystick:
         type = BTRMGR_DEVICE_TYPE_HID;
         break;
+    case enBTRCore_DC_HID_GamePad:
+        type = BTRMGR_DEVICE_TYPE_HID;
+        break;
     case enBTRCore_DC_HID_AudioRemote:
         type = BTRMGR_DEVICE_TYPE_HID;
         break;
@@ -3087,7 +3090,9 @@ BTRMGR_PairDevice (
 
     /* The Paring is not a blocking call for HID. So we can sent the pairing complete msg when paring actually completed and gets a notification.
      * But the pairing failed, we must send it right here. */
-    if ((lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) || ((lenBtrMgrResult == BTRMGR_RESULT_SUCCESS) && (lenBTRCoreDevTy != enBTRCoreHID))) {
+    if ((lenBtrMgrResult != BTRMGR_RESULT_SUCCESS) ||
+        ((lenBtrMgrResult == BTRMGR_RESULT_SUCCESS) &&
+         ((lenBTRCoreDevTy != enBTRCoreHID) && (lenBTRCoreDevTy != enBTRCoreMobileAudioIn) && (lenBTRCoreDevTy != enBTRCorePCAudioIn)))) {
         BTRMGR_EventMessage_t  lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
         btrMgr_GetDiscoveredDevInfo (ahBTRMgrDevHdl, &lstEventMessage.m_discoveredDevice);
@@ -4062,7 +4067,7 @@ BTRMGR_StartAudioStreamingIn (
     }
 
 
-    if (!listOfPDevices.devices[i].bDeviceConnected) {
+    if (!listOfPDevices.devices[i].bDeviceConnected || (ghBTRMgrDevHdlCurStreaming != listOfPDevices.devices[i].tDeviceId)) {
         if ((lenBtrMgrRet = btrMgr_ConnectToDevice(aui8AdapterIdx, listOfPDevices.devices[i].tDeviceId, connectAs, 0, 1)) == eBTRMgrSuccess) {
             gMediaPlaybackStPrev = BTRMGR_EVENT_MEDIA_TRACK_STOPPED;    //TODO: Bad Bad Bad way of doing this
         }
@@ -5486,8 +5491,11 @@ btrMgr_DeviceStatusCb (
 
         switch (p_StatusCB->eDeviceCurrState) {
         case enBTRCoreDevStPaired:
-            /* Post this event only for HID Devices */
-            if (p_StatusCB->eDeviceType == enBTRCoreHID) {
+            /* Post this event only for HID Devices and Audio-In Devices */
+            if ((p_StatusCB->eDeviceType == enBTRCoreHID) ||
+                (p_StatusCB->eDeviceType == enBTRCoreMobileAudioIn) ||
+                (p_StatusCB->eDeviceType == enBTRCorePCAudioIn)) {
+
                 btrMgr_GetDiscoveredDevInfo (p_StatusCB->deviceId, &lstEventMessage.m_discoveredDevice);
                 lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE;
                 if (gfpcBBTRMgrEventOut) {
@@ -6069,7 +6077,8 @@ btrMgr_ConnectionInAuthenticationCb (
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Mouse)         ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_MouseKeyBoard) ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_AudioRemote)   ||
-             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Joystick)      ){
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Joystick)      ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_GamePad)) {
 
         BTRMGRLOG_WARN ("Incoming Connection from BT HID device\n");
         /* PairedList updation is necessary for Connect event than Disconnect event */
@@ -6158,10 +6167,12 @@ btrMgr_MediaStatusCb (
             break;
         case eBTRCoreMediaTrkPosition:
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_POSITION;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             memcpy(&lstEventMessage.m_mediaInfo.m_mediaPositionInfo, &mediaStatus->m_mediaPositionInfo, sizeof(BTRMGR_MediaPositionInfo_t));
             break;
         case eBTRCoreMediaTrkStChanged:
             lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_CHANGED;
+            gMediaPlaybackStPrev = lstEventMessage.m_eventType;
             memcpy(&lstEventMessage.m_mediaInfo.m_mediaTrackInfo, &mediaStatus->m_mediaTrackInfo, sizeof(BTRMGR_MediaTrackInfo_t));
             break;
         case eBTRCoreMediaPlaybackEnded:
