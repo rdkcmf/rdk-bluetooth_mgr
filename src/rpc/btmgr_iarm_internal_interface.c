@@ -1838,7 +1838,7 @@ btrMgr_EventCallback (
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
     else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE) {
-        BTRMGRLOG_WARN ("Post Device Pairing Complete event\n");
+        BTRMGRLOG_WARN ("Post Device UnPairing Complete event\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
     else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE) {
