@@ -21,6 +21,10 @@ if USE_RPC
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/rpc -I${top_srcdir}/include/common -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/streamOut  -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/logger ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/wdmp-c  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS} $(BREAKPAD_CFLAGS)
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -ldbus-1 -lIARMBus -lrdkloggers -lrfcapi $(BREAKPAD_LFLAGS)
 
+if ENABLE_SD_NOTIFY
+AM_LDFLAGS += -lsystemd
+endif
+
 if WITH_PI_BUILD
 AM_CPPFLAGS += $(PI_BUILD_FLAG)
 endif
