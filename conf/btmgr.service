@@ -18,14 +18,13 @@
 ##########################################################################
 [Unit]
 Description=Bluetooth Manager Daemon over IARM IPC
-After=lighttpd.service iarmbusd.service bluetooth.service audiocapturemgr.service
+After=iarmbusd.service bluetooth.service audiocapturemgr.service
 Requires=iarmbusd.service bluetooth.service audiocapturemgr.service
 
 [Service]
 Type=notify
 TimeoutStartSec=45s
 Environment="XDG_RUNTIME_DIR=/tmp"
-ExecStartPre=/bin/sleep 15
 ExecStart=/usr/bin/btMgrBus
 RestartSec=5
 Restart=always
