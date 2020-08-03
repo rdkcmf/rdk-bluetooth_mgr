@@ -27,6 +27,8 @@
 
 
 static unsigned char isBTRMGR_Inited = 0;
+static unsigned char isBTRMGR_Iarm_Inited = 0;
+static unsigned char isBTRMGR_Iarm_Connected = 0;
 static BTRMGR_EventCallback m_eventCallbackFunction = NULL;
 
 #ifdef RDK_LOGGER_ENABLED
@@ -50,6 +52,7 @@ BTRMGR_Init (
     void
 ) {
     char processName[256] = "";
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
 
     if (!isBTRMGR_Inited) {
         isBTRMGR_Inited = 1;
@@ -68,8 +71,19 @@ BTRMGR_Init (
             b_rdk_logger_enabled = 1;
 #endif        
         sprintf (processName, "BTRMgr-User-%u", getpid());
-        IARM_Bus_Init((const char*) &processName);
-        IARM_Bus_Connect();
+        if (IARM_RESULT_SUCCESS == (retCode = IARM_Bus_Init((const char*) &processName))) {
+            isBTRMGR_Iarm_Inited = 1;
+        }
+        else {
+            BTRMGRLOG_INFO ("IARM Interface Inited Externally\n");
+        }
+
+        if (IARM_RESULT_SUCCESS == (retCode = IARM_Bus_Connect())) {
+            isBTRMGR_Iarm_Connected = 1;
+        }
+        else {
+            BTRMGRLOG_INFO ("IARM Interface Connected Externally\n");
+        }
 
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE, btrMgrdeviceCallback);
         IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED, btrMgrdeviceCallback);
@@ -130,19 +144,80 @@ BTRMGR_DeInit (
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     IARM_Result_t retCode = IARM_RESULT_SUCCESS;
 
+    if (m_eventCallbackFunction)
+        m_eventCallbackFunction = NULL;
+
+
     if (isBTRMGR_Inited) {
-        /* This is leading to Crash the BTRMgrBus which is listening; So lets not call this. */
-        //retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_DEINIT, 0, 0, BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
-        if (IARM_RESULT_SUCCESS == retCode) {
-            BTRMGRLOG_INFO ("Success\n");
+
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYLIST_INFO);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_COMPILATION_INFO);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_GENRE_INFO);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_ARTIST_INFO);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_ALBUM_INFO);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_GROUP);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_ALLTRACKS);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_SINGLETRACK);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_REPEAT_OFF);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_GROUP);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_ALLTRACKS);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_SHUFFLE_OFF);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_ON);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_EQUALIZER_OFF);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_VOLUME);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_NAME);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OP_READY);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYBACK_ENDED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_CHANGED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_POSITION);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_STOPPED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_PAUSED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_PLAYING);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACK_STARTED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_FOUND);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_FAILED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_CONNECTION_FAILED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_FAILED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_PAIRING_FAILED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCONNECT_COMPLETE);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_CONNECTION_COMPLETE);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_UNPAIRING_COMPLETE);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_PAIRING_COMPLETE);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_COMPLETE);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_UPDATE);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_DISCOVERY_STARTED);
+        IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE);
+
+        if (isBTRMGR_Iarm_Connected)  {
+            if (IARM_RESULT_SUCCESS == (retCode = IARM_Bus_Disconnect())) {
+                isBTRMGR_Iarm_Connected = 0;
+            }
+            else {
+                BTRMGRLOG_ERROR ("IARM_Bus_Disconnect Failed; RetCode = %d\n", retCode);
+            }
         }
-        else {
-            rc = BTRMGR_RESULT_GENERIC_FAILURE;
-            BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+
+        if (isBTRMGR_Iarm_Inited) {
+            if (IARM_RESULT_SUCCESS == (retCode = IARM_Bus_Term())) {
+                isBTRMGR_Iarm_Inited = 0;
+            }
+            else {
+                BTRMGRLOG_ERROR ("IARM_Bus_Term Failed; RetCode = %d\n", retCode);
+            }
         }
+
+        isBTRMGR_Inited = 0;
+        BTRMGRLOG_INFO ("IARM Interface termination Successfully \n");
     }
-    else
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
         BTRMGRLOG_INFO ("IARM Interface for BTRMgr is Not Inited Yet..\n");
+    }
 
     return rc;
 }
