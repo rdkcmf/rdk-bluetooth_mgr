@@ -60,6 +60,7 @@ typedef struct _stBTRMgrStreamingInfo {
     unsigned                samplerate;
     unsigned                channels;
     unsigned                bitsPerSample;
+    int                     i32BytesToEncode;
 } stBTRMgrStreamingInfo;
 
 typedef enum _BTRMGR_DiscoveryState_t {
@@ -206,6 +207,7 @@ static eBTRMgrRet btrMgr_MapDevstatusInfoToEventInfo (void* p_StatusCB, BTRMGR_E
 
 static eBTRMgrRet btrMgr_StartCastingAudio (int outFileFd, int outMTUSize, eBTRCoreDevMediaType aenBtrCoreDevOutMType, void* apstBtrCoreDevOutMCodecInfo);
 static eBTRMgrRet btrMgr_StopCastingAudio (void);
+static eBTRMgrRet btrMgr_SwitchCastingAudio_AC (BTRMGR_StreamOut_Type_t aenCurrentSoType);
 static eBTRMgrRet btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize, eBTRCoreDevMediaType aenBtrCoreDevInMType, void* apstBtrCoreDevInMCodecInfo);
 static eBTRMgrRet btrMgr_StopReceivingAudio (void);
 
@@ -1126,7 +1128,7 @@ btrMgr_StartCastingAudio (
 
     int                     inBytesToEncode = 3072; // Corresponds to MTU size of 895
 
-    BTRMGR_StreamOut_Type_t lCurrentSoType  = gstBTRMgrStreamingInfo.tBTRMgrSoType;
+    BTRMGR_StreamOut_Type_t lenCurrentSoType  = gstBTRMgrStreamingInfo.tBTRMgrSoType;
     tBTRMgrAcType           lpi8BTRMgrAcType= BTRMGR_AC_TYPE_PRIMARY;
 
     if ((ghBTRMgrDevHdlCurStreaming != 0) || (outMTUSize == 0)) {
@@ -1147,13 +1149,13 @@ btrMgr_StartCastingAudio (
         return eBTRMgrInitFailure;
     }
 
-    if (lCurrentSoType == BTRMGR_STREAM_PRIMARY) {
+    if (lenCurrentSoType == BTRMGR_STREAM_PRIMARY) {
         lpi8BTRMgrAcType = BTRMGR_AC_TYPE_PRIMARY;
-        gstBTRMgrStreamingInfo.tBTRMgrSoType = lCurrentSoType;
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = lenCurrentSoType;
     }
-    else if (lCurrentSoType == BTRMGR_STREAM_AUXILIARY) {
+    else if (lenCurrentSoType == BTRMGR_STREAM_AUXILIARY) {
         lpi8BTRMgrAcType = BTRMGR_AC_TYPE_AUXILIARY;
-        gstBTRMgrStreamingInfo.tBTRMgrSoType = lCurrentSoType;
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = lenCurrentSoType;
     }
     else {
         lpi8BTRMgrAcType = BTRMGR_AC_TYPE_PRIMARY;
@@ -1271,7 +1273,7 @@ btrMgr_StartCastingAudio (
         lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize = inBytesToEncode;
     }
     else {
-        inBytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
+        gstBTRMgrStreamingInfo.i32BytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
     }
 
 
@@ -1336,6 +1338,84 @@ btrMgr_StopCastingAudio (
 
     gstBTRMgrStreamingInfo.hBTRMgrAcHdl = NULL;
     gstBTRMgrStreamingInfo.hBTRMgrSoHdl = NULL;
+
+    return lenBtrMgrRet;
+}
+
+static eBTRMgrRet
+btrMgr_SwitchCastingAudio_AC (
+    BTRMGR_StreamOut_Type_t aenCurrentSoType
+) {
+    eBTRMgrRet              lenBtrMgrRet            = eBTRMgrSuccess;
+    tBTRMgrAcType           lpi8BTRMgrAcType        = BTRMGR_AC_TYPE_PRIMARY;
+    stBTRMgrOutASettings    lstBtrMgrAcOutASettings;
+
+
+    if (ghBTRMgrDevHdlCurStreaming == 0) {
+        return eBTRMgrFailInArg;
+    }
+
+
+    if ((lenBtrMgrRet = BTRMgr_AC_Stop(gstBTRMgrStreamingInfo.hBTRMgrAcHdl)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("BTRMgr_AC_Stop FAILED\n");
+    }
+
+    if ((lenBtrMgrRet = BTRMgr_SO_Pause(gstBTRMgrStreamingInfo.hBTRMgrSoHdl)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("BTRMgr_SO_Pause FAILED\n");
+    }
+
+    if ((lenBtrMgrRet = BTRMgr_AC_DeInit(gstBTRMgrStreamingInfo.hBTRMgrAcHdl)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("BTRMgr_AC_DeInit FAILED\n");
+    }
+
+    gstBTRMgrStreamingInfo.hBTRMgrAcHdl = NULL;
+
+
+    if (aenCurrentSoType == BTRMGR_STREAM_PRIMARY) {
+        lpi8BTRMgrAcType = BTRMGR_AC_TYPE_PRIMARY;
+    }
+    else if (aenCurrentSoType == BTRMGR_STREAM_AUXILIARY) {
+        lpi8BTRMgrAcType = BTRMGR_AC_TYPE_AUXILIARY;
+    }
+    else {
+        lpi8BTRMgrAcType = BTRMGR_AC_TYPE_PRIMARY;
+    }
+
+
+    if ((lenBtrMgrRet = BTRMgr_AC_Init(&gstBTRMgrStreamingInfo.hBTRMgrAcHdl, lpi8BTRMgrAcType)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("BTRMgr_AC_Init FAILED\n");
+        return eBTRMgrInitFailure;
+    }
+
+    /* Reset the buffer */
+    memset(&lstBtrMgrAcOutASettings, 0, sizeof(lstBtrMgrAcOutASettings));
+    lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo = (void*)malloc((sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) > sizeof(stBTRMgrMPEGInfo) ?
+                                                                    (sizeof(stBTRMgrPCMInfo) > sizeof(stBTRMgrSBCInfo) ? sizeof(stBTRMgrPCMInfo) : sizeof(stBTRMgrSBCInfo)) : sizeof(stBTRMgrMPEGInfo));
+    if (!lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo) {
+        BTRMGRLOG_ERROR ("MEMORY ALLOC FAILED\n");
+        return eBTRMgrFailure;
+    }
+
+
+    if ((lenBtrMgrRet = BTRMgr_AC_GetDefaultSettings(gstBTRMgrStreamingInfo.hBTRMgrAcHdl, &lstBtrMgrAcOutASettings)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR("BTRMgr_AC_GetDefaultSettings FAILED\n");
+    }
+
+    if ((lenBtrMgrRet = BTRMgr_SO_Resume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("BTRMgr_SO_Resume FAILED\n");
+    }
+
+    lstBtrMgrAcOutASettings.i32BtrMgrOutBufMaxSize = gstBTRMgrStreamingInfo.i32BytesToEncode;
+    if ((lenBtrMgrRet = BTRMgr_AC_Start(gstBTRMgrStreamingInfo.hBTRMgrAcHdl,
+                                        &lstBtrMgrAcOutASettings,
+                                        btrMgr_ACDataReadyCb,
+                                        btrMgr_ACStatusCb,
+                                        &gstBTRMgrStreamingInfo)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("BTRMgr_AC_Start FAILED\n");
+    }
+
+    if (lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo)
+        free(lstBtrMgrAcOutASettings.pstBtrMgrOutCodecInfo);
 
     return lenBtrMgrRet;
 }
@@ -3949,7 +4029,7 @@ BTRMGR_IsAudioStreamingOut (
 BTRMGR_Result_t
 BTRMGR_SetAudioStreamingOutType (
     unsigned char           aui8AdapterIdx,
-    BTRMGR_StreamOut_Type_t type
+    BTRMGR_StreamOut_Type_t aenCurrentSoType
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
 
@@ -3963,43 +4043,34 @@ BTRMGR_SetAudioStreamingOutType (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    BTRMGRLOG_INFO ("Audio output - Stored %d - Switching to %d\n", gstBTRMgrStreamingInfo.tBTRMgrSoType, type);
-    if (gstBTRMgrStreamingInfo.tBTRMgrSoType != type) {
+    BTRMGRLOG_INFO ("Audio output - Stored %d - Switching to %d\n", gstBTRMgrStreamingInfo.tBTRMgrSoType, aenCurrentSoType);
+    if (gstBTRMgrStreamingInfo.tBTRMgrSoType != aenCurrentSoType) {
         unsigned char ui8StreamingStatus = 0;
+        BTRMGR_StreamOut_Type_t lenCurrentSoType = gstBTRMgrStreamingInfo.tBTRMgrSoType;
 
-        gstBTRMgrStreamingInfo.tBTRMgrSoType = type;
+        gstBTRMgrStreamingInfo.tBTRMgrSoType = aenCurrentSoType;
         if ((BTRMGR_RESULT_SUCCESS == BTRMGR_IsAudioStreamingOut(aui8AdapterIdx, &ui8StreamingStatus)) && ui8StreamingStatus) {
             enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
             enBTRCoreDeviceType     lenBTRCoreDevTy = enBTRCoreUnknown;
             enBTRCoreDeviceClass    lenBTRCoreDevCl = enBTRCore_DC_Unknown;
-            BTRMgrDeviceHandle      lhBTRMgrDevHdlCurStreaming  = ghBTRMgrDevHdlCurStreaming;
 
-            BTRMGRLOG_WARN ("Its already streaming. lets stop this and start on other device \n");
+            BTRMGRLOG_WARN ("Its already streaming. lets Switch\n");
 
             lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ghBTRMgrDevHdlCurStreaming, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
             BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
 
             if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
-                /* Streaming-Out is happening; stop it */
-                if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingOut(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
-                    BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-Out\n");
-                    BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
-                    return lenBtrMgrResult;
-                }
-            }
-            else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
-                /* Streaming-In is happening; stop it */
-                if ((lenBtrMgrResult = BTRMGR_StopAudioStreamingIn(aui8AdapterIdx, ghBTRMgrDevHdlCurStreaming)) != BTRMGR_RESULT_SUCCESS) {
-                    BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to stop Playback.-In\n");
-                    BTRMGRLOG_ERROR ("Failed to stop streaming at the current device..\n");
-                    return lenBtrMgrResult;
-                }
-            }
+                /* Streaming-Out is happening; Lets switch it */
+                if (btrMgr_SwitchCastingAudio_AC(aenCurrentSoType) != eBTRMgrSuccess) {
+                    gstBTRMgrStreamingInfo.tBTRMgrSoType = lenCurrentSoType;
+                    BTRMGRLOG_ERROR ("This device is being Connected n Playing. Failed to switch to %d\n", aenCurrentSoType);
+                    BTRMGRLOG_ERROR ("Failed to switch streaming on the current device. Streaming %d\n", gstBTRMgrStreamingInfo.tBTRMgrSoType);
+                    if (btrMgr_SwitchCastingAudio_AC(gstBTRMgrStreamingInfo.tBTRMgrSoType) == eBTRMgrSuccess) {
+                        BTRMGRLOG_WARN ("Streaming on the current device. Streaming %d\n", gstBTRMgrStreamingInfo.tBTRMgrSoType);
+                    }
 
-            BTRMGRLOG_WARN ("Audio output - Switching to %d - Stored %d\n", type, gstBTRMgrStreamingInfo.tBTRMgrSoType);
-            if (btrMgr_StartAudioStreamingOut(aui8AdapterIdx, lhBTRMgrDevHdlCurStreaming, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT, 0, 0, 0) != eBTRMgrSuccess) {
-                BTRMGRLOG_ERROR ("Failure To Switch - Please reconnect\n");
-                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+                    return BTRMGR_RESULT_GENERIC_FAILURE;
+                }
             }
         }
     }

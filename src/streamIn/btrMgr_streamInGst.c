@@ -108,20 +108,23 @@ btrMgr_SI_validateStateWithTimeout (
     GstState    stateToValidate,
     guint       msTimeOut
 ) {
-    GstState    gst_current;
-    GstState    gst_pending;
-    float       timeout = BTRMGR_WAIT_TIMEOUT_MS;
-    gint        gstGetStateCnt = GST_ELEMENT_GET_STATE_RETRY_CNT_MAX;
+    GstState    gst_current     = GST_STATE_VOID_PENDING;
+    GstState    gst_pending     = GST_STATE_VOID_PENDING;
+    float       timeout         = BTRMGR_WAIT_TIMEOUT_MS;
+    gint        gstGetStateCnt  = GST_ELEMENT_GET_STATE_RETRY_CNT_MAX;
 
-    do { 
-        if ((GST_STATE_CHANGE_SUCCESS == gst_element_get_state(GST_ELEMENT(element), &gst_current, &gst_pending, timeout * GST_MSECOND)) && (gst_current == stateToValidate)) {
-           BTRMGRLOG_INFO ("gst_element_get_state - SUCCESS : State = %d, Pending = %d\n", gst_current, gst_pending);
+    GstStateChangeReturn gstStChangeRet = GST_STATE_CHANGE_FAILURE;
+
+    do {
+        gstStChangeRet = gst_element_get_state(GST_ELEMENT(element), &gst_current, &gst_pending, timeout * GST_MSECOND);
+        if (((GST_STATE_CHANGE_SUCCESS == gstStChangeRet) || (GST_STATE_CHANGE_NO_PREROLL == gstStChangeRet)) && (gst_current == stateToValidate)) {
+            BTRMGRLOG_INFO("gst_element_get_state - SUCCESS : St = %d Pend = %d StValidate = %d StChRet = %d\n", gst_current, gst_pending, stateToValidate, gstStChangeRet);
             return gst_current;
         }
         usleep(msTimeOut * 1000); // Let element safely transition to required state 
-    } while ((gst_current != stateToValidate) && (gstGetStateCnt-- != 0)) ;
+    } while (((gstStChangeRet == GST_STATE_CHANGE_ASYNC) || (gst_current != stateToValidate)) && (gstGetStateCnt-- != 0)) ;
 
-    BTRMGRLOG_ERROR ("gst_element_get_state - FAILURE : State = %d, Pending = %d\n", gst_current, gst_pending);
+    BTRMGRLOG_ERROR("gst_element_get_state - FAILURE : St = %d Pend = %d StValidate = %d StChRet = %d\n", gst_current, gst_pending, stateToValidate, gstStChangeRet);
 
     if (gst_pending == stateToValidate)
         return gst_pending;

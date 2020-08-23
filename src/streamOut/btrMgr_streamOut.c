@@ -49,6 +49,7 @@
 /* Local types */
 typedef struct _stBTRMgrSOHdl {
     stBTRMgrMediaStatus     lstBtrMgrSoStatus;
+    eBTRMgrState            leBtrMgrSoInState;
     fPtr_BTRMgr_SO_StatusCb fpcBSoStatus;
     void*                   pvcBUserData;
 #ifdef USE_GST1
@@ -104,10 +105,12 @@ BTRMgr_SO_Init (
         return leBtrMgrSoRet;
     }
 
+    pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui8Volume     = 128;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrState  = eBTRMgrStateInitialized;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFreq  = eBTRMgrSFreq48K;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrSFmt   = eBTRMgrSFmt16bit;
     pstBtrMgrSoHdl->lstBtrMgrSoStatus.eBtrMgrAChan  = eBTRMgrAChanJStereo;
+    pstBtrMgrSoHdl->leBtrMgrSoInState               = eBTRMgrStatePlaying;
     pstBtrMgrSoHdl->fpcBSoStatus                    = afpcBSoStatus;
     pstBtrMgrSoHdl->pvcBUserData                    = apvUserData;
 
@@ -235,10 +238,31 @@ BTRMgr_SO_SetStatus (
     }
 
 #ifdef USE_GST1
-    if (apstBtrMgrSoStatus->ui8Volume != 128) {
-        if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetVolume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, apstBtrMgrSoStatus->ui8Volume)) != eBTRMgrSOGstSuccess) {
-            BTRMGRLOG_ERROR("Return Status = %d - Failed to set volume\n", leBtrMgrSoGstRet);
-            leBtrMgrSoRet  = eBTRMgrFailure;
+    if (pstBtrMgrSoHdl->leBtrMgrSoInState != apstBtrMgrSoStatus->eBtrMgrState) {
+        pstBtrMgrSoHdl->leBtrMgrSoInState = apstBtrMgrSoStatus->eBtrMgrState;
+        BTRMGRLOG_WARN("Stream Out Paused = %d\n", apstBtrMgrSoStatus->eBtrMgrState);
+
+        if (pstBtrMgrSoHdl->leBtrMgrSoInState == eBTRMgrStatePaused) {
+            if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetInputPaused(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, 1)) !=  eBTRMgrSOGstSuccess) {
+                BTRMGRLOG_ERROR("Return Status = %d - Failed to set Paused\n", leBtrMgrSoGstRet);
+                leBtrMgrSoRet  = eBTRMgrFailure;
+            }
+        }
+        else if (pstBtrMgrSoHdl->leBtrMgrSoInState == eBTRMgrStatePlaying) {
+            if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetInputPaused(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, 0)) !=  eBTRMgrSOGstSuccess) {
+                BTRMGRLOG_ERROR("Return Status = %d - Failed to set Playing\n", leBtrMgrSoGstRet);
+                leBtrMgrSoRet  = eBTRMgrFailure;
+            }
+        }
+    }
+
+    if (pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui8Volume != apstBtrMgrSoStatus->ui8Volume) {
+        pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui8Volume = apstBtrMgrSoStatus->ui8Volume;
+        if (apstBtrMgrSoStatus->ui8Volume != 128) {
+            if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetVolume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, apstBtrMgrSoStatus->ui8Volume)) != eBTRMgrSOGstSuccess) {
+                BTRMGRLOG_ERROR("Return Status = %d - Failed to set volume\n", leBtrMgrSoGstRet);
+                leBtrMgrSoRet  = eBTRMgrFailure;
+            }
         }
     }
 #else

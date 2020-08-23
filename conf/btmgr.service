@@ -25,6 +25,9 @@ Requires=iarmbusd.service bluetooth.service audiocapturemgr.service
 Type=notify
 TimeoutStartSec=45s
 Environment="XDG_RUNTIME_DIR=/tmp"
+Environment="GST_REGISTRY=/opt/.gstreamer/registry.bin"
+Environment="GST_REGISTRY_UPDATE=no"
+Environment="GST_REGISTRY_FORK=no"
 ExecStart=/usr/bin/btMgrBus
 RestartSec=5
 Restart=always

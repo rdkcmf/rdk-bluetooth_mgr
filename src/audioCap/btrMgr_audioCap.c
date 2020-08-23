@@ -1007,9 +1007,9 @@ BTRMgr_AC_Start (
 
         //TODO: Work on a intelligent way to arrive at this value. This is not good enough
         if (pstBtrMgrRmfAcSettings->threshold > 4096)
-            pstBtrMgrRmfAcSettings->delayCompensation_ms = 240;
+            pstBtrMgrRmfAcSettings->delayCompensation_ms = 400;
         else
-            pstBtrMgrRmfAcSettings->delayCompensation_ms = 200;
+            pstBtrMgrRmfAcSettings->delayCompensation_ms = 360;
         //TODO: Bad hack above, need to modify before taking it to stable2
 
 
@@ -1290,6 +1290,12 @@ btrMgr_AC_rmfStatusChangeCb (
             bTriggerStatusChanged = true;
         }
 
+        if (pstBtrMgrRmfAcStatus->paused != lstBtrMgrRmfAcStatus.paused) {
+            BTRMGRLOG_WARN("Status Changed - Paused = %d\n", lstBtrMgrRmfAcStatus.paused);
+            pstBtrMgrRmfAcStatus->paused = lstBtrMgrRmfAcStatus.paused;
+            bTriggerStatusChanged = true;
+        }
+
         if (pstBtrMgrRmfAcStatus->volume != lstBtrMgrRmfAcStatus.volume) {
             BTRMGRLOG_WARN("Status Changed - Volume = %f\n", lstBtrMgrRmfAcStatus.volume);
             pstBtrMgrRmfAcStatus->volume = lstBtrMgrRmfAcStatus.volume;
@@ -1300,10 +1306,16 @@ btrMgr_AC_rmfStatusChangeCb (
             stBTRMgrMediaStatus     lstBtrMgrAcMediaStatus;
             stBTRMgrMediaStatus*    pstBtrMgrAcMediaStatus = &pstBtrMgrAcHdl->stBtrMgrAcStatus;
 
-#if 0
-            //TODO: Add later
-            eBTRMgrState    pstBtrMgrAcMediaStatus->eBtrMgrState;
-#endif
+            if (pstBtrMgrRmfAcStatus->paused) {
+                pstBtrMgrAcMediaStatus->eBtrMgrState = eBTRMgrStatePaused;
+
+                if ((pstBtrMgrAcHdl->pcBTRMgrAcType != NULL) &&
+                    (!strncmp(pstBtrMgrAcHdl->pcBTRMgrAcType, BTRMGR_AC_TYPE_AUXILIARY, strlen(BTRMGR_AC_TYPE_AUXILIARY)))) {
+                }
+            }
+            else {
+                pstBtrMgrAcMediaStatus->eBtrMgrState = eBTRMgrStatePlaying;
+            }
 
             switch (pstBtrMgrRmfAcStatus->format) {
             case racFormat_e16BitStereo:
