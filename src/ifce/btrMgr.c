@@ -896,16 +896,19 @@ btrMgr_MapDeviceTypeFromCore (
         type = BTRMGR_DEVICE_TYPE_HEADPHONES;
         break;
     case enBTRCore_DC_PortableAudio:
-        type = BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO;
+        // type = BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO;
+        type = BTRMGR_DEVICE_TYPE_LOUDSPEAKER;
         break;
     case enBTRCore_DC_CarAudio:
-        type = BTRMGR_DEVICE_TYPE_CAR_AUDIO;
+        // type = BTRMGR_DEVICE_TYPE_CAR_AUDIO;
+        type = BTRMGR_DEVICE_TYPE_LOUDSPEAKER;
         break;
     case enBTRCore_DC_STB:
         type = BTRMGR_DEVICE_TYPE_STB;
         break;
     case enBTRCore_DC_HIFIAudioDevice:
-        type = BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE;
+        // type = BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE;
+        type = BTRMGR_DEVICE_TYPE_LOUDSPEAKER;
         break;
     case enBTRCore_DC_VCR:
         type = BTRMGR_DEVICE_TYPE_VCR;
@@ -6024,6 +6027,8 @@ btrMgr_ConnectionInAuthenticationCb (
     }
     else if ((apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_WearableHeadset)   ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Loudspeaker)       ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_PortableAudio)     ||
+             (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_CarAudio)          ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HIFIAudioDevice)   ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_Headphones)) {
 
