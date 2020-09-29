@@ -168,7 +168,10 @@ eBTRMgrRet BTRMGR_SysDiag_GetData(BTRMGR_SysDiagChar_t aenSysDiagChar, char* aDa
             unsigned char lData[BTRMGR_STR_LEN_MAX] = "\0";
 
             btrMgr_SysDiag_getDeviceMAC("/tmp/.estb_mac", lData);
-            snprintf(aData, (BTRMGR_STR_LEN_MAX - 1), "%s", lData);
+            int ret = snprintf(aData, (BTRMGR_STR_LEN_MAX - 1), "%s", lData);
+	    if (ret > (BTRMGR_STR_LEN_MAX - 1)) {
+                BTRMGRLOG_DEBUG("BTRMGR_SYS_DIAG_DEVICEMAC truncated\n");
+	    }
         }
         break;
         case BTRMGR_SYS_DIAG_BTRADDRESS:

@@ -131,10 +131,20 @@ AC_SUBST([AUDIOCAPTURE_LIBS])
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h unistd.h btrCoreTypes.h btrCore.h btrCore_service.h])
 
-AC_CHECK_HEADERS([systemd/sd-daemon.h],
-        [enable_sd_notify=yes])
-AS_IF([test "x$enable_sd_notify" == "xyes"],
-    [AC_DEFINE(ENABLE_SD_NOTIFY, 1, [Enabled Systemd Notifications])])
+
+SYSTEMD_SDNOTIFY_LDFLAGS=""
+SYSTEMD_SDNOTIFY_CFLAGS=""
+AC_ARG_ENABLE([systemd-notify],
+        AS_HELP_STRING([--enable-systemd-notify],[enable systemd sd notify]),
+        [
+                case "${enableval}" in
+                yes) SYSTEMD_SDNOTIFY_CFLAGS="-DENABLE_SD_NOTIFY"
+                     SYSTEMD_SDNOTIFY_LDFLAGS="-lsystemd" ;;
+                no) AC_MSG_ERROR([systemd sd notify  is disabled]) ;;
+                *) AC_MSG_ERROR([bad value ${enableval} for --enable-systemd ]) ;;
+                esac
+                ],
+        [echo "systemd sd notify  is disable"])
 
 
 # Use Glib
@@ -270,6 +280,8 @@ AC_SUBST(BTR_MGR_SRC)
 AC_SUBST(BTR_MGR_TEST)
 AC_SUBST(BREAKPAD_CFLAGS)
 AC_SUBST(BREAKPAD_LFLAGS)
+AC_SUBST(SYSTEMD_SDNOTIFY_LDFLAGS)
+AC_SUBST(SYSTEMD_SDNOTIFY_CFLAGS)
 
 # Checks for library functions.
 
