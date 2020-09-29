@@ -316,7 +316,11 @@ BTRMGR_LeOnboarding_GetData (
     case BTRMGR_LE_ONBRDG_UUID_PUBLIC_KEY: {
         char lPublicKey[MAX_LEN_PUBLIC_KEY] = "";
         get_publicKey(lPublicKey);
-        snprintf(aData, (BTRMGR_LE_STR_LEN_MAX - 1), "%s", lPublicKey);
+        int ret =snprintf(aData, (BTRMGR_LE_STR_LEN_MAX - 1), "%s", lPublicKey);
+        if (ret > (BTRMGR_LE_STR_LEN_MAX - 1)) {
+            BTRMGRLOG_DEBUG("BTRMGR_LE_ONBRDG_UUID_PUBLIC_KEY truncated\n");
+        }
+
     }
         break;
     case BTRMGR_LE_ONBRDG_UUID_WIFI_CONFIG: {
