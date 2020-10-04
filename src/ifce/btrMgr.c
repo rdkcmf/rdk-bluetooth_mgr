@@ -2719,7 +2719,7 @@ BTRMGR_StartDeviceDiscovery_Internal (
     // TODO Try to move this check logically into btrMgr_PreCheckDiscoveryStatus
     if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
         if (aenBTRMgrDevOpT == btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)) {
-            BTRMGRLOG_WARN ("[%s] Scan already in Progress..."
+            BTRMGRLOG_WARN ("[%s] Scan already in Progress...\n"
                            , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)));
             return BTRMGR_RESULT_SUCCESS;
         }
@@ -2931,7 +2931,7 @@ BTRMGR_GetDiscoveryStatus (
     if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress())) {
         *isDiscoveryInProgress = BTRMGR_DISCOVERY_STATUS_IN_PROGRESS;
         *aenBTRMgrDevOpT = btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl);
-        BTRMGRLOG_WARN ("[%s] Scan already in Progress. "
+        BTRMGRLOG_WARN ("[%s] Scan already in Progress\n"
                                , btrMgr_GetDiscoveryDeviceTypeAsString (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl)));
     }
     else {
@@ -5749,16 +5749,23 @@ btrMgr_DeviceDiscoveryCb (
         if ((ldiscoveryHdl = btrMgr_GetDiscoveryInProgress()) || (astBTRCoreDiscoveryCbInfo->device.bFound == FALSE)) { /* Not a big fan of this */
             if (ldiscoveryHdl &&
                 (btrMgr_GetDiscoveryDeviceType(ldiscoveryHdl) == BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT)) {
-                //TODO: Horrible, bad bad bad hack for DELIA-39526, not happy about this.
-                //      We would have already reported a list of discovered devices to XRE/Client of BTRMgr if
-                //      they have requested for the same. But this list will be invalidated by the Resume and if
-                //      a Pairing Op is requested based on this stale information it will fail, but we will not end up
-                //      in a loop repeating the same sequence of events as we understand that on the first resume
-                //      Bluez/BTRCore will correctly give us the device Name. But if we get a new device which exhibits the
-                //      same behavior then we will repeat this again
-                if ((strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceName) == strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceAddress)) &&
-                     btrMgr_IsDevNameSameAsAddress(astBTRCoreDiscoveryCbInfo->device.pcDeviceName, astBTRCoreDiscoveryCbInfo->device.pcDeviceAddress, strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceName)) &&
-                     !btrMgr_CheckIfDevicePrevDetected(astBTRCoreDiscoveryCbInfo->device.tDeviceId)) {
+                // Acceptable hack for DELIA-39526
+                // We would have already reported a list of discovered devices to XRE/Client of BTRMgr if
+                // they have requested for the same. But this list will be invalidated by the Resume and if
+                // a Pairing Op is requested based on this stale information it will fail, but we will not end up
+                // in a loop repeating the same sequence of events as we understand that on the first resume
+                // Bluez/BTRCore will correctly give us the device Name. But if we get a new Audio-Out device which exhibits the
+                // same behavior then we will repeat this again. As we do the above only for Audio-Out devices
+                // non-Audio-Out devices cannot trigger this logic. So we will perform a focussed Audio-Out internal rescan
+                if (((astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_WearableHeadset)   ||
+                     (astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_Loudspeaker)       ||
+                     (astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_PortableAudio)     ||
+                     (astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_CarAudio)          ||
+                     (astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_HIFIAudioDevice)   ||
+                     (astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_Headphones)) &&
+                    (strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceName) == strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceAddress)) &&
+                    btrMgr_IsDevNameSameAsAddress(astBTRCoreDiscoveryCbInfo->device.pcDeviceName, astBTRCoreDiscoveryCbInfo->device.pcDeviceAddress, strlen(astBTRCoreDiscoveryCbInfo->device.pcDeviceName)) &&
+                    !btrMgr_CheckIfDevicePrevDetected(astBTRCoreDiscoveryCbInfo->device.tDeviceId)) {
 
                     BTRMGR_DiscoveredDevicesList_t  lstDiscDevices;
                     eBTRMgrRet                      lenBtrMgrRet    = eBTRMgrFailure;
