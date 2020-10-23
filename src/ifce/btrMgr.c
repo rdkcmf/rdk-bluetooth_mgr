@@ -5501,6 +5501,10 @@ btrMgr_DeviceStatusCb (
                 if (gfpcBBTRMgrEventOut) {
                     gfpcBBTRMgrEventOut(lstEventMessage);  /* Post a callback */
                 }
+
+                if (p_StatusCB->eDeviceType == enBTRCoreHID) {
+                    BTRMGR_GetPairedDevices (gDefaultAdapterContext.adapter_number, &gListOfPairedDevices);
+                }
             }
             break;
         case enBTRCoreDevStInitialized:
