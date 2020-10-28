@@ -65,7 +65,10 @@
 #define BTRMGR_IARM_METHOD_IS_AUDIO_STREAMING_IN                     "IsAudioStreamingIn"
 #define BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE                        "SetEventResponse"
 #define BTRMGR_IARM_METHOD_MEDIA_CONTROL                             "MediaControl"
+#define BTRMGR_IARM_METHOD_SET_DEVICE_VOLUME_MUTE_INFO               "SetDeviceVolumeMuteInfo"
+#define BTRMGR_IARM_METHOD_GET_DEVICE_VOLUME_MUTE_INFO               "GetDeviceVolumeMuteInfo"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO                      "GetMediaTrackInfo"
+#define BTRMGR_IARM_METHOD_GET_MEDIA_ELEMENT_TRACK_INFO              "GetMediaElementTrackInfo"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION                "GetMediaCurrentPosition"
 #define BTRMGR_IARM_METHOD_SET_MEDIA_ELEMENT_ACTIVE                  "SetMediaElementActive"
 #define BTRMGR_IARM_METHOD_GET_MEDIA_ELEMENT_LIST                    "GetMediaElementList"
@@ -132,6 +135,9 @@ typedef enum _BTRMGR_IARMEvents_t {
     BTRMGR_IARM_EVENT_MEDIA_COMPILATION_INFO,
     BTRMGR_IARM_EVENT_MEDIA_PLAYLIST_INFO,
     BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_TRACK_INFO,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_MUTE,
+    BTRMGR_IARM_EVENT_MEDIA_PLAYER_UNMUTE,
     BTRMGR_IARM_EVENT_MAX
 } BTRMGR_IARM_Events_t;
 
@@ -215,9 +221,18 @@ typedef struct _BTRMGR_IARMEventResp_t {
     BTRMGR_EventResponse_t m_stBTRMgrEvtRsp;
 } BTRMGR_IARMEventResp_t;
 
+typedef struct _BTRMGR_IARMDeviceVolumeMute_t {
+    unsigned char m_adapterIndex;
+    BTRMgrDeviceHandle m_deviceHandle;
+    BTRMGR_DeviceOperationType_t m_deviceOpType;
+    unsigned char m_volume;
+    unsigned char m_mute;
+} BTRMGR_IARMDeviceVolumeMute_t;
+
 typedef struct _BTRMGR_IARMMediaProperty_t {
     unsigned char           m_adapterIndex;
     BTRMgrDeviceHandle      m_deviceHandle;
+    BTRMgrMediaElementHandle      m_mediaElementHandle;
 
     union {
        BTRMGR_MediaControlCommand_t  m_mediaControlCmd;

@@ -40,6 +40,9 @@
 #define BTRMGR_A2DP_SRC_PROFILE_ID  "0x110a"
 #define BTRMGR_A2DP_SINK_PROFILE_ID "0x110b"
 
+#ifdef BUILD_SKY
+#define RDKTV_PERSIST_VOLUME_SKY 1
+#endif
 
 typedef void* tBTRMgrPIHdl;
 
@@ -61,6 +64,16 @@ typedef struct _BTRMGR_Beacon_PersistentData_t {
     char limitBeaconDetection[BTRMGR_NAME_LEN_MAX];
 } BTRMGR_Beacon_PersistentData_t;
 
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+typedef struct _BTRMGR_Volume_PersistentData_t {
+    unsigned  char Volume;
+} BTRMGR_Volume_PersistentData_t;
+
+typedef struct _BTRMGR_Mute_PersistentData_t {
+    char Mute[BTRMGR_NAME_LEN_MAX];
+} BTRMGR_Mute_PersistentData_t;
+#endif
+
 typedef struct _BTRMGR_PersistentData_t {
     char adapterId[BTRMGR_NAME_LEN_MAX];
     unsigned short numOfProfiles;
@@ -78,6 +91,12 @@ typedef struct _BTRMGR_Profile_t {
 
 eBTRMgrRet BTRMgr_PI_GetLEBeaconLimitingStatus (BTRMGR_Beacon_PersistentData_t*    persistentData);
 eBTRMgrRet BTRMgr_PI_SetLEBeaconLimitingStatus (BTRMGR_Beacon_PersistentData_t*    persistentData);
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+eBTRMgrRet BTRMgr_PI_GetVolume (BTRMGR_Volume_PersistentData_t*    persistentData);
+eBTRMgrRet BTRMgr_PI_SetVolume (BTRMGR_Volume_PersistentData_t*    persistentData);
+eBTRMgrRet BTRMgr_PI_GetMute (BTRMGR_Mute_PersistentData_t*    persistentData);
+eBTRMgrRet BTRMgr_PI_SetMute (BTRMGR_Mute_PersistentData_t*    persistentData);
+#endif
 
 /**
  * @brief  This API initializes bluetooth manager's persistent storage interface.

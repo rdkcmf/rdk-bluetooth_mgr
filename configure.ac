@@ -262,6 +262,25 @@ AC_ARG_ENABLE([pi-build],
 AM_CONDITIONAL([WITH_PI_BUILD], [test x$pi_build_ok = xyes])
 AC_SUBST(PI_BUILD_FLAG)
 
+# Check for sky build
+AC_ARG_ENABLE([sky-build],
+	       AS_HELP_STRING([--enable-sky-build],[enable sky build (default is no)]),
+	       [
+		 case "${enableval}" in
+		  yes) sky_build_ok=yes
+			  echo "Building for sky devices" ;;
+		  no)  sky_build_ok=no;;
+		  *) AC_MSG_ERROR([bad value ${enableval} for --enable-sky-build]) ;;
+		 esac
+	       ],
+	       [echo "Not enabled for comcast devices"])
+AS_IF([test "x$sky_build_ok" = "xyes"], [
+    if test "$sky_build_ok" = yes; then
+          AC_DEFINE(BUILD_SKY, 1, [Enabled includes for sky])
+    else
+          AC_MSG_ERROR([sky_build_ok false])
+    fi
+], [])
 plugindir="\$(libdir)/gstreamer-$GST_MAJORMINOR"
 
 BTR_MGR_SRC="src"

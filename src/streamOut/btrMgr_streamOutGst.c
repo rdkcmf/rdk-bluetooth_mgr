@@ -846,6 +846,73 @@ BTRMgr_SO_GstSetVolume (
 
 
 eBTRMgrSOGstRet
+BTRMgr_SO_GstGetVolume (
+    tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
+    unsigned char*   ui8Volume
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst  = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
+    GstElement*     volume          = NULL;
+    double          dvolume = 0;
+
+    if (!pstBtrMgrSoGst || !ui8Volume) {
+        BTRMGRLOG_ERROR ("Invalid input argument\n");
+        return eBTRMgrSOGstFailInArg;
+    }
+
+    volume = (GstElement*)pstBtrMgrSoGst->pVolume;
+    g_object_get (volume, "volume", &dvolume,  NULL);
+    *ui8Volume = (unsigned char )((dvolume) * 255) ;
+    BTRMGRLOG_DEBUG("Get Volume at StreamOut %d \n", *ui8Volume );
+
+    return eBTRMgrSOGstSuccess;
+}
+
+
+eBTRMgrSOGstRet
+BTRMgr_SO_GstSetMute (
+    tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
+    gboolean  mute
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst  = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
+    GstElement*     volume          = NULL;
+
+    if (!pstBtrMgrSoGst) {
+        BTRMGRLOG_ERROR ("Invalid input argument\n");
+        return eBTRMgrSOGstFailInArg;
+    }
+
+    volume = (GstElement*)pstBtrMgrSoGst->pVolume;
+    g_object_set (volume, "mute", mute,  NULL);
+    BTRMGRLOG_DEBUG("Set mute at StreamOut %d \n", mute );
+
+    return eBTRMgrSOGstSuccess;
+}
+
+
+eBTRMgrSOGstRet
+BTRMgr_SO_GstGetMute (
+    tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
+    gboolean *  muted
+) {
+    stBTRMgrSOGst*  pstBtrMgrSoGst  = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
+    gboolean        mute = FALSE;
+    GstElement*     volume = NULL;
+
+    if (!pstBtrMgrSoGst || !muted) {
+        BTRMGRLOG_ERROR ("Invalid input argument\n");
+        return eBTRMgrSOGstFailInArg;
+    }
+
+    volume = (GstElement*)pstBtrMgrSoGst->pVolume;
+    g_object_get (volume, "mute", &mute,  NULL);
+    *muted = mute ;
+    BTRMGRLOG_DEBUG("Get mute at StreamOut %d \n", *muted);
+
+    return eBTRMgrSOGstSuccess;
+}
+
+
+eBTRMgrSOGstRet
 BTRMgr_SO_GstSendBuffer (
     tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
     char*           pcInBuf,

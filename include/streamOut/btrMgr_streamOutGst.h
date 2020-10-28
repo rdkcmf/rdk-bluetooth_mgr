@@ -83,7 +83,7 @@ typedef eBTRMgrSOGstRet (*fPtr_BTRMgr_SO_GstStatusCb) (eBTRMgrSOGstStatus aeBtrM
  * @param[in]  apvUserData              Data for the callback function.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstInit (tBTRMgrSoGstHdl* phBTRMgrSoGstHdl, fPtr_BTRMgr_SO_GstStatusCb afpcBSoGstStatus, void* apvUserData);
 
@@ -95,7 +95,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstInit (tBTRMgrSoGstHdl* phBTRMgrSoGstHdl, fPtr_BTRMg
  * @param[in]  hBTRMgrSoGstHdl             Handle to the stream out interface.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstDeInit (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 
@@ -119,7 +119,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstDeInit (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
  * @param[in]  ai32BTDevMTU               Block size to  read.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, 
                                     int ai32InBufMaxSize,
@@ -143,7 +143,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstStart (tBTRMgrSoGstHdl hBTRMgrSoGstHdl,
  * @param[in]  hBTRMgrSoGstHdl           Handle to the stream out interface.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstStop (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 
@@ -155,7 +155,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstStop (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
  * @param[in]  hBTRMgrSoGstHdl           Handle to the stream out interface.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstPause (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 
@@ -167,7 +167,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstPause (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
  * @param[in]  hBTRMgrSoGstHdl             Handle to the stream out interface.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstResume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 
@@ -180,7 +180,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstResume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
  * @param[in]  ui8InputPaused       Input Buffers Paused.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstSetInputPaused (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, unsigned char ui8InputPaused);
 
@@ -193,9 +193,39 @@ eBTRMgrSOGstRet BTRMgr_SO_GstSetInputPaused (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, un
  * @param[in]  ui8Volume            Input Volume.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstSetVolume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, unsigned char ui8Volume);
+/**
+ * @brief This API Gets the volume of current operation and listens to the events.
+ *
+ * @param[in]  hBTRMgrSoGstHdl      Handle to the stream in interface.
+ * @param[in]  ui8Volume            Output Volume.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
+ */
+eBTRMgrSOGstRet BTRMgr_SO_GstGetVolume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, unsigned char * ui8Volume);
+/**
+ * @brief This API Sets the Mute of current operation and listens to the events.
+ *
+ * @param[in]  hBTRMgrSoGstHdl      Handle to the stream in interface.
+ * @param[in]  mute                 Input mute.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
+ */
+eBTRMgrSOGstRet BTRMgr_SO_GstSetMute (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, gboolean mute);
+/**
+ * @brief This API Gets the Mute of current operation and listens to the events.
+ *
+ * @param[in]  hBTRMgrSoGstHdl      Handle to the stream in interface.
+ * @param[in]  mute                 Output mute.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
+ */
+eBTRMgrSOGstRet BTRMgr_SO_GstGetMute (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, gboolean *mute);
 
 /**
  * @brief This API pushes the buffer to the queue.
@@ -205,7 +235,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstSetVolume (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, unsigne
  * @param[in]  aiInBufSize             Buffer size.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstSendBuffer (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, char* pcInBuf, int aiInBufSize);
 
@@ -215,7 +245,7 @@ eBTRMgrSOGstRet BTRMgr_SO_GstSendBuffer (tBTRMgrSoGstHdl hBTRMgrSoGstHdl, char* 
  * @param[in]  hBTRMgrSoGstHdl             Handle to the stream out interface.
  *
  * @return Returns the status of the operation.
- * @retval eBTRMgrSIGstSuccess  on success, appropriate  error code otherwise.
+ * @retval eBTRMgrSOGstSuccess  on success, appropriate  error code otherwise.
  */
 eBTRMgrSOGstRet BTRMgr_SO_GstSendEOS (tBTRMgrSoGstHdl hBTRMgrSoGstHdl);
 /** @} */

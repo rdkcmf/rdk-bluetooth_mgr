@@ -274,6 +274,97 @@ BTRMgr_SO_SetStatus (
 
 
 eBTRMgrRet
+BTRMgr_SO_SetVolume (
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    unsigned char           ui8Volume
+) {
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
+    eBTRMgrSOGstRet leBtrMgrSoGstRet = eBTRMgrSOGstSuccess;
+
+    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetVolume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, ui8Volume)) != eBTRMgrSOGstSuccess) {
+         BTRMGRLOG_ERROR("Return Status = %d - Failed to set volume\n", leBtrMgrSoGstRet);
+         leBtrMgrSoRet  = eBTRMgrFailure;
+    } else {
+         pstBtrMgrSoHdl->lstBtrMgrSoStatus.ui8Volume = ui8Volume;
+         BTRMGRLOG_DEBUG("Volume set %d success \n", ui8Volume);
+    }
+
+    return leBtrMgrSoRet;
+}
+
+
+eBTRMgrRet
+BTRMgr_SO_GetVolume (
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    unsigned char*          ui8Volume
+) {
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
+    eBTRMgrSOGstRet leBtrMgrSoGstRet = eBTRMgrSOGstSuccess;
+    unsigned char  ui8GstVolume;
+
+    if(!ui8Volume || !pstBtrMgrSoHdl) {
+       leBtrMgrSoRet  = eBTRMgrFailure;
+       return leBtrMgrSoRet;
+    }
+
+    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstGetVolume(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, &ui8GstVolume)) != eBTRMgrSOGstSuccess) {
+         BTRMGRLOG_ERROR("Return Status = %d - Failed to get volume\n", leBtrMgrSoGstRet);
+         leBtrMgrSoRet  = eBTRMgrFailure;
+    } else {
+         *ui8Volume = ui8GstVolume;
+         BTRMGRLOG_DEBUG("Volume get %d success \n", ui8GstVolume);
+    }
+
+    return leBtrMgrSoRet;
+}
+
+
+eBTRMgrRet
+BTRMgr_SO_SetMute (
+    tBTRMgrSoHdl       hBTRMgrSoHdl,
+    gboolean           Mute
+) {
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
+    eBTRMgrSOGstRet leBtrMgrSoGstRet = eBTRMgrSOGstSuccess;
+
+    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstSetMute(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, Mute)) != eBTRMgrSOGstSuccess) {
+         BTRMGRLOG_ERROR("Return Status = %d - Failed to set volume\n", leBtrMgrSoGstRet);
+         leBtrMgrSoRet  = eBTRMgrFailure;
+    } else {
+         BTRMGRLOG_DEBUG("Mute set success \n");
+    }
+    return leBtrMgrSoRet;
+
+}
+eBTRMgrRet
+BTRMgr_SO_GetMute (
+    tBTRMgrSoHdl            hBTRMgrSoHdl,
+    gboolean *               mute
+) {
+    eBTRMgrRet      leBtrMgrSoRet  = eBTRMgrSuccess;
+    stBTRMgrSOHdl*  pstBtrMgrSoHdl = (stBTRMgrSOHdl*)hBTRMgrSoHdl;
+    eBTRMgrSOGstRet leBtrMgrSoGstRet = eBTRMgrSOGstSuccess;
+    gboolean   gmute;
+
+    if(!mute || !pstBtrMgrSoHdl) {
+       leBtrMgrSoRet  = eBTRMgrFailure;
+       return leBtrMgrSoRet;
+    }
+
+    if ((leBtrMgrSoGstRet = BTRMgr_SO_GstGetMute(pstBtrMgrSoHdl->hBTRMgrSoGstHdl, &gmute)) != eBTRMgrSOGstSuccess) {
+         BTRMGRLOG_ERROR("Return Status = %d - Failed to get mute\n", leBtrMgrSoGstRet);
+         leBtrMgrSoRet  = eBTRMgrFailure;
+    } else {
+         *mute = gmute;
+         BTRMGRLOG_DEBUG("mute get %d success \n", gmute);
+    }
+
+    return leBtrMgrSoRet;
+}
+eBTRMgrRet
 BTRMgr_SO_GetEstimatedInABufSize (
     tBTRMgrSoHdl            hBTRMgrSoHdl,
     stBTRMgrInASettings*    apstBtrMgrSoInASettings,

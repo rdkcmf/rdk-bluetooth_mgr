@@ -55,7 +55,7 @@ static int btrMgr_SysDiag_getDeviceMAC(char* aFileName, unsigned char* aData)
     FILE *fPtr;
     unsigned char lElement;
     int index = 0;
-    char temp;
+    char temp[6];
     unsigned int lDeviceMac[16];
     int count = 0;
     int lDataLen = 0;
@@ -73,8 +73,8 @@ static int btrMgr_SysDiag_getDeviceMAC(char* aFileName, unsigned char* aData)
         {
             if (lElement != ':')
             {
-                snprintf(&temp, 6, "%c", lElement);
-                sscanf(&temp, "%x", &ch);
+                snprintf(temp, sizeof(temp), "%c", lElement);
+                sscanf(temp, "%x", &ch);
                 lDeviceMac[index] = ch;
                 index++;
             }

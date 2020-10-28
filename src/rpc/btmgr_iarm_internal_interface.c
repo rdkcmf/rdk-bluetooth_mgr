@@ -53,7 +53,10 @@ static IARM_Result_t btrMgr_IsAudioStreamingIn (void* arg);
 static IARM_Result_t btrMgr_SetEventResponse (void* arg);
 static IARM_Result_t btrMgr_ResetAdapter (void* arg);
 static IARM_Result_t btrMgr_MediaControl (void* arg);
+static IARM_Result_t btrMgr_SetDeviceVolumeMute (void* arg);
+static IARM_Result_t btrMgr_GetDeviceVolumeMute (void* arg);
 static IARM_Result_t btrMgr_GetMediaTrackInfo (void* arg);
+static IARM_Result_t btrMgr_GetMediaElementTrackInfo (void* arg);
 static IARM_Result_t btrMgr_GetMediaCurrentPosition (void* arg);
 static IARM_Result_t btrMgr_SetMediaElementActive (void* arg);
 static IARM_Result_t btrMgr_GetMediaElementList (void* arg);
@@ -1056,6 +1059,74 @@ btrMgr_GetMediaCurrentPosition (
 }
 
 static IARM_Result_t
+btrMgr_GetDeviceVolumeMute (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMDeviceVolumeMute_t *pdevvolmut = (BTRMGR_IARMDeviceVolumeMute_t*)arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pdevvolmut) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_GetDeviceVolumeMute(pdevvolmut->m_adapterIndex, pdevvolmut->m_deviceHandle, pdevvolmut->m_deviceOpType , &pdevvolmut->m_volume, &pdevvolmut->m_mute);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t
+btrMgr_SetDeviceVolumeMute (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMDeviceVolumeMute_t *pdevvolmut = (BTRMGR_IARMDeviceVolumeMute_t*)arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+	retCode = IARM_RESULT_INVALID_STATE;
+	BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+	return retCode;
+    }
+
+    if (!pdevvolmut) {
+	retCode = IARM_RESULT_INVALID_PARAM;
+	BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+	return retCode;
+    }
+
+    rc = BTRMGR_SetDeviceVolumeMute(pdevvolmut->m_adapterIndex, pdevvolmut->m_deviceHandle, pdevvolmut->m_deviceOpType , pdevvolmut->m_volume, pdevvolmut->m_mute);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+	BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+	retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+	BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t
 btrMgr_GetMediaTrackInfo (
     void*   arg
 ) {
@@ -1089,6 +1160,40 @@ btrMgr_GetMediaTrackInfo (
     return retCode;
 }
 
+
+static IARM_Result_t
+btrMgr_GetMediaElementTrackInfo (
+    void*   arg
+) {
+    IARM_Result_t   retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMMediaProperty_t *pMediaProperty = (BTRMGR_IARMMediaProperty_t*) arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!pMediaProperty) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_GetMediaElementTrackInfo(pMediaProperty->m_adapterIndex, pMediaProperty->m_deviceHandle, pMediaProperty->m_mediaElementHandle, &pMediaProperty->m_mediaTrackInfo);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
 
 static IARM_Result_t
 btrMgr_SetMediaElementActive (
@@ -1195,6 +1300,7 @@ btrMgr_SelectMediaElement (
                                     pMedElementList->m_deviceHandle,
                                     pMedElementList->m_mediaElementHandle,
                                     pMedElementList->m_mediaElementType);
+
     if (BTRMGR_RESULT_SUCCESS == rc) {
         BTRMGRLOG_INFO ("Success\n");
     }
@@ -1753,7 +1859,10 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_EVENT_RESPONSE, btrMgr_SetEventResponse);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_RESET_ADAPTER, btrMgr_ResetAdapter);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_MEDIA_CONTROL, btrMgr_MediaControl);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_DEVICE_VOLUME_MUTE_INFO, btrMgr_SetDeviceVolumeMute);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_DEVICE_VOLUME_MUTE_INFO, btrMgr_GetDeviceVolumeMute);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_TRACK_INFO, btrMgr_GetMediaTrackInfo);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_ELEMENT_TRACK_INFO, btrMgr_GetMediaElementTrackInfo);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_CURRENT_POSITION, btrMgr_GetMediaCurrentPosition);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_MEDIA_ELEMENT_ACTIVE, btrMgr_SetMediaElementActive);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_MEDIA_ELEMENT_LIST, btrMgr_GetMediaElementList);
@@ -1984,6 +2093,18 @@ btrMgr_EventCallback (
     else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACKLIST_INFO) {
         BTRMGRLOG_WARN ("Post Media TrackList Info\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_TRACK_INFO) {
+        BTRMGRLOG_WARN ("Post Media Track Info\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_TRACK_INFO, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_PLAYER_MUTE) {
+        BTRMGRLOG_WARN ("Post Media Mute Info\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYER_MUTE, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE) {
+        BTRMGRLOG_WARN ("Post Media UnMute Info\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYER_UNMUTE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
 
     if (lenIarmResult != IARM_RESULT_SUCCESS) {

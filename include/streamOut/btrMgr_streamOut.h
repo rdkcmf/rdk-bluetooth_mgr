@@ -108,6 +108,50 @@ eBTRMgrRet BTRMgr_SO_GetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrMediaStatus* 
 eBTRMgrRet BTRMgr_SO_SetStatus (tBTRMgrSoHdl hBTRMgrSoHdl, stBTRMgrMediaStatus* apstBtrMgrSoStatus);
 
 /**
+ * @brief This API will set the current volume used by this interface.
+ *
+ * @param[in]  hBTRMgrSoHdl             Handle to the bluetooth manager stream out interface.
+ * @param[in]  ui8Volume                Volume of media device that has to be set.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
+ */
+eBTRMgrRet BTRMgr_SO_SetVolume (tBTRMgrSoHdl hBTRMgrSoHdl, unsigned char ui8Volume);
+
+/**
+ * @brief This API will fetches the current volume used by this interface.
+ *
+ * @param[in]  hBTRMgrSoHdl             Handle to the bluetooth manager stream out interface.
+ * @param[in]  ui8Volume                Volume of media device that has to be fetched.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
+ */
+eBTRMgrRet BTRMgr_SO_GetVolume (tBTRMgrSoHdl hBTRMgrSoHdl, unsigned char* ui8Volume);
+
+/**
+ * @brief This API will set the Mute used by this interface.
+ *
+ * @param[in]  hBTRMgrSoHdl             Handle to the bluetooth manager stream out interface.
+ * @param[in]  Mute                     Mute of media device that has to be set.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
+ */
+eBTRMgrRet BTRMgr_SO_SetMute   (tBTRMgrSoHdl hBTRMgrSoHdl, gboolean Mute);
+
+/**
+ * @brief This API will fetches the Mute used by this interface.
+ *
+ * @param[in]  hBTRMgrSoHdl             Handle to the bluetooth manager stream out interface.
+ * @param[in]  Mute                     Mute of media device that has to be fetched.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate  error code otherwise.
+ */
+eBTRMgrRet BTRMgr_SO_GetMute   (tBTRMgrSoHdl hBTRMgrSoHdl, gboolean* Mute);
+
+/**
  * @brief This API fetches the maximum transmission rate.
  *
  * @param[in]  hBTRMgrSoHdl              Handle to the bluetooth manager stream out   interface.

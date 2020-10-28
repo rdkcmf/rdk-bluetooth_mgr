@@ -120,6 +120,9 @@ static void printOptions (void)
     printf ("43. Set Media Element Active\n");
     printf ("44. Get Media Element List\n");
     printf ("45. Select Media Element to Play/Explore\n");
+    printf ("46. Get Media Track Information by Media Element\n");
+    printf ("47. Set Device Media volume and mute info\n");
+    printf ("48. Get Device Media volume and mute info\n");
     printf ("50. Set advertisement data and services and start advertisement\n");
     printf ("51. Add service/gatt/descriptor info\n");
     printf ("52. Stop Advertisement\n");
@@ -304,6 +307,8 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_MEDIA_COMPILATION_INFO            : event = "MEDIA_PLAYER_COMPILATION_INFO";       break;
     case BTRMGR_EVENT_MEDIA_PLAYLIST_INFO               : event = "MEDIA_PLAYER_PLAYLIST_INFO";          break;
     case BTRMGR_EVENT_MEDIA_TRACKLIST_INFO              : event = "MEDIA_PLAYER_TRACKLIST_INFO";         break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_MUTE                 : event = "MEDIA_PLAYER_MUTE";                   break;
+    case BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE               : event = "MEDIA_PLAYER_UNMUTE";                 break;
     default                                            : event = "##INVALID##";
   }
   return event;
@@ -498,6 +503,7 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_MEDIA_COMPILATION_INFO:
     case BTRMGR_EVENT_MEDIA_PLAYLIST_INFO:
     case BTRMGR_EVENT_MEDIA_TRACKLIST_INFO:
+    case BTRMGR_EVENT_MEDIA_TRACK_INFO:
         if (event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_IsPlayable) {
             printf("\t%50s\t\t%020llu\n", event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_mediaTrackInfo.pcTitle
                                         , event.m_mediaInfo.m_mediaTrackListInfo.m_mediaElementInfo[0].m_mediaElementHdl);
@@ -1012,7 +1018,8 @@ int main(int argc, char *argv[])
                     printf ("Please Enter the Media Control Options\n"
                             "[0 - Play | 1 - Pause | 2 - Stop | 3 - Next  | 4 - Previous | 5 - FF | 6 - Rewind]\n"
                             "[7 - VolUp | 8 - VolDown | 9 - EQZ Off | 10 - EQZ On | 11 - Shuffle Off | 12 - shuffle AllTracks]\n"
-                            "[13 - shuffle Group | 14 - Repeat Off | 15 - Repeat SingleTrack | 16 - Repeat AllTracks | 17 - Repeat Group]\n");
+                            "[13 - shuffle Group | 14 - Repeat Off | 15 - Repeat SingleTrack | 16 - Repeat AllTracks]\n"
+                            "[17 - Repeat Group | 21 - MuteON | 22 - MuteOFF ]\n");
                     opt = getDeviceSelection();
 
                     rc = BTRMGR_MediaControl(0, handle, opt);
@@ -1023,7 +1030,6 @@ int main(int argc, char *argv[])
                 }
                 break;
             case 30:
-            case 46:
                 {
                     BTRMGR_MediaTrackInfo_t mediaTrackInfo;
                     handle = 0;
@@ -1031,7 +1037,6 @@ int main(int argc, char *argv[])
                     handle = getDeviceSelection();
 
                     rc = BTRMGR_GetMediaTrackInfo(0, handle, &mediaTrackInfo);
-
                     if (BTRMGR_RESULT_SUCCESS != rc)
                         printf ("failed\n");
                     else
@@ -1351,7 +1356,7 @@ int main(int argc, char *argv[])
                     handle = getDeviceSelection();
                     printf("\nEnter the Media Browser Element Handle\t: ");
                     scanf("%llu", &mediaElementHdl);
-                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList"
+                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList | 7.Track"
                            "\nEnter the Media Element type\t: ");
                     scanf("%d", &mediaElementType);
 
@@ -1381,7 +1386,7 @@ int main(int argc, char *argv[])
                     scanf("%hu", &startIdx);
                     printf("\nEnter the End index of List\t: ");
                     scanf("%hu", &endIdx);
-                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList"
+                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList | 7. Track"
                            "\nEnter the Media Element type\t: ");
                     scanf("%d", &mediaElementType);
 
@@ -1420,7 +1425,7 @@ int main(int argc, char *argv[])
                     handle = getDeviceSelection();
                     printf("\nEnter the Media Element Handle to select\t: ");
                     scanf("%llu", &mediaElementHdl);
-                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList"
+                    printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList | 7. Track"
                            "\nEnter the Media Element type\t: ");
                     scanf("%d", &mediaElementType);
 
@@ -1434,6 +1439,106 @@ int main(int argc, char *argv[])
                     }
                 }
                 break;
+            case 46:
+                {
+                    BTRMGR_MediaTrackInfo_t mediaTrackInfo;
+                    BTRMgrMediaElementHandle  mediaElementHdl = 0;
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+
+                    printf("\nEnter the Media Browser Element Handle\t: ");
+                    scanf("%llu", &mediaElementHdl);
+
+                    rc = BTRMGR_GetMediaElementTrackInfo(0, handle, mediaElementHdl, &mediaTrackInfo);
+
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\n---Media Track Info--- \n"
+                                "Album           : %s\n"
+                                "Artist          : %s\n"
+                                "Title           : %s\n"
+                                "Genre           : %s\n"
+                                "NumberOfTracks  : %d\n"
+                                "TrackNumber     : %d\n"
+                                "Duration        : %d\n\n"
+                                , mediaTrackInfo.pcAlbum
+                                , mediaTrackInfo.pcArtist
+                                , mediaTrackInfo.pcTitle
+                                , mediaTrackInfo.pcGenre
+                                , mediaTrackInfo.ui32NumberOfTracks
+                                , mediaTrackInfo.ui32TrackNumber
+                                , mediaTrackInfo.ui32Duration);
+
+                }
+                break;
+            case 47:
+                {
+                    unsigned char ui8volume = 0;
+                    unsigned char mute = 0;
+                    int ch = 0;
+                    int vol = 0;
+                    int mu = 0;
+                    BTRMGR_DeviceOperationType_t Type = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf ("Enter Device ConnectAs  Type : [0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE | 3 - HID | 4 - UNKNOWN]\n");
+                    ch = getDeviceSelection();
+                    if (0 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    else if (1 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT;
+                    else if (2 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_LE;
+                    else if (3 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_HID;
+
+                    printf("\nEnter the Volume value [0 - 255] \t: ");
+                    vol = getDeviceSelection();
+                    printf("\nEnter the Mute [ON - 1 | OFF - 0] \t: ");
+                    mu = getDeviceSelection();
+                    ui8volume = (char) vol;
+                    mute = (char) mu;
+                    rc = BTRMGR_SetDeviceVolumeMute (0, handle, Type, ui8volume, mute);
+
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\n---volume and mute set success--- \n");
+                }
+                 break;
+            case 48:
+                {
+                    unsigned char ui8volume = 0;
+                    unsigned char mute = 0;
+                    int ch = 0;
+                    BTRMGR_DeviceOperationType_t Type = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    handle = 0;
+                    printf ("Please Enter the device Handle number of the device\t: ");
+                    handle = getDeviceSelection();
+                    printf ("Enter Device ConnectAs  Type : [0 - AUDIO_OUTPUT | 1 - AUDIO_INPUT | 2 - LE | 3 - HID | 4 - UNKNOWN]\n");
+                    ch = getDeviceSelection();
+                    if (0 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT;
+                    else if (1 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT;
+                    else if (2 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_LE;
+                    else if (3 == ch)
+                        Type = BTRMGR_DEVICE_OP_TYPE_HID;
+
+                    rc = BTRMGR_GetDeviceVolumeMute (0, handle, Type, &ui8volume, &mute);
+
+                    if (BTRMGR_RESULT_SUCCESS != rc)
+                        printf ("failed\n");
+                    else
+                        printf ("\n---Device volume Info--- \n"
+                                "\n volume: %d \n"
+                                "\n mute  : %s \n\n", ui8volume , mute ? "TRUE" :"FALSE");
+                }
+                 break;
             case 50:
                 {
                     char lPropertyValue[BTRMGR_MAX_STR_LEN] = "";

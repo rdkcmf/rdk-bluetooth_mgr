@@ -154,6 +154,9 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_MEDIA_COMPILATION_INFO,
     BTRMGR_EVENT_MEDIA_PLAYLIST_INFO,
     BTRMGR_EVENT_MEDIA_TRACKLIST_INFO,
+    BTRMGR_EVENT_MEDIA_TRACK_INFO,
+    BTRMGR_EVENT_MEDIA_PLAYER_MUTE,
+    BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
@@ -259,6 +262,8 @@ typedef enum _BTRMGR_MediaControlCommand_t {
     BTRMGR_MEDIA_CTRL_SCAN_OFF,
     BTRMGR_MEDIA_CTRL_SCAN_ALLTRACKS,
     BTRMGR_MEDIA_CTRL_SCAN_GROUP,
+    BTRMGR_MEDIA_CTRL_MUTE,
+    BTRMGR_MEDIA_CTRL_UNMUTE,
     BTRMGR_MEDIA_CTRL_UNKNOWN
 } BTRMGR_MediaControlCommand_t;
 
@@ -328,7 +333,8 @@ typedef enum _BTRMGR_MediaElementType_t {
     BTRMGR_MEDIA_ELEMENT_TYPE_GENRE,
     BTRMGR_MEDIA_ELEMENT_TYPE_COMPILATIONS,
     BTRMGR_MEDIA_ELEMENT_TYPE_PLAYLIST,
-    BTRMGR_MEDIA_ELEMENT_TYPE_TRACKLIST
+    BTRMGR_MEDIA_ELEMENT_TYPE_TRACKLIST,
+    BTRMGR_MEDIA_ELEMENT_TYPE_TRACK
 } BTRMGR_MediaElementType_t;
 
     
@@ -997,6 +1003,34 @@ BTRMGR_Result_t BTRMGR_SetEventResponse(unsigned char aui8AdapterIdx, BTRMGR_Eve
 BTRMGR_Result_t BTRMGR_MediaControl(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaControlCommand_t mediaCtrlCmd);
 
 /**
+ * @brief  This API is used to fetch the media volume and mute data.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  deviceOpType         device operation type audio out or in etc.
+ * @param[out]  pui8Volume          Media volume value.
+ * @param[out]  pui8Mute            Media mute set or not.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_GetDeviceVolumeMute(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t deviceOpType, unsigned char *pui8Volume, unsigned char *pui8Mute);
+
+/**
+ * @brief  This API is used to set the media volume and mute data.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  deviceOpType         device operation type audio out or in etc.
+ * @param[out]  ui8Volume          Media volume value.
+ * @param[out]  ui8Mute            Media mute set or not.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_SetDeviceVolumeMute(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t deviceOpType, unsigned char ui8Volume, unsigned char ui8Mute);
+
+/**
  * @brief  This API fetches the media track info like title, genre, duration, number of tracks, current track number.
  *
  * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
@@ -1007,6 +1041,20 @@ BTRMGR_Result_t BTRMGR_MediaControl(unsigned char aui8AdapterIdx, BTRMgrDeviceHa
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
 BTRMGR_Result_t BTRMGR_GetMediaTrackInfo(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
+
+/**
+ * @brief  This API fetches the media track info like title, genre, duration, number of tracks, current track number.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  ahBTRMgrDevHdl       Device handle.
+ * @param[in]  ahBTRMgrMedElementHdl     Media Element handle .
+ * @param[out]  mediaTrackInfo       Track info like title, genre, duration etc.
+ *
+ * @return Returns the status of the operation.
+ * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_GetMediaElementTrackInfo(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMgrMediaElementHandle ahBTRMgrMedElementHdl, BTRMGR_MediaTrackInfo_t *mediaTrackInfo);
+
 
 /**
  * @brief  This API fetches the current position and total duration of the media.

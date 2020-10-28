@@ -231,6 +231,142 @@ BTRMgr_PI_SetLEBeaconLimitingStatus (
     return eBTRMgrSuccess;
 }
 
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+/*Creating a persistent get/set api for value of volume */
+eBTRMgrRet
+BTRMgr_PI_GetVolume (
+    BTRMGR_Volume_PersistentData_t*    persistentData
+) {
+    char *persistent_file_content = NULL;
+
+    persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
+    if(persistent_file_content == NULL) {
+        // Seems like file is empty
+        return eBTRMgrFailure;
+    }
+
+    cJSON *btData = cJSON_Parse(persistent_file_content);
+    free(persistent_file_content);
+    if(btData == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    cJSON * Volume = cJSON_GetObjectItem(btData,"Volume");
+    if(Volume == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not able to get value of volume detection from JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    persistentData->Volume  = (unsigned char ) atoi (Volume->valuestring);
+    return eBTRMgrSuccess;
+}
+
+eBTRMgrRet
+BTRMgr_PI_SetVolume (
+    BTRMGR_Volume_PersistentData_t*    persistentData
+) {
+    char *persistent_file_content = NULL;
+
+    persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
+    if(persistent_file_content == NULL) {
+        // Seems like file is empty
+        return eBTRMgrFailure;
+    }
+
+    cJSON *btData = cJSON_Parse(persistent_file_content);
+    free(persistent_file_content);
+    if(btData == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    /*Adding value of volume */
+    BTRMGRLOG_DEBUG ("Appending object to JSON file\n");
+    char VolStr[4];
+    sprintf(VolStr, "%d",persistentData->Volume);
+    cJSON *Volume = cJSON_GetObjectItem(btData,"Volume");
+    if(Volume == NULL) {
+        cJSON_AddStringToObject(btData, "Volume", VolStr);
+    }
+    else {
+        strcpy(Volume->valuestring, VolStr);
+    }
+
+    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
+    return eBTRMgrSuccess;
+}
+
+/*Creating a persistent get/set api for limiting beacon detection */
+eBTRMgrRet
+BTRMgr_PI_GetMute (
+    BTRMGR_Mute_PersistentData_t*    persistentData
+) {
+    char *persistent_file_content = NULL;
+
+    persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
+    if(persistent_file_content == NULL) {
+        // Seems like file is empty
+        return eBTRMgrFailure;
+    }
+
+    cJSON *btData = cJSON_Parse(persistent_file_content);
+    free(persistent_file_content);
+    if(btData == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    cJSON *Mute = cJSON_GetObjectItem(btData,"Mute");
+    if(Mute == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not able to get limit value for beacon detection from JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    strcpy(persistentData->Mute ,Mute->valuestring);
+    return eBTRMgrSuccess;
+}
+
+eBTRMgrRet
+BTRMgr_PI_SetMute (
+    BTRMGR_Mute_PersistentData_t*    persistentData
+) {
+    char *persistent_file_content = NULL;
+
+    persistent_file_content = readPersistentFile(BTRMGR_PERSISTENT_DATA_PATH);
+    if(persistent_file_content == NULL) {
+        // Seems like file is empty
+        return eBTRMgrFailure;
+    }
+
+    cJSON *btData = cJSON_Parse(persistent_file_content);
+    free(persistent_file_content);
+    if(btData == NULL) {
+        // Corrupted JSON
+        BTRMGRLOG_ERROR ("Could not parse JSON data file - Corrupted JSON\n");
+        return eBTRMgrFailure;
+    }
+
+    /*Adding limit for beacon detection*/
+    BTRMGRLOG_DEBUG ("Appending object to JSON file\n");
+    cJSON *Mute = cJSON_GetObjectItem(btData,"Mute");
+    if(Mute == NULL) {
+        cJSON_AddStringToObject(btData, "Mute", persistentData->Mute);
+    }
+    else {
+        strcpy(Mute->valuestring, persistentData->Mute);
+    }
+
+    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
+    return eBTRMgrSuccess;
+}
+#endif
+
 eBTRMgrRet
 BTRMgr_PI_GetAllProfiles (
     tBTRMgrPIHdl                hBTRMgrPiHdl,

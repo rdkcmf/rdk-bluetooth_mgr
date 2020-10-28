@@ -243,7 +243,12 @@ static enBTRCoreRet btrMgr_ConnectionInIntimationCb (stBTRCoreConnCBInfo* apstCo
 static enBTRCoreRet btrMgr_ConnectionInAuthenticationCb (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
 static enBTRCoreRet btrMgr_MediaStatusCb (stBTRCoreMediaStatusCBInfo* mediaStatusCB, void* apvUserData);
 
-
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+BTRMGR_Result_t BTRMGR_SetLastVolume(unsigned char aui8AdapterIdx, unsigned char ui8Volume);
+BTRMGR_Result_t BTRMGR_GetLastVolume(unsigned char aui8AdapterIdx, unsigned char *pVolume);
+BTRMGR_Result_t BTRMGR_SetLastMuteState(unsigned char aui8AdapterIdx, gboolean Mute);
+BTRMGR_Result_t BTRMGR_GetLastMuteState(unsigned char aui8AdapterIdx, gboolean *pMute);
+#endif
 
 /* Static Function Definitions */
 static inline unsigned char
@@ -1130,6 +1135,10 @@ btrMgr_StartCastingAudio (
 
     BTRMGR_StreamOut_Type_t lenCurrentSoType  = gstBTRMgrStreamingInfo.tBTRMgrSoType;
     tBTRMgrAcType           lpi8BTRMgrAcType= BTRMGR_AC_TYPE_PRIMARY;
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+    unsigned char           ui8Volume;
+    gboolean                Mute;
+#endif
 
     if ((ghBTRMgrDevHdlCurStreaming != 0) || (outMTUSize == 0)) {
         return eBTRMgrFailInArg;
@@ -1276,6 +1285,19 @@ btrMgr_StartCastingAudio (
         gstBTRMgrStreamingInfo.i32BytesToEncode = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
     }
 
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+    if (BTRMGR_GetLastVolume(0, &ui8Volume) == BTRMGR_RESULT_SUCCESS) {
+        if (BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, ui8Volume) != eBTRMgrSuccess) {
+            BTRMGRLOG_ERROR (" BTRMgr_SO_SetVolume FAILED \n");
+	}
+    }
+
+    if (BTRMGR_GetLastMuteState(0, &Mute) == BTRMGR_RESULT_SUCCESS) {
+        if (BTRMgr_SO_SetMute(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, Mute) != eBTRMgrSuccess) {
+            BTRMGRLOG_ERROR (" BTRMgr_SO_SetMute FAILED \n");
+	}
+    }
+#endif
 
     if ((lenBtrMgrRet = BTRMgr_SO_Start(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, &lstBtrMgrSoInASettings, &lstBtrMgrSoOutASettings)) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("BTRMgr_SO_Start FAILED\n");
@@ -4426,7 +4448,6 @@ BTRMGR_MediaControl (
     enBTRCoreDeviceClass            lenBtrCoreDevCl     = enBTRCore_DC_Unknown;
     enBTRCoreMediaCtrl              aenBTRCoreMediaCtrl = enBTRCoreMediaCtrlUnknown;
 
-
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
         return BTRMGR_RESULT_INIT_FAILED;
@@ -4500,6 +4521,12 @@ BTRMGR_MediaControl (
     case BTRMGR_MEDIA_CTRL_REPEAT_GROUP:
         aenBTRCoreMediaCtrl = enBTRCoreMediaCtrlRptGroup;
         break;
+    case BTRMGR_MEDIA_CTRL_MUTE:
+        aenBTRCoreMediaCtrl = enBTRCoreMediaCtrlMute;
+        break;
+    case BTRMGR_MEDIA_CTRL_UNMUTE:
+        aenBTRCoreMediaCtrl = enBTRCoreMediaCtrlUnMute;
+        break;
     default:
         aenBTRCoreMediaCtrl = enBTRCoreMediaCtrlUnknown;
     }
@@ -4508,15 +4535,241 @@ BTRMGR_MediaControl (
         BTRMGRLOG_ERROR ("Media Control Command for %llu Unknown!!!\n", ahBTRMgrDevHdl);
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
-    else
-    if (enBTRCoreSuccess != BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, lenBtrCoreDevTy, aenBTRCoreMediaCtrl)) {
-        BTRMGRLOG_ERROR ("Media Control Command for %llu Failed!!!\n", ahBTRMgrDevHdl);
-        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    else {
+      if ((lenBtrCoreDevTy == enBTRCoreSpeakers) || (lenBtrCoreDevTy == enBTRCoreHeadSet)) {
+          if ((ghBTRMgrDevHdlCurStreaming == ahBTRMgrDevHdl) ) {
+              unsigned char         ui8CurVolume = 0;
+              eBTRMgrRet            lenBtrMgrRet = eBTRMgrFailure;
+              BTRMGR_EventMessage_t lstEventMessage;
+
+              memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+              switch (mediaCtrlCmd) {
+              case BTRMGR_MEDIA_CTRL_VOLUMEUP:
+                 /* Volume range is in btmgr is 0 to 255
+                    In Gstremer the same range is 0.0 to 1.0
+                    hence below logic implemented when volume up and down by 25 except
+                    the near min and max values */
+                  BTRMgr_SO_GetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,&ui8CurVolume);
+                  BTRMGRLOG_DEBUG ("ui8CurVolume %d \n ",ui8CurVolume);
+                  if(ui8CurVolume > 230)
+                     ui8CurVolume = 255;
+                  else if (ui8CurVolume <= 230 && ui8CurVolume >= 25)
+                     ui8CurVolume = ui8CurVolume + 25;
+                  else
+                     ui8CurVolume = 25;
+                  if ((lenBtrMgrRet = BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, ui8CurVolume)) == eBTRMgrSuccess) {
+                       lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_VOLUME;
+                       lstEventMessage.m_mediaInfo.m_mediaPlayerVolumeInPercentage = ui8CurVolume;
+                       BTRMGRLOG_DEBUG (" volumeup %d \n", ui8CurVolume);
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+                       BTRMGR_SetLastVolume(0, ui8CurVolume);
+#endif
+                  }
+              break;
+
+              case BTRMGR_MEDIA_CTRL_VOLUMEDOWN:
+                   BTRMgr_SO_GetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,&ui8CurVolume);
+                   BTRMGRLOG_DEBUG ("ui8CurVolume %d \n ",ui8CurVolume);
+                   if(ui8CurVolume > 250)
+                      ui8CurVolume = 250;
+                   else if (ui8CurVolume <= 250 && ui8CurVolume >= 25)
+                      ui8CurVolume = ui8CurVolume - 25;
+                   else
+                      ui8CurVolume = 0;
+                  BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, ui8CurVolume);
+                  if ((lenBtrMgrRet = BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, ui8CurVolume)) == eBTRMgrSuccess) {
+                       lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_VOLUME;
+                       lstEventMessage.m_mediaInfo.m_mediaPlayerVolumeInPercentage = ui8CurVolume;
+                       BTRMGRLOG_DEBUG (" volumedown %d \n", ui8CurVolume);
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+                       BTRMGR_SetLastVolume(0, ui8CurVolume);
+#endif
+                  }
+              break;
+
+              case BTRMGR_MEDIA_CTRL_MUTE:
+                  // default Mute is FALSE
+                  if ((lenBtrMgrRet = BTRMgr_SO_SetMute(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, TRUE)) == eBTRMgrSuccess) {
+                       lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_MUTE;
+                       BTRMGRLOG_DEBUG (" Mute set success \n");
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+                       BTRMGR_SetLastMuteState(0, TRUE);
+#endif
+                  }
+              break;
+
+              case BTRMGR_MEDIA_CTRL_UNMUTE:
+                  if ((lenBtrMgrRet = BTRMgr_SO_SetMute(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, FALSE)) == eBTRMgrSuccess) {
+                       lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE;
+                       BTRMGRLOG_DEBUG (" UNMute set success \n");
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+                       BTRMGR_SetLastMuteState(0, FALSE);
+#endif
+                  }
+              break;
+
+              default:
+                   if (enBTRCoreSuccess != BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, lenBtrCoreDevTy, aenBTRCoreMediaCtrl)) {
+                       BTRMGRLOG_ERROR ("Media Control Command for %llu Failed for streamout!!!\n", ahBTRMgrDevHdl);
+                       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+                   }
+              }
+              if ((lenBtrMgrRet == eBTRMgrSuccess) && (gfpcBBTRMgrEventOut)) {
+                  gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+              }
+
+          } else {
+             BTRMGRLOG_ERROR ("pstBtrMgrSoHdl Null  or streaming out not started \n");
+             lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+          }
+      } else {
+         if (enBTRCoreSuccess != BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, lenBtrCoreDevTy, aenBTRCoreMediaCtrl)) {
+             BTRMGRLOG_ERROR ("Media Control Command for %llu Failed!!!\n", ahBTRMgrDevHdl);
+             lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+         }
+      }
     }
 
     return lenBtrMgrResult;
 }
 
+
+BTRMGR_Result_t
+BTRMGR_GetDeviceVolumeMute (
+    unsigned char                aui8AdapterIdx,
+    BTRMgrDeviceHandle           ahBTRMgrDevHdl,
+    BTRMGR_DeviceOperationType_t deviceOpType,
+    unsigned char *pui8Volume,
+    unsigned char *pui8Mute
+) {
+    BTRMGR_Result_t              lenBtrMgrResult     = BTRMGR_RESULT_SUCCESS;
+    eBTRMgrRet                   lenBtrMgrRet        = eBTRMgrSuccess;
+    enBTRCoreRet                 lenBtrCoreRet       = enBTRCoreSuccess;
+    enBTRCoreDeviceType          lenBtrCoreDevTy     = enBTRCoreUnknown;
+    enBTRCoreDeviceClass         lenBtrCoreDevCl     = enBTRCore_DC_Unknown;
+    unsigned char         ui8CurVolume = 0;
+    gboolean              CurMute = FALSE;
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if (!btrMgr_IsDevConnected(ahBTRMgrDevHdl)) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    // Currently implemented for audio out only
+    if (deviceOpType != BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not audio out\n", ahBTRMgrDevHdl);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBtrCoreDevTy, &lenBtrCoreDevCl);
+    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBtrCoreDevTy, lenBtrCoreDevCl);
+
+    if ((lenBtrMgrRet = BTRMgr_SO_GetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,&ui8CurVolume)) != eBTRMgrSuccess) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) audio out volume get fail\n", ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    if ((lenBtrMgrRet = BTRMgr_SO_GetMute(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,&CurMute)) != eBTRMgrSuccess) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not audio out mute get fail\n", ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+    if (lenBtrMgrRet == eBTRMgrSuccess)  {
+        *pui8Volume = ui8CurVolume;
+        *pui8Mute   = (unsigned char)CurMute;
+    }
+
+    return lenBtrMgrResult;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_SetDeviceVolumeMute (
+    unsigned char                aui8AdapterIdx,
+    BTRMgrDeviceHandle           ahBTRMgrDevHdl,
+    BTRMGR_DeviceOperationType_t deviceOpType,
+    unsigned char ui8Volume,
+    unsigned char ui8Mute
+) {
+    BTRMGR_Result_t              lenBtrMgrResult     = BTRMGR_RESULT_SUCCESS;
+    eBTRMgrRet                   lenBtrMgrRet        = eBTRMgrSuccess;
+    enBTRCoreRet                 lenBtrCoreRet       = enBTRCoreSuccess;
+    enBTRCoreDeviceType          lenBtrCoreDevTy     = enBTRCoreUnknown;
+    enBTRCoreDeviceClass         lenBtrCoreDevCl     = enBTRCore_DC_Unknown;
+    BTRMGR_EventMessage_t lstEventMessage;
+    gboolean              bMute = FALSE;
+
+    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt() || ui8Mute > 1) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if (!btrMgr_IsDevConnected(ahBTRMgrDevHdl)) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    // Currently implemented for audio out only
+    if (deviceOpType != BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not audio out\n", ahBTRMgrDevHdl);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBtrCoreDevTy, &lenBtrCoreDevCl);
+    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBtrCoreDevTy, lenBtrCoreDevCl);
+
+    if ((lenBtrMgrRet = BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,ui8Volume)) != eBTRMgrSuccess) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) audio out volume get fail\n", ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    } else {
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+        BTRMGR_SetLastVolume(0,ui8Volume);
+#endif
+        if (gfpcBBTRMgrEventOut) {
+            lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_VOLUME;
+            lstEventMessage.m_mediaInfo.m_mediaPlayerVolumeInPercentage = ui8Volume;
+            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+        }
+    }
+
+    memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+    if (ui8Mute == 0) {
+        lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE;
+        bMute = FALSE;
+    } else {
+        lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_PLAYER_MUTE;
+        bMute = TRUE;
+    }
+
+    if ((lenBtrMgrRet = BTRMgr_SO_SetMute(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,bMute)) != eBTRMgrSuccess) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not audio out mute get fail\n", ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    } else {
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+        BTRMGR_SetLastMuteState(0,bMute);
+#endif
+        if (gfpcBBTRMgrEventOut) {
+            gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+        }
+    }
+
+    return lenBtrMgrResult;
+}
 
 BTRMGR_Result_t
 BTRMGR_GetMediaTrackInfo (
@@ -4549,6 +4802,46 @@ BTRMGR_GetMediaTrackInfo (
     BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBtrCoreDevTy, lenBtrCoreDevCl);
 
     if (enBTRCoreSuccess != BTRCore_GetMediaTrackInfo(ghBTRCoreHdl, ahBTRMgrDevHdl, lenBtrCoreDevTy, (stBTRCoreMediaTrackInfo*)mediaTrackInfo)) {
+       BTRMGRLOG_ERROR ("Get Media Track Information for %llu Failed!!!\n", ahBTRMgrDevHdl);
+       lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    return lenBtrMgrResult;
+}
+
+BTRMGR_Result_t
+BTRMGR_GetMediaElementTrackInfo (
+    unsigned char                aui8AdapterIdx,
+    BTRMgrDeviceHandle           ahBTRMgrDevHdl,
+    BTRMgrMediaElementHandle     ahBTRMgrMedElementHdl,
+    BTRMGR_MediaTrackInfo_t      *mediaTrackInfo
+) {
+    BTRMGR_Result_t              lenBtrMgrResult     = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreRet                 lenBtrCoreRet       = enBTRCoreSuccess;
+    enBTRCoreDeviceType          lenBtrCoreDevTy     = enBTRCoreUnknown;
+    enBTRCoreDeviceClass         lenBtrCoreDevCl     = enBTRCore_DC_Unknown;
+
+
+    if (!ghBTRCoreHdl) {
+        BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
+        return BTRMGR_RESULT_INIT_FAILED;
+    }
+
+    if (aui8AdapterIdx > btrMgr_GetAdapterCnt()) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    if (!btrMgr_IsDevConnected(ahBTRMgrDevHdl)) {
+       BTRMGRLOG_ERROR ("Device Handle(%lld) not connected\n", ahBTRMgrDevHdl);
+       return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBtrCoreDevTy, &lenBtrCoreDevCl);
+    BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBtrCoreDevTy, lenBtrCoreDevCl);
+
+    if (enBTRCoreSuccess != BTRCore_GetMediaElementTrackInfo(ghBTRCoreHdl, ahBTRMgrDevHdl,
+                            lenBtrCoreDevTy, ahBTRMgrMedElementHdl, (stBTRCoreMediaTrackInfo*)mediaTrackInfo)) {
        BTRMGRLOG_ERROR ("Get Media Track Information for %llu Failed!!!\n", ahBTRMgrDevHdl);
        lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
     }
@@ -4646,6 +4939,9 @@ BTRMGR_SetMediaElementActive (
     case BTRMGR_MEDIA_ELEMENT_TYPE_TRACKLIST:
         lenMediaElementType    = enBTRCoreMedETypeTrackList;
         break;
+    case BTRMGR_MEDIA_ELEMENT_TYPE_TRACK:
+        lenMediaElementType    = enBTRCoreMedETypeTrack;
+        break;
     default:
         break;
     }
@@ -4708,12 +5004,16 @@ BTRMGR_GetMediaElementList (
     memset (&lpstBTRCoreMediaElementInfoList, 0, sizeof(stBTRCoreMediaElementInfoList));
 
     /* TODO Retrive required List from the populated DataBase */
+    /* In below passing argument aMediaElementType is not transitioning now due to
+     * BTRMGR_MediaElementType_t and eBTRCoreMedElementType both enums are same.
+     * In future if change the any enums it will impact */
     if (enBTRCoreSuccess != BTRCore_GetMediaElementList (ghBTRCoreHdl,
                                                          ahBTRMgrDevHdl,
                                                          ahBTRMgrMedElementHdl,
                                                          aui16MediaElementStartIdx,
                                                          aui16MediaElementEndIdx,
                                                          lenBtrCoreDevTy,
+                                                         aMediaElementType,
                                                          &lpstBTRCoreMediaElementInfoList)) {
         BTRMGRLOG_ERROR ("Get Media Element(%llu) List for Dev %llu Failed!!!\n", ahBTRMgrMedElementHdl, ahBTRMgrDevHdl);
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
@@ -4773,6 +5073,7 @@ BTRMGR_SelectMediaElement (
 
     lenBtrCoreRet = BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBtrCoreDevTy, &lenBtrCoreDevCl);
     BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBtrCoreDevTy, lenBtrCoreDevCl);
+   
 
     switch (aMediaElementType) {
     case BTRMGR_MEDIA_ELEMENT_TYPE_ALBUM:
@@ -4792,6 +5093,9 @@ BTRMGR_SelectMediaElement (
         break;
     case BTRMGR_MEDIA_ELEMENT_TYPE_TRACKLIST:
         lenMediaElementType    = enBTRCoreMedETypeTrackList;
+        break;
+    case BTRMGR_MEDIA_ELEMENT_TYPE_TRACK:
+        lenMediaElementType    = enBTRCoreMedETypeTrack;
         break;
     default:
         break;
@@ -4928,6 +5232,97 @@ BTRMGR_SetLimitBeaconDetection (
     return BTRMGR_RESULT_SUCCESS;
 }
 
+#ifdef RDKTV_PERSIST_VOLUME_SKY
+BTRMGR_Result_t
+BTRMGR_SetLastVolume (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   volume
+) {
+
+    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt())) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    BTRMGR_Volume_PersistentData_t VolumePersistentData;
+    VolumePersistentData.Volume =  volume;
+    if (BTRMgr_PI_SetVolume(&VolumePersistentData) == eBTRMgrFailure) {
+        BTRMGRLOG_ERROR ("Failed to set volume from json.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    BTRMGRLOG_INFO ("set volume %d.\n",volume);
+    return BTRMGR_RESULT_SUCCESS;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetLastVolume (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   *pVolume
+) {
+
+    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt()) || !(pVolume)) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    BTRMGR_Volume_PersistentData_t VolumePersistentData;
+    if (BTRMgr_PI_GetVolume(&VolumePersistentData) == eBTRMgrFailure) {
+        BTRMGRLOG_INFO ("Failed to get volume detection from json.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    *pVolume = VolumePersistentData.Volume;
+    BTRMGRLOG_INFO ("get volume %d \n",*pVolume);
+    return BTRMGR_RESULT_SUCCESS;
+}
+
+BTRMGR_Result_t
+BTRMGR_SetLastMuteState (
+    unsigned char   aui8AdapterIdx,
+    gboolean        muted
+) {
+
+    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt())) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    BTRMGR_Mute_PersistentData_t MutePersistentData;
+    sprintf(MutePersistentData.Mute, "%s", muted ? "true" : "false");
+    if (BTRMgr_PI_SetMute(&MutePersistentData) == eBTRMgrFailure) {
+        BTRMGRLOG_ERROR ("Failed to set mute from json.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    BTRMGRLOG_INFO (" set mute %s.\n", muted ? "true":"false");
+    return BTRMGR_RESULT_SUCCESS;
+}
+
+
+BTRMGR_Result_t
+BTRMGR_GetLastMuteState (
+    unsigned char   aui8AdapterIdx,
+    gboolean        *pMute
+) {
+
+    if ((aui8AdapterIdx > btrMgr_GetAdapterCnt()) || !(pMute)) {
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return BTRMGR_RESULT_INVALID_INPUT;
+    }
+
+    BTRMGR_Mute_PersistentData_t MutePersistentData;
+    if (BTRMgr_PI_GetMute(&MutePersistentData) == eBTRMgrFailure) {
+        BTRMGRLOG_INFO ("Failed to get mute detection from json.\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
+
+    *pMute =  (unsigned char)((!strncasecmp(MutePersistentData.Mute, "true", 4)) ? 1 : 0 );
+    BTRMGRLOG_INFO (" get mute %s.\n", *pMute ? "true":"false");
+    return BTRMGR_RESULT_SUCCESS;
+}
+#endif
 
 BTRMGR_Result_t
 BTRMGR_GetLeProperty (
@@ -5673,6 +6068,7 @@ btrMgr_DeviceStatusCb (
             }
             else if (enBTRCoreDevStInitialized != p_StatusCB->eDevicePrevState) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_CONNECTION_COMPLETE);
+                lstEventMessage.m_pairedDevice.m_isConnected = 1;
 
                 if ((lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET) &&
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HANDSFREE) &&
@@ -6386,6 +6782,9 @@ btrMgr_MediaStatusCb (
                 break;
             case enBTRCoreMedETypeTrackList:
                 lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACKLIST_INFO;
+                break;
+            case enBTRCoreMedETypeTrack:
+                lstEventMessage.m_eventType = BTRMGR_EVENT_MEDIA_TRACK_INFO;
                 break;
             default:
                 break;
