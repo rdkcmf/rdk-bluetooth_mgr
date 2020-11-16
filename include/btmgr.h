@@ -649,6 +649,22 @@ BTRMGR_Result_t BTRMGR_Init(void);
 BTRMGR_Result_t BTRMGR_DeInit(void);
 
 /**
+ * @brief This API registers all the IARM call backs for BTRMGR and Third party Clients.
+ * 
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_RegisterForCallbacks(const char* apcProcessName);
+
+/**
+ * @brief This API Unregisters all the IARM call backs for BTRMGR and Third party Clients.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success, appropriate error code otherwise.
+ */
+BTRMGR_Result_t BTRMGR_UnRegisterFromCallbacks(const char* apcProcessName);
+
+/**
  * @brief  This API returns the number of bluetooth adapters available.
  *
  * @param[out] pNumOfAdapters    Indicates the number of adapters available.
