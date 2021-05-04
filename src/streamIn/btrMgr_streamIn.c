@@ -388,6 +388,7 @@ BTRMgr_SI_Start (
      switch (leBtrMgrSiInSFreq) {
      case eBTRMgrSFreq8K:
          lui32BtrMgrInSiSFreq = 8000;
+	 break;  //CID:23359 - missing break
      case eBTRMgrSFreq16K:
          lui32BtrMgrInSiSFreq = 16000;
          break;

@@ -89,8 +89,8 @@ eBTRMgrRet BTRMGR_Columbo_SetData(BTRMGR_ColumboChar_t aenColumboChar, char* aDa
                     BTRMGRLOG_DEBUG("%s", lData);
                 }
                 BTRMGRLOG_DEBUG("Script has finished it's execution\n");
+		pclose(fPipe);   //CID:135219 - Forward Null
             }
-            pclose(fPipe);
         }
         break;
         case BTRMGR_SYSDIAG_COLUMBO_STOP:
@@ -110,8 +110,8 @@ eBTRMgrRet BTRMGR_Columbo_SetData(BTRMGR_ColumboChar_t aenColumboChar, char* aDa
                     BTRMGRLOG_DEBUG("%s", lData);
                 }
                 BTRMGRLOG_DEBUG("Script has finished it's execution\n");
+		pclose(fPipe);
             }
-            pclose(fPipe);
         }
         break;
         default:

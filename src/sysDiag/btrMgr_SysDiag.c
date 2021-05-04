@@ -59,7 +59,7 @@ static int btrMgr_SysDiag_getDeviceMAC(char* aFileName, unsigned char* aData)
     unsigned int lDeviceMac[16];
     int count = 0;
     int lDataLen = 0;
-    int ch;
+    int ch = 0;
     int leBtrMgrAcRet = 0;
     
     fPtr = fopen(aFileName, "r");
@@ -119,7 +119,7 @@ static int btrMgr_SysDiag_getDiagInfoFromFile(char* aFileName, char* aData)
                 aData[strlen(aData) - 1] = '\0';
             }
         }
-        pclose(fPtr);
+        fclose(fPtr);   //CID:115333 - Alloc free mismatch
     }
     return leBtrMgrAcRet;
 }

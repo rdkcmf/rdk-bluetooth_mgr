@@ -132,7 +132,7 @@ eBTRMgrRet BTRMgr_PI_SetAllProfiles (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Persistent
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
-eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile);
+eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t* persistProfile);
 
 /**
  * @brief  This API removes a single bluetooth profile from json file.
@@ -143,7 +143,7 @@ eBTRMgrRet BTRMgr_PI_AddProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t pers
  * @return Returns the status of the operation.
  * @retval eBTRMgrSuccess on success, appropriate error code otherwise.
  */
-eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t persistProfile);
+eBTRMgrRet BTRMgr_PI_RemoveProfile (tBTRMgrPIHdl hBTRMgrPiHdl,BTRMGR_Profile_t* persistProfile);
 /** @} */
 
 #endif /* __BTR_MGR_PERSIST_IFCE_H__ */

@@ -288,6 +288,7 @@ BTRMgr_SO_GetEstimatedInABufSize (
         switch (pstBtrMgrSoInPcmInfo->eBtrMgrSFreq) {
         case eBTRMgrSFreq8K:
             lui32InSamplingFreq = 8000;
+	    break;  //CID:23383 - Missing break
         case eBTRMgrSFreq16K:
             lui32InSamplingFreq = 16000;
             break;
@@ -454,6 +455,7 @@ BTRMgr_SO_Start (
     switch (leBtrMgrSoInSFreq) {
     case eBTRMgrSFreq8K:
         lui32BtrMgrInSoSFreq = 8000;
+	break;  //CID:23360 - Missing break
     case eBTRMgrSFreq16K:
         lui32BtrMgrInSoSFreq = 16000;
         break;
@@ -550,6 +552,7 @@ BTRMgr_SO_Start (
     switch (leBtrMgrSoOutSFreq) {
     case eBTRMgrSFreq8K:
         lui32BtrMgrOutSoSFreq = 8000;
+	break;
     case eBTRMgrSFreq16K:
         lui32BtrMgrOutSoSFreq = 16000;
         break;

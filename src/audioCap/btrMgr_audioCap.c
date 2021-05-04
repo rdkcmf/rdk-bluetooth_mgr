@@ -183,8 +183,8 @@ btrMgr_AC_acmDataCapture_InTask (
 
                     lstBtrMgrAcmDCSockAddr.sun_family = AF_UNIX;
                     strncpy(lstBtrMgrAcmDCSockAddr.sun_path, pstBtrMgrAcHdl->pcBtrMgrAcmSockPath, 
-                        strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath) < (MAX_OUTPUT_PATH_LEN - 1) ?
-                            strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath) + 1 : MAX_OUTPUT_PATH_LEN);
+                        strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath) < (sizeof(lstBtrMgrAcmDCSockAddr.sun_path) - 1) ?
+                            strlen(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath) + 1 : sizeof(lstBtrMgrAcmDCSockAddr.sun_path));  //CID:136289 - Buffer size and 23363 - Overrun
 
 
                     if ((li32BtrMgrAcmDCSockFd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1) {
@@ -202,7 +202,10 @@ btrMgr_AC_acmDataCapture_InTask (
                         (connect(li32BtrMgrAcmDCSockFd, (const struct sockaddr*)&lstBtrMgrAcmDCSockAddr, sizeof(lstBtrMgrAcmDCSockAddr)) == -1)) {
                         lerrno = errno;
                         BTRMGRLOG_ERROR("eBTRMgrACAcmDCStart - Unable to connect socket :FAILURE - %d\n", lerrno);
-                        close(li32BtrMgrAcmDCSockFd);
+                        if( li32BtrMgrAcmDCSockFd > 0 ) {
+                            close(li32BtrMgrAcmDCSockFd);
+                            li32BtrMgrAcmDCSockFd = -1;
+                        }
                         lerrno = errno;
                     }
                     else {
@@ -241,9 +244,11 @@ btrMgr_AC_acmDataCapture_InTask (
                         lpInDataBuf  = NULL;
                     }
 
-                    close(pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd);
+                    if (pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd  >  0) {
+                        close(pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd);  //CID:23436
+                        pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd = -1;
+                    }
 
-                    pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd = -1;
                 }
             }
             /* eBTRMgrACAcmDCPause - PAUSE */
@@ -276,9 +281,11 @@ btrMgr_AC_acmDataCapture_InTask (
             if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCStart) {
                 int li32InDataBufBytesRead = 0;
 
-                li32InDataBufBytesRead = (int)read( pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd, 
-                                                    lpInDataBuf, 
-                                                    pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold);
+                if((pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd >= 0) && (lpInDataBuf)) {
+                    li32InDataBufBytesRead = (int)read( pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd,
+                                                        lpInDataBuf,
+                                                        pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold);
+                }  //CID:23331 and 23351- Negative returns, 23362 - Forward null
 
 
                 if (pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady && (li32InDataBufBytesRead > 0)) {
@@ -310,8 +317,11 @@ btrMgr_AC_acmDataCapture_InTask (
         }
 
     } while(1);
-    
-    BTRMGRLOG_DEBUG ("Exit\n");  
+
+    if(lpInDataBuf != NULL) {
+        free(lpInDataBuf);  //CID:23332 - Resource leak
+    }
+    BTRMGRLOG_DEBUG ("Exit\n");
 
     return NULL;
 }
@@ -360,7 +370,9 @@ BTRMgr_AC_Init (
         memset(pstBtrMgrAcHdl->pcBtrMgrAcmSockPath, '\0', MAX_OUTPUT_PATH_LEN);
         pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd = -1;
 
-        IARM_Bus_IsConnected(lpcProcessName, &pstBtrMgrAcHdl->i32BtrMgrAcmExternalIARMMode);
+        if(!IARM_Bus_IsConnected(lpcProcessName, &pstBtrMgrAcHdl->i32BtrMgrAcmExternalIARMMode)) {
+            BTRMGRLOG_TRACE("Error in IARM_Bus_IsConnected\n");
+        }  //CID:101819 - Checked return
 
         if (!pstBtrMgrAcHdl->i32BtrMgrAcmExternalIARMMode) {
             IARM_Bus_Init(lpcProcessName);
@@ -402,14 +414,16 @@ BTRMgr_AC_Init (
     }
 #endif
 
-    if (leBtrMgrAcRet != eBTRMgrSuccess)
-        BTRMgr_AC_DeInit((tBTRMgrAcHdl)pstBtrMgrAcHdl);
-
     if (api8BTRMgrAcType)
         pstBtrMgrAcHdl->pcBTRMgrAcType = g_strndup(api8BTRMgrAcType, 32);
 
+    if (leBtrMgrAcRet != eBTRMgrSuccess) {
+        BTRMgr_AC_DeInit((tBTRMgrAcHdl)pstBtrMgrAcHdl);  //CID:127655 - Use after free
+        return leBtrMgrAcRet;
+    }
+
     *phBTRMgrAcHdl = (tBTRMgrAcHdl)pstBtrMgrAcHdl;
-    
+
     return leBtrMgrAcRet;
 }
 
@@ -436,7 +450,8 @@ BTRMgr_AC_DeInit (
 
 #if defined(USE_AC_RMF)
     if ((pstBtrMgrAcHdl->pcBTRMgrAcType != NULL) &&
-        (!strncmp(pstBtrMgrAcHdl->pcBTRMgrAcType, BTRMGR_AC_TYPE_AUXILIARY, strlen(BTRMGR_AC_TYPE_AUXILIARY)))) {
+        (!strncmp(pstBtrMgrAcHdl->pcBTRMgrAcType, BTRMGR_AC_TYPE_AUXILIARY, strlen(BTRMGR_AC_TYPE_AUXILIARY)))  &&
+        (pstBtrMgrAcHdl->hBTRMgrRmfAcHdl != NULL)) {
         if ((leBtrMgrRmfAcRet = RMF_AudioCapture_Close(pstBtrMgrAcHdl->hBTRMgrRmfAcHdl)) != RMF_SUCCESS) {
             BTRMGRLOG_ERROR("Return Status = %d\n", leBtrMgrRmfAcRet);
             leBtrMgrAcRet = eBTRMgrFailure;
@@ -475,10 +490,11 @@ BTRMgr_AC_DeInit (
         memset(&lstBtrMgrIarmAcmArgs, 0, sizeof(iarmbus_acm_arg_t));
         lstBtrMgrIarmAcmArgs.session_id = pstBtrMgrAcHdl->hBtrMgrIarmAcmHdl;
 
-        if ((leBtrMgIarmAcmRet = IARM_Bus_Call (IARMBUS_AUDIOCAPTUREMGR_NAME,
-                                                IARMBUS_AUDIOCAPTUREMGR_CLOSE,
-                                                (void *)&lstBtrMgrIarmAcmArgs,
-                                                sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
+        if ((lstBtrMgrIarmAcmArgs.session_id != 0) &&
+            ((leBtrMgIarmAcmRet = IARM_Bus_Call (IARMBUS_AUDIOCAPTUREMGR_NAME,
+                                                 IARMBUS_AUDIOCAPTUREMGR_CLOSE,
+                                                 (void *)&lstBtrMgrIarmAcmArgs,
+                                                 sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS)) {
             BTRMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_CLOSE:Return Status = %d\n", leBtrMgIarmAcmRet);
             leBtrMgrAcRet = eBTRMgrFailure;
         }

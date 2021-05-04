@@ -1911,12 +1911,14 @@ btrMgr_AddPersistentEntry (
 
     // Device connected add data from json file
     BTRMGR_Profile_t btPtofile;
-    strncpy(btPtofile.adapterId, lui8adapterAddr, BTRMGR_NAME_LEN_MAX);
-    strncpy(btPtofile.profileId, apui8ProfileStr, BTRMGR_NAME_LEN_MAX);
+    strncpy(btPtofile.adapterId, lui8adapterAddr, BTRMGR_NAME_LEN_MAX -1);
+    btPtofile.adapterId[BTRMGR_NAME_LEN_MAX -1] = '\0';
+    strncpy(btPtofile.profileId, apui8ProfileStr, BTRMGR_NAME_LEN_MAX -1);
+    btPtofile.profileId[BTRMGR_NAME_LEN_MAX -1] = '\0'; //CID:136398 - Bufefr size warning
     btPtofile.deviceId  = ahBTRMgrDevHdl;
     btPtofile.isConnect = ai32DevConnected;
 
-    lenBtrMgrPiRet = BTRMgr_PI_AddProfile(ghBTRMgrPiHdl, btPtofile);
+    lenBtrMgrPiRet = BTRMgr_PI_AddProfile(ghBTRMgrPiHdl, &btPtofile);
     if(lenBtrMgrPiRet == eBTRMgrSuccess) {
         BTRMGRLOG_INFO ("Persistent File updated successfully\n");
     }
@@ -1940,12 +1942,14 @@ btrMgr_RemovePersistentEntry (
 
     // Device disconnected remove data from json file
     BTRMGR_Profile_t btPtofile;
-    strncpy(btPtofile.adapterId, lui8adapterAddr, BTRMGR_NAME_LEN_MAX);
-    strncpy(btPtofile.profileId, apui8ProfileStr, BTRMGR_NAME_LEN_MAX);
+    strncpy(btPtofile.adapterId, lui8adapterAddr, BTRMGR_NAME_LEN_MAX -1);
+    btPtofile.adapterId[BTRMGR_NAME_LEN_MAX -1] = '\0';
+    strncpy(btPtofile.profileId, apui8ProfileStr, BTRMGR_NAME_LEN_MAX -1);
+    btPtofile.profileId[BTRMGR_NAME_LEN_MAX -1] = '\0';  //CID:136475 - Buffer size warning
     btPtofile.deviceId = ahBTRMgrDevHdl;
     btPtofile.isConnect = 1;
 
-    lenBtrMgrPiRet = BTRMgr_PI_RemoveProfile(ghBTRMgrPiHdl, btPtofile);
+    lenBtrMgrPiRet = BTRMgr_PI_RemoveProfile(ghBTRMgrPiHdl, &btPtofile);
     if(lenBtrMgrPiRet == eBTRMgrSuccess) {
        BTRMGRLOG_INFO ("Persistent File updated successfully\n");
     }
@@ -2469,7 +2473,8 @@ BTRMGR_GetAdapterName (
     }
 
     /*  Copy regardless of success or failure. */
-    strncpy (pNameOfAdapter, name, (BTRMGR_NAME_LEN_MAX - 1));
+    strncpy (pNameOfAdapter, name, (strlen(pNameOfAdapter) > BTRMGR_NAME_LEN_MAX -1) ? BTRMGR_NAME_LEN_MAX -1 : strlen(name));
+    pNameOfAdapter[(strlen(pNameOfAdapter) > BTRMGR_NAME_LEN_MAX -1) ? BTRMGR_NAME_LEN_MAX -1 : strlen(name)] = '\0';
 
 
     return lenBtrMgrResult;
@@ -3543,7 +3548,8 @@ BTRMGR_GetConnectedDevices (
                    lpstBtrMgrPDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService;
                    for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
                        lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                       strncpy (lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                       strncpy (lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX -1);
+		       lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';   ///CID:136654 - Buffer size warning
                    }
 
                    pConnectedDevices->m_numOfDevices++;
@@ -3576,7 +3582,8 @@ BTRMGR_GetConnectedDevices (
                     lpstBtrMgrSDevice->m_serviceInfo.m_numOfService = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService;
                     for (j = 0; j < lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
                         lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                        strncpy (lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                        strncpy (lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX -1);
+			lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';
                     }
 
                     pConnectedDevices->m_numOfDevices++;
@@ -3647,7 +3654,8 @@ BTRMGR_GetDeviceProperties (
                         BTRMGRLOG_TRACE ("Profile ID = %d; Profile Name = %s \n", lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
                                                                                                    lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name);
                         pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                        strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                        strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX -1);
+			pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';  //CID:136651 - Buffer size warning
                     }
 
                   if (lstBtrCoreListOfPDevices.devices[i].bDeviceConnected) {
@@ -3691,7 +3699,8 @@ BTRMGR_GetDeviceProperties (
                             BTRMGRLOG_TRACE ("Profile ID = %d; Profile Name = %s \n", lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value,
                                                                                                        lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name);
                             pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
-                            strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX);
+                            strncpy (pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX -1);
+			    pDeviceProperty->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';
 
                             if(0 != lstBtrCoreListOfSDevices.devices[i].stAdServiceData[j].len)
                             {
@@ -4776,10 +4785,10 @@ BTRMGR_GetLimitBeaconDetection (
         return BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
-    *pLimited =  (unsigned char)((!strncasecmp(BeaconPersistentData.limitBeaconDetection, "true", 4)) ? 1 : 0 );
     if (pLimited != NULL) {
+        *pLimited =  (unsigned char)((!strncasecmp(BeaconPersistentData.limitBeaconDetection, "true", 4)) ? 1 : 0 );
         BTRMGRLOG_INFO ("the beacon detection detection : %s\n", *pLimited? "true":"false");
-    }
+    }  //CID:45164 - Reverse_inull
     else {
         BTRMGRLOG_INFO ("Failed to get limit for beacon detection.\n");
         return BTRMGR_RESULT_GENERIC_FAILURE;
@@ -4913,7 +4922,10 @@ BTRMGR_PerformLeOp (
     }
 
     /* Check whether the device is in the Connected list */ 
-    BTRMGR_GetConnectedDevices (aui8AdapterIdx, &listOfCDevices);
+    if(!BTRMGR_GetConnectedDevices (aui8AdapterIdx, &listOfCDevices)) {
+        BTRMGRLOG_TRACE ("BTRMGR_GetConnectedDevices is error !!!\n");
+    }  //CID:95101 - Checked return
+
     for ( ;ui16LoopIdx < listOfCDevices.m_numOfDevices; ui16LoopIdx++) {
         if (listOfCDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle == ahBTRMgrDevHdl) {
             isConnected = listOfCDevices.m_deviceProperty[ui16LoopIdx].m_isConnected;
@@ -5212,7 +5224,7 @@ BTRMGR_SysDiagInfo(
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     int lenDiagElement = 0;
-    char lPropValue[BTRMGR_MAX_STR_LEN] = "";
+    char lPropValue[BTRMGR_LE_STR_LEN_MAX] = {'\0'};   //CID:135225 - Overrurn
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR("BTRCore is not Inited\n");
@@ -5380,9 +5392,8 @@ btrMgr_ACDataReadyCb (
         if ((leBtrMgrAcRet = BTRMgr_SO_SendBuffer(lstBTRMgrStrmInfo->hBTRMgrSoHdl, apvAcDataBuf, aui32AcDataLen)) != eBTRMgrSuccess) {
             BTRMGRLOG_ERROR ("cbBufferReady: BTRMgr_SO_SendBuffer FAILED\n");
         }
-    }
-
-    lstBTRMgrStrmInfo->bytesWritten += aui32AcDataLen;
+        lstBTRMgrStrmInfo->bytesWritten += aui32AcDataLen;
+    }   //CID:23337 - Forward null
 
     return leBtrMgrAcRet;
 }
@@ -5487,6 +5498,7 @@ btrMgr_DeviceStatusCb (
 ) {
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
     BTRMGR_EventMessage_t   lstEventMessage;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
 
     memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
@@ -5605,12 +5617,18 @@ btrMgr_DeviceStatusCb (
                     if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
                         lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET) {
                         /* Stop the playback which already stopped internally but to free up the memory */
-                        BTRMGR_StopAudioStreamingIn(0, ghBTRMgrDevHdlCurStreaming);
+                        if(!BTRMGR_StopAudioStreamingIn(0, ghBTRMgrDevHdlCurStreaming))
+                        {
+                            BTRMGRLOG_ERROR ("BTRMGR_StopAudioStreamingIn error \n ");  //CID:41286 - Checked return
+                        }
                         ghBTRMgrDevHdlLastConnected = 0;
                     }
                     else {
                         /* Stop the playback which already stopped internally but to free up the memory */
-                        BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming);
+                        if(!BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming))
+                        {
+                            BTRMGRLOG_ERROR ("BTRMGR_StopAudioStreamingOut error \n ");  //CID:41354 - Checked return
+                        }
                     }
                 }
                 else if ((btrMgr_IsDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle) == 1) &&
@@ -5657,7 +5675,10 @@ btrMgr_DeviceStatusCb (
                         }
                         else {
                             /* Stop the playback which already stopped internally but to free up the memory */
-                            BTRMGR_StopAudioStreamingOut (0, ghBTRMgrDevHdlCurStreaming);
+                            rc = BTRMGR_StopAudioStreamingOut (0, ghBTRMgrDevHdlCurStreaming);
+			    if (BTRMGR_RESULT_SUCCESS == rc) {
+                                BTRMGRLOG_INFO ("Success\n");
+                            }  //CID:41354 - Checked return
                         }
                     }
                     btrMgr_PostCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
@@ -6165,7 +6186,8 @@ btrMgr_MediaStatusCb (
 
         lstEventMessage.m_mediaInfo.m_deviceHandle = mediaStatusCB->deviceId;
         lstEventMessage.m_mediaInfo.m_deviceType   = btrMgr_MapDeviceTypeFromCore(mediaStatusCB->eDeviceClass);
-        strncpy (lstEventMessage.m_mediaInfo.m_name, mediaStatusCB->deviceName, BTRMGR_NAME_LEN_MAX);
+        strncpy (lstEventMessage.m_mediaInfo.m_name, mediaStatusCB->deviceName, BTRMGR_NAME_LEN_MAX -1);
+	lstEventMessage.m_mediaInfo.m_name[BTRMGR_NAME_LEN_MAX -1] = '\0';  //CID:136544 - Buffer size warning
 
         switch (mediaStatus->eBTMediaStUpdate) {
         case eBTRCoreMediaTrkStStarted:
