@@ -365,14 +365,14 @@ BTRMgr_SO_GetEstimatedInABufSize (
     }
 
 
-    lui16OutMtu = lui16OutMtu - 20; // 12 byte RTP packet + 8 byte UDP - (54 Byte - 12 byte RTP packet + 8 byte UDP + 20 byte IP + 18 byte Ethernet headers)
+    lui16OutMtu = (lui16OutMtu/lui16OutFrameLen) * lui16OutFrameLen;
     lui32OutByteRate = (lui16OutBitrateKbps * 1024) / 8;
     lfOutMtuTimemSec = (lui16OutMtu * 1000.0) / lui32OutByteRate;
     lui32InByteRate  = (lui32InBitsPerSample/8) * lui32InNumAChan * lui32InSamplingFreq;
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (lui32InByteRate * lfOutMtuTimemSec)/1000;
 
     // Align to multiple of 256
-    apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize >> 8);
+    apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = (apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize >> 8) + 1;
     apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize = apstBtrMgrSoInASettings->i32BtrMgrInBufMaxSize << 8;
 
 
