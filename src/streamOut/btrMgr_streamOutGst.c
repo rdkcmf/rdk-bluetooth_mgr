@@ -580,13 +580,13 @@ BTRMgr_SO_GstStart (
     pstBtrMgrSoGst->gstClkTStamp = 0;
     pstBtrMgrSoGst->inBufOffset  = 0;
 
-    if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_8BIT))
+    if (!strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_8BIT))
         lui32InBitsPSample = 8;
-    else if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT))
+    else if (!strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_16BIT))
         lui32InBitsPSample = 16;
-    else if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT))
+    else if (!strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_24BIT))
         lui32InBitsPSample = 24;
-    else if (strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT))
+    else if (!strcmp(apcInFmt, BTRMGR_AUDIO_SFMT_SIGNED_LE_32BIT))
         lui32InBitsPSample = 32;
     else
         lui32InBitsPSample = 16;
