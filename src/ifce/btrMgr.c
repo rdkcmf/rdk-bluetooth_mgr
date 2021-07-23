@@ -2898,10 +2898,26 @@ BTRMGR_StartDeviceDiscovery (
     unsigned char                aui8AdapterIdx, 
     BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT
 ) {
+    BTRMGR_Result_t result = BTRMGR_RESULT_GENERIC_FAILURE;
+
     gIsDiscoveryOpInternal = FALSE;
 
     memset (&gListOfDiscoveredDevices, 0, sizeof(gListOfDiscoveredDevices));
-    return BTRMGR_StartDeviceDiscovery_Internal(aui8AdapterIdx, aenBTRMgrDevOpT);
+    result = BTRMGR_StartDeviceDiscovery_Internal(aui8AdapterIdx, aenBTRMgrDevOpT);
+
+    if ((result == BTRMGR_RESULT_SUCCESS) && gfpcBBTRMgrEventOut) {
+        BTRMGR_EventMessage_t lstEventMessage;
+        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+        lstEventMessage.m_adapterIndex = aui8AdapterIdx;
+        if (gIsAdapterDiscovering) {
+            lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_DISCOVERY_STARTED;
+        }
+
+        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+    }
+
+    return result;
 }
 
 
@@ -2910,8 +2926,24 @@ BTRMGR_StopDeviceDiscovery (
     unsigned char                aui8AdapterIdx,
     BTRMGR_DeviceOperationType_t aenBTRMgrDevOpT
 ) {
+    BTRMGR_Result_t result = BTRMGR_RESULT_GENERIC_FAILURE;
+
     gIsDiscoveryOpInternal = FALSE;
-    return BTRMGR_StopDeviceDiscovery_Internal(aui8AdapterIdx, aenBTRMgrDevOpT);
+    result = BTRMGR_StopDeviceDiscovery_Internal(aui8AdapterIdx, aenBTRMgrDevOpT);
+
+    if ((result == BTRMGR_RESULT_SUCCESS) && gfpcBBTRMgrEventOut) {
+        BTRMGR_EventMessage_t lstEventMessage;
+        memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+
+        lstEventMessage.m_adapterIndex = aui8AdapterIdx;
+        if (!gIsAdapterDiscovering) {
+            lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_DISCOVERY_COMPLETE;
+        }
+
+        gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
+    }
+
+    return result;
 }
 
 
@@ -5850,6 +5882,7 @@ btrMgr_DeviceDiscoveryCb (
 
         gIsAdapterDiscovering = astBTRCoreDiscoveryCbInfo->adapter.bDiscovering;
 
+#if 0
         if (gfpcBBTRMgrEventOut && (gIsDiscoveryOpInternal == FALSE)) {
             BTRMGR_EventMessage_t lstEventMessage;
             memset (&lstEventMessage, 0, sizeof(lstEventMessage));
@@ -5864,6 +5897,8 @@ btrMgr_DeviceDiscoveryCb (
 
             gfpcBBTRMgrEventOut(lstEventMessage); /*  Post a callback */
         }
+#endif
+
     }
 
     return lenBtrCoreRet;
