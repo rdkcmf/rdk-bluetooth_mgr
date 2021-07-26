@@ -1871,6 +1871,7 @@ btrMgr_StartAudioStreamingOut (
         lstEventMessage.m_adapterIndex                 = aui8AdapterIdx;
         lstEventMessage.m_pairedDevice.m_deviceHandle  = listOfPDevices.devices[i].tDeviceId;
         lstEventMessage.m_pairedDevice.m_deviceType    = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
+	lstEventMessage.m_pairedDevice.m_isConnected   = (btrMgr_IsDevConnected(listOfPDevices.devices[i].tDeviceId)) ? 1 : 0;
         lstEventMessage.m_pairedDevice.m_isLowEnergyDevice = (lstEventMessage.m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//will make it generic later
         strncpy(lstEventMessage.m_pairedDevice.m_name, listOfPDevices.devices[i].pcDeviceName, BTRMGR_NAME_LEN_MAX);
         strncpy(lstEventMessage.m_pairedDevice.m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, BTRMGR_NAME_LEN_MAX);
