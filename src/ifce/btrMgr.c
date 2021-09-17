@@ -100,6 +100,7 @@ static unsigned char                    gIsUserInitiated            = 0;
 static unsigned char                    gIsAudOutStartupInProgress  = 0;
 static unsigned char                    gDiscHoldOffTimeOutCbData   = 0;
 static unsigned char                    gIsAudioInEnabled           = 0;
+static unsigned char                    gIsHidGamePadEnabled        = 0;
 static volatile guint                   gTimeOutRef                 = 0;
 static volatile unsigned int            gIsAdapterDiscovering       = 0;
 
@@ -154,6 +155,7 @@ static const char* btrMgr_GetAdapterPath (unsigned char aui8AdapterIdx);
 static inline void btrMgr_SetAgentActivated (unsigned char aui8AgentActivated);
 static inline unsigned char btrMgr_GetAgentActivated (void);
 static void btrMgr_CheckAudioInServiceAvailability (void);
+static void btrMgr_CheckHidGamePadServiceAvailability (void);
 
 static const char* btrMgr_GetDiscoveryDeviceTypeAsString (BTRMGR_DeviceOperationType_t adevOpType);
 //static const char* btrMgr_GetDiscoveryFilterAsString (BTRMGR_ScanFilter_t ascanFlt);
@@ -310,6 +312,36 @@ btrMgr_CheckAudioInServiceAvailability (
         }
         else {
             BTRMGRLOG_INFO ("BTR AudioIn Serivce will not be available.\n");
+        }
+    }
+    else {
+        BTRMGRLOG_ERROR ("getRFCParameter Failed : %s\n", getRFCErrorString(status));
+    }
+#endif
+}
+
+static void
+btrMgr_CheckHidGamePadServiceAvailability (
+    void
+) {
+#ifdef BUILD_FOR_PI
+   //Since RFC is not enabled for PI devices, enabling by default
+    gIsHidGamePadEnabled = 1;
+    BTRMGRLOG_INFO ("Enabling BTR HidGamePad Service for raspberry pi devices.\n");
+#else
+    RFC_ParamData_t param = {0};
+    /* We shall make this api generic and macro defined tr181 params as we start to enable diff services based on RFC */
+    WDMP_STATUS status = getRFCParameter("BTRMGR", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.GamePad.Enable", &param);
+
+    if (status == WDMP_SUCCESS) {
+        BTRMGRLOG_DEBUG ("name = %s, type = %d, value = %s\n", param.name, param.type, param.value);
+
+        if (!strncmp(param.value, "true", strlen("true"))) {
+            gIsHidGamePadEnabled = 1;
+            BTRMGRLOG_INFO ("BTR HidGamePad Serivce will be available.\n");
+        }
+        else {
+            BTRMGRLOG_INFO ("BTR HidGamePad Serivce will not be available.\n");
         }
     }
     else {
@@ -951,7 +983,7 @@ btrMgr_MapDeviceTypeFromCore (
         type = BTRMGR_DEVICE_TYPE_HID;
         break;
     case enBTRCore_DC_HID_GamePad:
-        type = BTRMGR_DEVICE_TYPE_HID;
+        type = BTRMGR_DEVICE_TYPE_HID_GAMEPAD;
         break;
     case enBTRCore_DC_HID_AudioRemote:
         type = BTRMGR_DEVICE_TYPE_HID;
@@ -989,6 +1021,7 @@ btrMgr_MapDeviceOpFromDeviceType (
         devOpType = BTRMGR_DEVICE_OP_TYPE_LE;
         break;
     case BTRMGR_DEVICE_TYPE_HID:
+    case BTRMGR_DEVICE_TYPE_HID_GAMEPAD:
         devOpType = BTRMGR_DEVICE_OP_TYPE_HID;
         break;
     case BTRMGR_DEVICE_TYPE_STB:
@@ -2289,6 +2322,7 @@ BTRMGR_Init (
         BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
     btrMgr_CheckAudioInServiceAvailability();
+    btrMgr_CheckHidGamePadServiceAvailability();
 #if 0
     // Set the beacon and start the advertisement
 
@@ -3099,7 +3133,9 @@ BTRMGR_GetDiscoveredDevices_Internal (
     BTRMGR_Result_t                 lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet                    lenBtrCoreRet   = enBTRCoreSuccess;
     stBTRCoreScannedDevicesCount    lstBtrCoreListOfSDevices;
+    BTRMGR_DeviceType_t         lenBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
     int i = 0;
+    int j = 0;
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -3126,8 +3162,16 @@ BTRMGR_GetDiscoveredDevices_Internal (
             pDiscoveredDevices->m_numOfDevices = (lstBtrCoreListOfSDevices.numberOfDevices < BTRMGR_DEVICE_COUNT_MAX) ? 
                                                     lstBtrCoreListOfSDevices.numberOfDevices : BTRMGR_DEVICE_COUNT_MAX;
 
-            for (i = 0; i < pDiscoveredDevices->m_numOfDevices; i++) {
-                lpstBtrMgrSDevice = &pDiscoveredDevices->m_deviceProperty[i];
+            for (i = 0,j = 0; j < pDiscoveredDevices->m_numOfDevices; i++,j++) {
+                lenBtrMgrDevType =  btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfSDevices.devices[i].enDeviceType);
+                if (!gIsHidGamePadEnabled && (lenBtrMgrDevType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
+                    j--;
+                    pDiscoveredDevices->m_numOfDevices--;
+                    BTRMGRLOG_WARN ("HID GamePad RFC not enable, HID GamePad devices are not listing \n");
+                    continue;
+                }
+
+                lpstBtrMgrSDevice = &pDiscoveredDevices->m_deviceProperty[j];
 
                 lpstBtrMgrSDevice->m_deviceHandle   = lstBtrCoreListOfSDevices.devices[i].tDeviceId;
                 lpstBtrMgrSDevice->m_signalLevel    = lstBtrCoreListOfSDevices.devices[i].i32RSSI;
@@ -3193,6 +3237,10 @@ BTRMGR_PairDevice (
     BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
     BTRMGRLOG_DEBUG ("Status = %d\t Device Type = %d\t Device Class = %x\n", lenBtrCoreRet, lenBTRCoreDevTy, lenBTRCoreDevCl);
 
+    if (!gIsHidGamePadEnabled && (lenBTRCoreDevCl == enBTRCore_DC_HID_GamePad)) {
+        BTRMGRLOG_WARN ("BTR HID GamePad is currently Disabled\n");
+       return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
     /* We always need a agent to get the pairing done.. if no agent registered, default agent will be used.
      * But we will not able able to get the PIN and other stuff received at our level. We have to have agent
      * for pairing process..
@@ -3459,6 +3507,9 @@ BTRMGR_ConnectToDevice (
     BTRMGR_DeviceOperationType_t    connectAs
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
+    enBTRCoreDeviceType     lenBTRCoreDevTy     = enBTRCoreUnknown;
+    enBTRCoreDeviceClass    lenBTRCoreDevCl     = enBTRCore_DC_Unknown;
+
 
     if (!ghBTRCoreHdl) {
         BTRMGRLOG_ERROR ("BTRCore is not Inited\n");
@@ -3471,6 +3522,13 @@ BTRMGR_ConnectToDevice (
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
+    BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, ahBTRMgrDevHdl, &lenBTRCoreDevTy, &lenBTRCoreDevCl);
+    BTRMGRLOG_DEBUG (" Device Type = %d\t Device Class = %x\n", lenBTRCoreDevTy, lenBTRCoreDevCl);
+
+    if (!gIsHidGamePadEnabled && (lenBTRCoreDevCl == enBTRCore_DC_HID_GamePad)) {
+        BTRMGRLOG_WARN ("BTR HID GamePad is currently Disabled\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
 
     if (btrMgr_ConnectToDevice(aui8AdapterIdx, ahBTRMgrDevHdl, connectAs, 0, 1) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("Failure\n");
@@ -5154,7 +5212,7 @@ BTRMGR_GetDeviceTypeAsString (
         return "TABLET";
     else if (type == BTRMGR_DEVICE_TYPE_TILE)
         return "LE TILE";
-    else if (type == BTRMGR_DEVICE_TYPE_HID)
+    else if ((type == BTRMGR_DEVICE_TYPE_HID) || (type == BTRMGR_DEVICE_TYPE_HID_GAMEPAD))
         return "HUMAN INTERFACE DEVICE";
     else
         return "UNKNOWN DEVICE";
@@ -5175,6 +5233,19 @@ BTRMGR_SetAudioInServiceState (
     return BTRMGR_RESULT_SUCCESS;
 }
 
+BTRMGR_Result_t
+BTRMGR_SetHidGamePadServiceState (
+    unsigned char   aui8AdapterIdx,
+    unsigned char   aui8State
+) {
+    if ((gIsHidGamePadEnabled = aui8State)) {
+        BTRMGRLOG_INFO ("HID GamePad Service is Enabled.\n");
+    }
+    else {
+        BTRMGRLOG_INFO ("HID GamePad Service is Disabled.\n");
+    }
+    return BTRMGR_RESULT_SUCCESS;
+}
 
 BTRMGR_Result_t
 BTRMGR_GetLimitBeaconDetection (
@@ -5998,20 +6069,23 @@ btrMgr_DeviceStatusCb (
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
     BTRMGR_EventMessage_t   lstEventMessage;
     BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_DeviceType_t     lBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
+
 
     memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-
-    if (!gIsAudioInEnabled &&
-        (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_SMARTPHONE ||
-        lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_TABLET)) {
-        BTRMGRLOG_DEBUG ("Rejecting status callback - BTR AudioIn is currently Disabled!\n");
-        return lenBtrCoreRet;
-    }
 
     BTRMGRLOG_INFO ("Received status callback\n");
 
     if (p_StatusCB) {
 
+        lBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass);
+        BTRMGRLOG_INFO (" Received status callback device type %d\n",lBtrMgrDevType);
+
+        if (!gIsHidGamePadEnabled &&
+            (lBtrMgrDevType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
+             BTRMGRLOG_WARN ("Rejecting status callback - BTR HID Gamepad is currently Disabled!\n");
+             return lenBtrCoreRet;
+        }
         switch (p_StatusCB->eDeviceCurrState) {
         case enBTRCoreDevStPaired:
             /* Post this event only for HID Devices and Audio-In Devices */
@@ -6053,7 +6127,9 @@ btrMgr_DeviceStatusCb (
                             doPostCheck = 1;
                         }
                     }
-                    else if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID) {
+                    else if ((lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID)
+                            || (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
+                        lstEventMessage.m_pairedDevice.m_deviceType = BTRMGR_DEVICE_TYPE_HID ;
                         btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 1);
                     }
 
@@ -6079,7 +6155,10 @@ btrMgr_DeviceStatusCb (
                     (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE)) {
 
                     /* Update the flag as the Device is Connected */
-                    if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID) {
+                    if ((lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID)
+                        || (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
+			    lstEventMessage.m_pairedDevice.m_deviceType = BTRMGR_DEVICE_TYPE_HID;
+			    BTRMGRLOG_WARN ("\n Sending Event for HID ");
                         btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 1);
                     }
                     else if (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_TILE) {
@@ -6097,6 +6176,11 @@ btrMgr_DeviceStatusCb (
         case enBTRCoreDevStDisconnected:
             if (enBTRCoreDevStConnecting != p_StatusCB->eDevicePrevState) {
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCONNECT_COMPLETE);
+                /* external modules like thunder,servicemanager yet to define
+                 * HID sub types hence type is sending as BTRMGR_DEVICE_TYPE_HID in events
+		 */
+                if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)
+                    lstEventMessage.m_pairedDevice.m_deviceType = BTRMGR_DEVICE_TYPE_HID;
 
                 if (gfpcBBTRMgrEventOut) {
                     gfpcBBTRMgrEventOut(lstEventMessage);    /* Post a callback */
@@ -6107,7 +6191,8 @@ btrMgr_DeviceStatusCb (
                     /* update the flags as the LE device is NOT Connected */
                     gIsLeDeviceConnected = 0;
                 }
-                else if (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID) {
+                else if ((lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID)
+                        || (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
                     btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 0);
                 }
                 else if ((ghBTRMgrDevHdlCurStreaming != 0) && (ghBTRMgrDevHdlCurStreaming == p_StatusCB->deviceId)) {
@@ -6334,6 +6419,12 @@ btrMgr_DeviceDiscoveryCb (
                 BTRMGR_EventMessage_t lstEventMessage;
                 memset (&lstEventMessage, 0, sizeof(lstEventMessage));
 
+                if (!gIsHidGamePadEnabled &&
+                     (astBTRCoreDiscoveryCbInfo->device.enDeviceType == enBTRCore_DC_HID_GamePad)) {
+                     BTRMGRLOG_WARN ("BTR HID Gamepad is currently Disabled!\n");
+                     return lenBtrCoreRet;
+                }
+
                 btrMgr_MapDevstatusInfoToEventInfo ((void*)&astBTRCoreDiscoveryCbInfo->device, &lstEventMessage, BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE);
 
                 if (gfpcBBTRMgrEventOut) {
@@ -6392,7 +6483,8 @@ btrMgr_ConnectionInIntimationCb (
         return enBTRCoreInvalidArg;
     }
 
-    if (BTRMGR_DEVICE_TYPE_HID != (lBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType))) {
+    lBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(apstConnCbInfo->stFoundDevice.enDeviceType);
+    if(! ((BTRMGR_DEVICE_TYPE_HID == lBtrMgrDevType) || (BTRMGR_DEVICE_TYPE_HID_GAMEPAD == lBtrMgrDevType ))) {
         if (!gIsAudioInEnabled) {
             BTRMGRLOG_WARN ("Incoming Connection Rejected - BTR AudioIn is currently Disabled!\n");
             *api32ConnInIntimResp = 0;
@@ -6415,7 +6507,7 @@ btrMgr_ConnectionInIntimationCb (
     btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_PAIR_REQUEST);
 
     /* We mustn't need this conditional check; We must always reset the globals before invoking the Callbacks. But as per code review comments, resetting it only for HID */
-    if (BTRMGR_DEVICE_TYPE_HID == lBtrMgrDevType) {
+    if ((BTRMGR_DEVICE_TYPE_HID == lBtrMgrDevType)||(BTRMGR_DEVICE_TYPE_HID_GAMEPAD == lBtrMgrDevType)) {
         gEventRespReceived = 0;
         gAcceptConnection  = 0;
     }
@@ -6629,6 +6721,14 @@ btrMgr_ConnectionInAuthenticationCb (
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_AudioRemote)   ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_Joystick)      ||
              (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_GamePad)) {
+
+
+        if ((!gIsHidGamePadEnabled) && (apstConnCbInfo->stKnownDevice.enDeviceType == enBTRCore_DC_HID_GamePad)) {
+            BTRMGRLOG_WARN ("Incoming Connection Rejected - BTR GamePad is currently Disabled!\n");
+            *api32ConnInAuthResp = 0;
+            btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, lBtrMgrDevType);
+            return lenBtrCoreRet;
+        }
 
         BTRMGRLOG_WARN ("Incoming Connection from BT HID device\n");
         /* PairedList updation is necessary for Connect event than Disconnect event */

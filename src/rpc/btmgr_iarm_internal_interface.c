@@ -1713,6 +1713,40 @@ btrMgr_SetAudioInServiceState (
 }
 
 static IARM_Result_t
+btrMgr_SetHidGamePadServiceState (
+    void* arg
+) {
+    IARM_Result_t    retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
+    BTRMGR_IARMHidGamePadServiceState_t* hidGamePadSerivceState = (BTRMGR_IARMHidGamePadServiceState_t*)arg;
+
+    BTRMGRLOG_INFO ("Entering\n");
+
+    if (!gIsBTRMGR_Internal_Inited) {
+        retCode = IARM_RESULT_INVALID_STATE;
+        BTRMGRLOG_ERROR ("BTRMgr is not Inited\n");
+        return retCode;
+    }
+
+    if (!hidGamePadSerivceState) {
+        retCode = IARM_RESULT_INVALID_PARAM;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+        return retCode;
+    }
+
+    rc = BTRMGR_SetHidGamePadServiceState (hidGamePadSerivceState->m_adapterIndex, hidGamePadSerivceState->m_serviceState);
+    if (BTRMGR_RESULT_SUCCESS == rc) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        retCode = IARM_RESULT_IPCCORE_FAIL; /* We do not have other IARM Error code to describe this. */
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", rc);
+    }
+
+    return retCode;
+}
+
+static IARM_Result_t
 btrMgr_SysDiagInfo(
     void*   arg
 ) {
@@ -1870,6 +1904,7 @@ BTRMgr_BeginIARMMode (
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LE_PROPERTY, btrMgr_GetLeProperty);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_PERFORM_LE_OP, btrMgr_PerformLeOp);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE, btrMgr_SetAudioInServiceState);
+        IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_HID_GAMEPAD_SERVICE_STATE, btrMgr_SetHidGamePadServiceState);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_SET_LIMIT_BEACON_DETECTION, btrMgr_SetLimitBeaconDetection);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_GET_LIMIT_BEACON_DETECTION, btrMgr_GetLimitBeaconDetection);
         IARM_Bus_RegisterCall(BTRMGR_IARM_METHOD_LE_START_ADVERTISEMENT, btrMgr_LeStartAdvertisement);

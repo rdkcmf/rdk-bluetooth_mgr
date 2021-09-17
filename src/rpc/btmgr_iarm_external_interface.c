@@ -1837,6 +1837,38 @@ BTRMGR_SetAudioInServiceState (
 }
 
 BTRMGR_Result_t
+BTRMGR_SetHidGamePadServiceState (
+    unsigned char                index_of_adapter,
+    unsigned char                aui8ServiceState
+) {
+    BTRMGR_Result_t rc    = BTRMGR_RESULT_SUCCESS;
+    IARM_Result_t retCode = IARM_RESULT_SUCCESS;
+    BTRMGR_IARMHidGamePadServiceState_t hidGamePadServiceState;
+
+    if (BTRMGR_ADAPTER_COUNT_MAX < index_of_adapter) {
+        rc = BTRMGR_RESULT_INVALID_INPUT;
+        BTRMGRLOG_ERROR ("Input is invalid\n");
+        return rc;
+    }
+
+    memset (&hidGamePadServiceState, 0, sizeof(BTRMGR_IARMHidGamePadServiceState_t));
+    hidGamePadServiceState.m_adapterIndex = index_of_adapter;
+    hidGamePadServiceState.m_serviceState = aui8ServiceState;
+
+    retCode = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_METHOD_SET_HID_GAMEPAD_SERVICE_STATE, (void*)&hidGamePadServiceState, sizeof(BTRMGR_IARMHidGamePadServiceState_t), BTRMGR_IARM_METHOD_CALL_TIMEOUT_DEFAULT_MS);
+
+    if (IARM_RESULT_SUCCESS == retCode) {
+        BTRMGRLOG_INFO ("Success\n");
+    }
+    else {
+        rc = BTRMGR_RESULT_GENERIC_FAILURE;
+        BTRMGRLOG_ERROR ("Failed; RetCode = %d\n", retCode);
+    }
+
+    return rc;
+}
+
+BTRMGR_Result_t
 BTRMGR_SysDiagInfo(
     unsigned char aui8AdapterIdx,
     char *apDiagElement,
@@ -1956,7 +1988,7 @@ BTRMGR_GetDeviceTypeAsString (
         return "TABLET";
     else if (type == BTRMGR_DEVICE_TYPE_TILE)
         return "LE TILE";
-    else if (type == BTRMGR_DEVICE_TYPE_HID)
+    else if ((type == BTRMGR_DEVICE_TYPE_HID) || (type == BTRMGR_DEVICE_TYPE_HID_GAMEPAD))
         return "HUMAN INTERFACE DEVICE";
     else
         return "UNKNOWN DEVICE";

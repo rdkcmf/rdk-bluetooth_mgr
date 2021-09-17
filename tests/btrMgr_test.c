@@ -127,7 +127,9 @@ static void printOptions (void)
     printf ("51. Add service/gatt/descriptor info\n");
     printf ("52. Stop Advertisement\n");
     printf ("53. Begin advertisement for Xcam2\n");
-    printf ("55. Quit\n");
+    printf ("54. (RFC)Set GamePad - Enabled/Disabled\n");
+    printf ("55. Set GamePad - Enabled/Disabled\n");
+    printf ("56. Quit\n");
     printf ("\n\n");
     printf ("Please enter the option that you want to test\t");
 
@@ -1734,7 +1736,55 @@ int main(int argc, char *argv[])
 #endif              
                 }
                 break;
+            case 54:
+                {
+                    int choice = 0;
+                    WDMP_STATUS status = WDMP_FAILURE;
+
+                    printf ("\n\nATTENTION! Disconnect all existing GamePad connection before flipping the GamePad Service state.\n\n");
+                    printf ("Press 1 to Enable and 0 to Disable GamePad Service.\n");
+                    scanf("%d", &choice);
+
+                    status = setRFCParameter("btrMgrTest", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.GamePad.Enable",
+                                                           (choice)? "true" : "false", WDMP_BOOLEAN);
+
+                    if (status != WDMP_SUCCESS) {
+                        printf("\nsetRFCParameter Failed : %s\n", getRFCErrorString(status));
+                    }
+                    else {
+                        if (choice) {
+                            printf("\nSuccessfully Enabled GamePad.\n");
+                        }
+                        else {
+                            printf("\nSuccessfully Disabled GamePad.\n");
+                        }
+                    }
+                }
+                break;
             case 55:
+                {
+                    int choice = 0;
+
+                    printf ("\n\nATTENTION! Disconnect all existing GamePad connection before flipping the GamePad Service state.\n\n");
+                    printf ("Press 1 to Enable and 0 to Disable GamePad Service.\n");
+                    scanf("%d", &choice);
+
+                    rc = BTRMGR_SetHidGamePadServiceState (0, choice);
+
+                    if (BTRMGR_RESULT_SUCCESS == rc) {
+                        if (choice) {
+                            printf("\nSuccessfully Enabled GamePad.\n");
+                        }
+                        else {
+                            printf("\nSuccessfully Disabled GamePad.\n");
+                        }
+                    }
+                    else {
+                        printf("\nCall Failed : %d\n", rc);
+                    }
+                }
+                break;
+            case 56:
                 loop = 0;
                 break;
             default:

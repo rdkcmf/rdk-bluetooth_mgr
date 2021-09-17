@@ -76,6 +76,7 @@
 #define BTRMGR_IARM_METHOD_GET_LE_PROPERTY                           "GetLeProperty"
 #define BTRMGR_IARM_METHOD_PERFORM_LE_OP                             "PerformLeOperation"
 #define BTRMGR_IARM_METHOD_SET_AUDIO_IN_SERVICE_STATE                "SetAudioInServiceState"
+#define BTRMGR_IARM_METHOD_SET_HID_GAMEPAD_SERVICE_STATE             "SetGamePadServiceState"
 #define BTRMGR_IARM_METHOD_RESET_ADAPTER                             "ResetAdapter"
 #define BTRMGR_IARM_METHOD_DEINIT                                    "DeInit"
 #define BTRMGR_IARM_METHOD_SET_LIMIT_BEACON_DETECTION                "SetLimitBeaconDetection"
@@ -298,6 +299,11 @@ typedef struct _BTRMGR_IARMAudioInServiceState_t {
     unsigned char m_adapterIndex;
     unsigned char m_serviceState;
 } BTRMGR_IARMAudioInServiceState_t;
+
+typedef struct _BTRMGR_IARMHidGamePadServiceState_t {
+    unsigned char m_adapterIndex;
+    unsigned char m_serviceState;
+} BTRMGR_IARMHidGamePadServiceState_t;
 
 typedef struct _BTRMGR_IARMGATTValue_t {
     unsigned char   m_adapterIndex;

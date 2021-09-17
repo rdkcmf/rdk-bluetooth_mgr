@@ -186,6 +186,7 @@ typedef enum _BTRMGR_DeviceType_t {
     // LE
     BTRMGR_DEVICE_TYPE_TILE,
     BTRMGR_DEVICE_TYPE_HID,
+    BTRMGR_DEVICE_TYPE_HID_GAMEPAD,
     BTRMGR_DEVICE_TYPE_END
 } BTRMGR_DeviceType_t;
 
@@ -1129,6 +1130,17 @@ const char* BTRMGR_GetDeviceTypeAsString(BTRMGR_DeviceType_t type);
  * @retval BTRMGR_RESULT_SUCCESS on success.
  */
 BTRMGR_Result_t BTRMGR_SetAudioInServiceState (unsigned char aui8AdapterIdx, unsigned char aui8State);
+
+/**
+ * @brief  This API Enable/Disables Hid GamePad on the specified bluetooth adapter.
+ *
+ * @param[in]  aui8AdapterIdx       Index of bluetooth adapter.
+ * @param[in]  aui8State            0/1- Enable or Disable AudioIn service.
+ *
+ * @return Returns the status of the operation.
+ * @retval BTRMGR_RESULT_SUCCESS on success.
+ */
+BTRMGR_Result_t BTRMGR_SetHidGamePadServiceState (unsigned char aui8AdapterIdx, unsigned char aui8State);
 
 /**
  * @brief  This API Gets Beacon Detection status on the specified bluetooth adapter.
