@@ -7106,18 +7106,24 @@ btrMgr_ConnectionInAuthenticationCb (
             }
 
 
-            {   /* Max 200msec timeout - Polled at 50ms second interval */
-                unsigned int ui32sleepIdx = 4;
+            {   /* Max 2 sec timeout - Polled at 50ms second interval */
+                unsigned int ui32sleepIdx = 40;
 
                 do {
                     usleep(50000);
                 } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
 
+
+                if (gEventRespReceived == 0)
+                    *api32ConnInAuthResp = 1;
+                else
+                    *api32ConnInAuthResp = gAcceptConnection;
+
+
                 gEventRespReceived = 0;
             }
 
-            BTRMGRLOG_WARN ("Incoming Connection accepted\n");
-            *api32ConnInAuthResp = 1;
+            BTRMGRLOG_WARN ("Incoming Connection accepted - %d\n", *api32ConnInAuthResp);
         }
         else {
             BTRMGRLOG_ERROR ("Incoming Connection denied\n");
