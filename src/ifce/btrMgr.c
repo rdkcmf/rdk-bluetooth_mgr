@@ -6589,27 +6589,30 @@ btrMgr_ConnectionInAuthenticationCb (
 
         BTRMGRLOG_WARN ("Incoming Connection from BT Speaker/Headset\n");
         if (btrMgr_GetDevPaired(apstConnCbInfo->stKnownDevice.tDeviceId) && (apstConnCbInfo->stKnownDevice.tDeviceId == ghBTRMgrDevHdlLastConnected)) {
-            BTRMGR_EventMessage_t lstEventMessage;
 
             BTRMGRLOG_DEBUG ("Paired - Last Connected device...\n");
 
-            memset (&lstEventMessage, 0, sizeof(lstEventMessage));
-            btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
+            if (!gIsAudOutStartupInProgress) {
+                BTRMGR_EventMessage_t lstEventMessage;
 
-            //TODO: Check if XRE wants to bring up a Pop-up or Respond
-            if (gfpcBBTRMgrEventOut) {
-                gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
-            }
+                memset (&lstEventMessage, 0, sizeof(lstEventMessage));
+                btrMgr_MapDevstatusInfoToEventInfo ((void*)apstConnCbInfo, &lstEventMessage, BTRMGR_EVENT_RECEIVED_EXTERNAL_CONNECT_REQUEST);
+
+                //TODO: Check if XRE wants to bring up a Pop-up or Respond
+                if (gfpcBBTRMgrEventOut) {
+                    gfpcBBTRMgrEventOut(lstEventMessage);     /* Post a callback */
+                }
 
 
-            {   /* Max 200msec timeout - Polled at 50ms second interval */
-                unsigned int ui32sleepIdx = 4;
+                {   /* Max 200msec timeout - Polled at 50ms second interval */
+                    unsigned int ui32sleepIdx = 4;
 
-                do {
-                    usleep(50000);
-                } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
+                    do {
+                        usleep(50000);
+                    } while ((gEventRespReceived == 0) && (--ui32sleepIdx));
 
-                gEventRespReceived = 0;
+                    gEventRespReceived = 0;
+                }
             }
 
             BTRMGRLOG_WARN ("Incoming Connection accepted\n");
