@@ -56,6 +56,9 @@
 #endif
 
 #include "btrMgr_logger.h"
+#ifdef RDK_LOGGER_ENABLED
+int b_rdk_logger_enabled = 0;
+#endif
 
 /* Local Headers */
 #include "btrMgr_Types.h"
