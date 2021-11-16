@@ -2400,7 +2400,6 @@ BTRMGR_DeInit (
     unsigned short                  ui16LoopIdx       = 0;
     BTRMGR_ConnectedDevicesList_t   lstConnectedDevices;
     unsigned int                    ui32sleepTimeOut = 1;
-    unsigned int                    ui32confirmIdx = 2;
 
 
     if (btrMgr_isTimeOutSet()) {
@@ -2415,9 +2414,12 @@ BTRMGR_DeInit (
 
     if ((lenBtrMgrResult = BTRMGR_GetConnectedDevices(0, &lstConnectedDevices)) == BTRMGR_RESULT_SUCCESS) {
         BTRMGRLOG_DEBUG ("Connected Devices = %d\n", lstConnectedDevices.m_numOfDevices);
-        for (ui16LoopIdx = 0 ;ui16LoopIdx < lstConnectedDevices.m_numOfDevices; ui16LoopIdx++) {
+
+        for (ui16LoopIdx = 0; ui16LoopIdx < lstConnectedDevices.m_numOfDevices; ui16LoopIdx++) {
+            unsigned int            ui32confirmIdx  = 2;
             enBTRCoreDeviceType     lenBtrCoreDevTy = enBTRCoreUnknown;
             enBTRCoreDeviceClass    lenBtrCoreDevCl = enBTRCore_DC_Unknown;
+
             BTRCore_GetDeviceTypeClass(ghBTRCoreHdl, lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle, &lenBtrCoreDevTy, &lenBtrCoreDevCl);
             if (BTRCore_DisconnectDevice(ghBTRCoreHdl, lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle, lenBtrCoreDevTy) != enBTRCoreSuccess) {
                 BTRMGRLOG_ERROR ("Failed to Disconnect - %llu\n", lstConnectedDevices.m_deviceProperty[ui16LoopIdx].m_deviceHandle);
@@ -6130,7 +6132,6 @@ btrMgr_DeviceStatusCb (
 ) {
     enBTRCoreRet            lenBtrCoreRet   = enBTRCoreSuccess;
     BTRMGR_EventMessage_t   lstEventMessage;
-    BTRMGR_Result_t  rc = BTRMGR_RESULT_SUCCESS;
     BTRMGR_DeviceType_t     lBtrMgrDevType  = BTRMGR_DEVICE_TYPE_UNKNOWN;
 
 
@@ -6272,8 +6273,7 @@ btrMgr_DeviceStatusCb (
                     }
                     else {
                         /* Stop the playback which already stopped internally but to free up the memory */
-                        if(!BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming))
-                        {
+                        if (BTRMGR_RESULT_SUCCESS != BTRMGR_StopAudioStreamingOut(0, ghBTRMgrDevHdlCurStreaming)) {
                             BTRMGRLOG_ERROR ("BTRMGR_StopAudioStreamingOut error \n ");  //CID:41354 - Checked return
                         }
                     }
@@ -6322,10 +6322,9 @@ btrMgr_DeviceStatusCb (
                         }
                         else {
                             /* Stop the playback which already stopped internally but to free up the memory */
-                            rc = BTRMGR_StopAudioStreamingOut (0, ghBTRMgrDevHdlCurStreaming);
-			    if (BTRMGR_RESULT_SUCCESS == rc) {
-                                BTRMGRLOG_INFO ("Success\n");
-                            }  //CID:41354 - Checked return
+                            if (BTRMGR_RESULT_SUCCESS != BTRMGR_StopAudioStreamingOut (0, ghBTRMgrDevHdlCurStreaming)) {
+                                BTRMGRLOG_ERROR ("BTRMGR_StopAudioStreamingOut error \n ");  //CID:41354 - Checked return
+                            }
                         }
                     }
                     btrMgr_PostCheckDiscoveryStatus (0, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT);
