@@ -62,41 +62,36 @@ readPersistentFile (
 ) {
     FILE *fp = NULL;
     char *fileContent = NULL;
-    BTRMGRLOG_DEBUG ("Reading file - %s\n", fileName);
+    BTRMGRLOG_INFO ("Reading file - %s\n", fileName);
 
-    if( 0 == access(fileName, F_OK) )
-    { 
-       fp = fopen(fileName, "r");
-       if (fp == NULL)
-       {
-           BTRMGRLOG_ERROR ("Could not open file - %s\n", fileName);
-       }
-       else
-       {
-           int ch_count = 0;
-           fseek(fp, 0, SEEK_END);
-           ch_count = ftell(fp);
-           fseek(fp, 0, SEEK_SET);
-           if(ch_count > 0)
-           {
-               fileContent = (char *) malloc(sizeof(char) * (ch_count + 1));
-	       if(fileContent != NULL)
-               {
-                    if(fread(fileContent, 1, ch_count,fp) != 1)
-                    {
-                         BTRMGRLOG_ERROR ("fileContent not read - %s\n", fileName);
+    if (0 == access(fileName, F_OK)) {
+        fp = fopen(fileName, "r");
+        if (fp == NULL) {
+            BTRMGRLOG_ERROR ("Could not open file - %s\n", fileName);
+        }
+        else {
+            int ch_count = 0;
+            fseek(fp, 0, SEEK_END);
+            ch_count = ftell(fp);
+            fseek(fp, 0, SEEK_SET);
+
+            if(ch_count > 0) {
+                fileContent = (char *) malloc(sizeof(char) * (ch_count + 1));
+                if (fileContent != NULL) {
+                    if (fread(fileContent, 1, ch_count, fp) != ch_count) {
+                        BTRMGRLOG_ERROR ("fileContent not read - %s\n", fileName);
                     }  //CID:23373 - Checked return
                 }
-	        fileContent[ch_count] ='\0';
+                fileContent[ch_count] ='\0';
            }  //CID:23376 - Negative retuns
-           BTRMGRLOG_DEBUG ("Reading %s success, Content = %s \n", fileName,fileContent);
            fclose(fp);
+           BTRMGRLOG_DEBUG ("Reading %s success, Content = %s \n", fileName,fileContent);
        }
     }
-    else
-    { 
+    else {
        BTRMGRLOG_WARN ("File %s does not exist!!!", fileName);
     }
+
     return fileContent;
 }
 
@@ -106,21 +101,19 @@ writeToPersistentFile (
     cJSON*  profileData
 ) {
     FILE *fp = NULL;
-    BTRMGRLOG_DEBUG ("Writing data to file %s\n" ,fileName);
+    BTRMGRLOG_INFO("Writing data to file %s\n" ,fileName);
+
     fp = fopen(fileName, "w");
-    if (fp == NULL)
-    {
+    if (fp == NULL) {
         BTRMGRLOG_ERROR ("Could not open file to write, -  %s\n" ,fileName);
     }
-    else
-    {
+    else {
         char* fileContent = cJSON_Print(profileData);
-        BTRMGRLOG_DEBUG ("Writing data to file - %s, Content - %s\n" ,fileName,fileContent);
         fprintf(fp, "%s", fileContent);
         fclose(fp);
+        BTRMGRLOG_DEBUG ("Writing data to file - %s, Content - %s\n" ,fileName,fileContent);
         BTRMGRLOG_DEBUG ("File write Success\n");
     }
-
 }
 
 /*  Local Op Threads */
@@ -151,15 +144,13 @@ BTRMgr_PI_DeInit (
 ) {
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
 
-    if( NULL != pstBtrMgrPiHdl)
-    {
+    if ( NULL != pstBtrMgrPiHdl) {
         free((void*)pstBtrMgrPiHdl);
         pstBtrMgrPiHdl = NULL;
         BTRMGRLOG_INFO ("BTRMgr_PI_DeInit SUCCESS\n");
         return eBTRMgrSuccess;
     }
-    else
-    {
+    else {
         BTRMGRLOG_WARN ("BTRMgr PI handle is not Inited(NULL)\n");
         return eBTRMgrFailure;
     }
@@ -222,12 +213,13 @@ BTRMgr_PI_SetLEBeaconLimitingStatus (
     cJSON *limitDetection = cJSON_GetObjectItem(btData,"LimitBeaconDetection");
     if(limitDetection == NULL) {
         cJSON_AddStringToObject(btData, "LimitBeaconDetection", persistentData->limitBeaconDetection);
+        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     }
-    else {
+    else if (strcmp(limitDetection->valuestring, persistentData->limitBeaconDetection)) { // Only if Beacon change write persistent memory
         strcpy(limitDetection->valuestring, persistentData->limitBeaconDetection);
+        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     }
 
-    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     return eBTRMgrSuccess;
 }
 
@@ -285,18 +277,20 @@ BTRMgr_PI_SetVolume (
     }
 
     /*Adding value of volume */
-    BTRMGRLOG_DEBUG ("Appending object to JSON file\n");
+    BTRMGRLOG_INFO ("Appending object to JSON file\n");
     char VolStr[4];
     sprintf(VolStr, "%d",persistentData->Volume);
     cJSON *Volume = cJSON_GetObjectItem(btData,"Volume");
-    if(Volume == NULL) {
+    if (Volume == NULL) {
         cJSON_AddStringToObject(btData, "Volume", VolStr);
+        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     }
-    else {
+    else if (strcmp(Volume->valuestring, VolStr)) { // Only if Volume changed write to persistence
         strcpy(Volume->valuestring, VolStr);
+        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     }
 
-    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
+
     return eBTRMgrSuccess;
 }
 
@@ -353,16 +347,17 @@ BTRMgr_PI_SetMute (
     }
 
     /*Adding limit for beacon detection*/
-    BTRMGRLOG_DEBUG ("Appending object to JSON file\n");
+    BTRMGRLOG_INFO ("Appending object to JSON file\n");
     cJSON *Mute = cJSON_GetObjectItem(btData,"Mute");
-    if(Mute == NULL) {
+    if (Mute == NULL) {
         cJSON_AddStringToObject(btData, "Mute", persistentData->Mute);
+        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     }
-    else {
+    else if (strcmp(Mute->valuestring, persistentData->Mute)) { // Only if Mute changed write to persistence
         strcpy(Mute->valuestring, persistentData->Mute);
+        writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     }
 
-    writeToPersistentFile(BTRMGR_PERSISTENT_DATA_PATH, btData);
     return eBTRMgrSuccess;
 }
 #endif
@@ -425,47 +420,50 @@ BTRMgr_PI_GetAllProfiles (
         // Read Profile details
         profileCount = cJSON_GetArraySize(btProfiles);
         BTRMGRLOG_DEBUG ("Successfully Parsed Persistent profile, Profile count = %d\n",profileCount);
+
         persistentData->numOfProfiles = profileCount;
-        for(pcount = 0; pcount < profileCount; pcount++ )
-        {
+        for (pcount = 0; pcount < profileCount; pcount++ ) {
             char* profileId = NULL;
             cJSON *profile = cJSON_GetArrayItem(btProfiles, pcount);
-            if(cJSON_GetObjectItem(profile,"ProfileId"))
-                profileId = cJSON_GetObjectItem(profile,"ProfileId")->valuestring;
-	    if(profileId)
-            {
-                strcpy(persistentData->profileList[pcount].profileId,profileId);
+            if(cJSON_GetObjectItem(profile,"ProfileId")) {
 
-                // Get Device Details
-                cJSON *btDevices = cJSON_GetObjectItem(profile,"Devices");
-                deviceCount = cJSON_GetArraySize(btDevices);
-                persistentData->profileList[pcount].numOfDevices = deviceCount;
-                BTRMGRLOG_DEBUG ("Parsing device details, %d devices found for profile %s\n",deviceCount,profileId);
-                for(dcount = 0; dcount<deviceCount; dcount++)
-                {
-                    char* deviceId = NULL;
-                    int isConnect  = 0;
-                    cJSON *device = cJSON_GetArrayItem(btDevices, dcount);
-                    if(cJSON_GetObjectItem(device,"DeviceId"))
-                        deviceId = cJSON_GetObjectItem(device,"DeviceId")->valuestring;
-                    if(deviceId)   //CID:23328. 23379 - Reverse_inull and 23385,23443 - Forward null
-                    {
-                        persistentData->profileList[pcount].deviceList[dcount].deviceId =  strtoll(deviceId,NULL,10);
-                        if(cJSON_GetObjectItem(device,"ConnectionStatus")->valueint)
-                           isConnect =  cJSON_GetObjectItem(device,"ConnectionStatus")->valueint;
-                        persistentData->profileList[pcount].deviceList[dcount].isConnected = isConnect;
-                        BTRMGRLOG_DEBUG ("Parsing device details, Device- %s, Status-%d, Profile-%s\n",deviceId,isConnect,profileId);
+                profileId = cJSON_GetObjectItem(profile,"ProfileId")->valuestring;
+                if (profileId) {
+                    strcpy(persistentData->profileList[pcount].profileId,profileId);
+
+                    // Get Device Details
+                    cJSON *btDevices = cJSON_GetObjectItem(profile,"Devices");
+                    deviceCount = cJSON_GetArraySize(btDevices);
+                    persistentData->profileList[pcount].numOfDevices = deviceCount;
+                    BTRMGRLOG_DEBUG ("Parsing device details, %d devices found for profile %s\n",deviceCount,profileId);
+
+                    for(dcount = 0; dcount<deviceCount; dcount++) {
+                        char* deviceId = NULL;
+                        int isConnect  = 0;
+                        cJSON *device = cJSON_GetArrayItem(btDevices, dcount);
+                        if(cJSON_GetObjectItem(device,"DeviceId")) {
+                            deviceId = cJSON_GetObjectItem(device,"DeviceId")->valuestring;
+                            if (deviceId) {  //CID:23328. 23379 - Reverse_inull and 23385,23443 - Forward null
+                                persistentData->profileList[pcount].deviceList[dcount].deviceId =  strtoll(deviceId,NULL,10);
+
+                                if(cJSON_GetObjectItem(device,"ConnectionStatus")->valueint)
+                                   isConnect =  cJSON_GetObjectItem(device,"ConnectionStatus")->valueint;
+
+                                persistentData->profileList[pcount].deviceList[dcount].isConnected = isConnect;
+                                BTRMGRLOG_DEBUG ("Parsing device details, Device- %s, Status-%d, Profile-%s\n",deviceId,isConnect,profileId);
+                            }
+                        }
                     }
-		}
+                }
             }
         }
     }
-    else
-    {
+    else {
         // Corrupted JSON
         BTRMGRLOG_ERROR ("Could not able to get Profile Lists from JSON\n");
         return eBTRMgrFailure;
     }
+
     return eBTRMgrSuccess;
 }
 
@@ -483,29 +481,24 @@ BTRMgr_PI_AddProfile (
     // Validate Handle
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
 
-    if ((pstBtrMgrPiHdl == NULL) && (persistProfile  == NULL))
-    {
+    if ((pstBtrMgrPiHdl == NULL) && (persistProfile  == NULL)) {
         BTRMGRLOG_ERROR ("PI Handle and Persist profile not initialized\n");
         return eBTRMgrFailure;
     }
 
     BTRMgr_PI_GetAllProfiles(hBTRMgrPiHdl,&piData);
     int profileCount = piData.numOfProfiles;
-    if( profileCount > 0) // Seems like some profile are already there, So append data
-    {
+    if( profileCount > 0) { // Seems like some profile are already there, So append data
         BTRMGRLOG_DEBUG ("Profile Count >0 need to append profile \n");
-        for(pcount=0; pcount<profileCount ; pcount++)
-        {
-            if(strcmp(piData.profileList[pcount].profileId,persistProfile->profileId) == 0) // Profile already exists simply add device
-            {
+
+        for(pcount=0; pcount<profileCount ; pcount++) {
+            if(strcmp(piData.profileList[pcount].profileId,persistProfile->profileId) == 0) { // Profile already exists simply add device
                 BTRMGRLOG_DEBUG ("Profile entry already exists,need to add device alone  \n");
                 int deviceCnt = piData.profileList[pcount].numOfDevices;
                 // Check if it is a duplicate entry
                 int dcount = 0;
-                for(dcount = 0; dcount < deviceCnt; dcount++)
-                {
-                    if(piData.profileList[pcount].deviceList[dcount].deviceId == persistProfile->deviceId)
-                    {
+                for(dcount = 0; dcount < deviceCnt; dcount++) {
+                    if(piData.profileList[pcount].deviceList[dcount].deviceId == persistProfile->deviceId) {
                         // Its a duplicate entry
                         BTRMGRLOG_ERROR ("Adding Failed Duplicate entry found - %lld\n",persistProfile->deviceId);
                         return eBTRMgrFailure;
@@ -520,8 +513,8 @@ BTRMgr_PI_AddProfile (
                 break;
             }
         }
-        if(0 == isObjectAdded) // Seems like its a new profile add it
-        {
+
+        if(0 == isObjectAdded) { // Seems like its a new profile add it
             BTRMGRLOG_DEBUG ("New Profile found, add to profile list -  %s \n",persistProfile->profileId);
             piData.profileList[pcount].numOfDevices = 1;
             strcpy(piData.profileList[pcount].profileId,persistProfile->profileId);
@@ -532,8 +525,7 @@ BTRMgr_PI_AddProfile (
             BTRMGRLOG_DEBUG ("New Profile added -  %s \n",persistProfile->profileId);
         }
     }
-    else // Data is empty now, Lets create one and add
-    {
+    else { // Data is empty now, Lets create one and add
         BTRMGRLOG_DEBUG ("Data is empty creating new entry -  %s \n",persistProfile->profileId);
         strcpy(piData.adapterId,persistProfile->adapterId);
         piData.numOfProfiles = 1;
@@ -543,11 +535,12 @@ BTRMgr_PI_AddProfile (
         piData.profileList[0].deviceList[0].isConnected = persistProfile->isConnect;
         isObjectAdded = 1;
     }
-    if(isObjectAdded)
-    {
+
+    if(isObjectAdded) {
         BTRMGRLOG_DEBUG ("Writing changes to file -  %s \n",persistProfile->profileId);
         BTRMgr_PI_SetAllProfiles(hBTRMgrPiHdl,&piData);
     }
+
     return eBTRMgrSuccess;
 }
 
@@ -566,8 +559,7 @@ BTRMgr_PI_SetAllProfiles (
 
     // Validate Handle
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
-    if (pstBtrMgrPiHdl == NULL)
-    {
+    if (pstBtrMgrPiHdl == NULL) {
         BTRMGRLOG_ERROR ("PI Handle not initialized\n");
         return eBTRMgrFailure;
     }
@@ -579,12 +571,10 @@ BTRMgr_PI_SetAllProfiles (
     for (pcount = 0; pcount <profileCount; pcount++) {
         // Get All Device details first
         int deviceCount = persistentData->profileList[pcount].numOfDevices;
-        if(deviceCount > 0)
-        {
+        if(deviceCount > 0) {
             BTRMGRLOG_DEBUG ("Device count > 0 , Count = %d\n",deviceCount);
             devices = cJSON_CreateArray();
-            for(dcount = 0; dcount<deviceCount; dcount++)
-            {
+            for(dcount = 0; dcount<deviceCount; dcount++) {
                 cJSON* device = cJSON_CreateObject();
                 char deviceId[15];
                 sprintf(deviceId, "%lld",persistentData->profileList[pcount].deviceList[dcount].deviceId );
@@ -598,8 +588,7 @@ BTRMgr_PI_SetAllProfiles (
             cJSON_AddItemToObject(Profile, "Devices", devices);
             cJSON_AddItemToArray(Profiles, Profile);
         }
-        else
-        {
+        else {
             BTRMGRLOG_ERROR ("Empty device list could not set\n");
             //return eBTRMgrFailure;
         }
@@ -636,8 +625,7 @@ BTRMgr_PI_RemoveProfile (
 
     // Validate Handle
     stBTRMgrPIHdl*  pstBtrMgrPiHdl = (stBTRMgrPIHdl*)hBTRMgrPiHdl;
-    if ((pstBtrMgrPiHdl  == NULL) && (persistProfile  == NULL))
-    {
+    if ((pstBtrMgrPiHdl  == NULL) && (persistProfile  == NULL)) {
         BTRMGRLOG_ERROR ("PI Handle and Persist profile not initialized\n");
         return eBTRMgrFailure;
     }
@@ -645,21 +633,16 @@ BTRMgr_PI_RemoveProfile (
     BTRMGRLOG_DEBUG ("Removing profile - %s\n",persistProfile->profileId);
     BTRMgr_PI_GetAllProfiles(hBTRMgrPiHdl,&piData);
     int profileCount = piData.numOfProfiles;
-    if( profileCount > 0) // Seems like some profile are already
-    {
+    if( profileCount > 0) { // Seems like some profile are already
         BTRMGRLOG_DEBUG ("Profiles not empty- %s\n",persistProfile->profileId);
-        for(pcount=0; pcount<profileCount ; pcount++)
-        {
-            if(strcmp(piData.profileList[pcount].profileId,persistProfile->profileId) == 0) // Profile already exists simply remove device
-            {
+        for(pcount = 0; pcount < profileCount; pcount++) {
+            if(strcmp(piData.profileList[pcount].profileId,persistProfile->profileId) == 0) { // Profile already exists simply remove device
                 BTRMGRLOG_DEBUG ("Profile match found - %s find device\n",persistProfile->profileId);
                 int deviceCnt = piData.profileList[pcount].numOfDevices;
                 // Check if it is a duplicate entry
                 int dcount = 0;
-                for(dcount = 0; dcount < deviceCnt; dcount++)
-                {
-                    if(piData.profileList[pcount].deviceList[dcount].deviceId == persistProfile->deviceId)
-                    {
+                for(dcount = 0; dcount < deviceCnt; dcount++) {
+                    if(piData.profileList[pcount].deviceList[dcount].deviceId == persistProfile->deviceId) {
                         BTRMGRLOG_DEBUG ("Profile match found && Device Match Found - %s Deleting device %lld\n",
                                          persistProfile->profileId, persistProfile->deviceId);
                         piData.profileList[pcount].deviceList[dcount].deviceId = 0;
@@ -671,34 +654,33 @@ BTRMgr_PI_RemoveProfile (
                         break;
                     }
                 }
-                if(isObjectRemoved && piData.profileList[pcount].numOfDevices == 0) // There is no more device exists so no need to profile
-                {
+
+                if(isObjectRemoved && piData.profileList[pcount].numOfDevices == 0) { // There is no more device exists so no need to profile
                     memset(piData.profileList[pcount].profileId, 0,BTRMGR_NAME_LEN_MAX );
                     piData.numOfProfiles--;
                 }
             }
-            else
-            {
+            else if (!isObjectRemoved && (pcount == (profileCount - 1))) {
                 // Unknown profile not able to delete
                 BTRMGRLOG_ERROR ("Profile Not found, Could not delete %s\n",persistProfile->profileId);
                 return eBTRMgrFailure;
             }
         }
-        if(isObjectRemoved && piData.numOfProfiles == 0) // There is no more profiles exists
-        {
+
+        if(isObjectRemoved && piData.numOfProfiles == 0) { // There is no more profiles exists
             memset(piData.adapterId, 0,BTRMGR_NAME_LEN_MAX );
         }
-        if(isObjectRemoved)
-        {
+
+        if(isObjectRemoved) {
             BTRMgr_PI_SetAllProfiles(hBTRMgrPiHdl,&piData);
         }
     }
-    else
-    {
+    else {
         // Profile is empty cant delete
         BTRMGRLOG_ERROR ("Nothing to delete, Profile is empty \n");
         return eBTRMgrFailure;
     }
+
     return eBTRMgrSuccess;
 }
 

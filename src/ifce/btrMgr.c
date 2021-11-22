@@ -1682,10 +1682,12 @@ btrMgr_ConnectToDevice (
     unsigned int                    aui32ConnectRetryIdx,
     unsigned int                    aui32ConfirmIdx
 ) {
-    eBTRMgrRet      lenBtrMgrRet    = eBTRMgrSuccess;
-    enBTRCoreRet    lenBtrCoreRet   = enBTRCoreSuccess;
-    unsigned int    ui32retryIdx    = aui32ConnectRetryIdx + 1;
-    enBTRCoreDeviceType lenBTRCoreDeviceType  = enBTRCoreUnknown;
+    eBTRMgrRet          lenBtrMgrRet        = eBTRMgrSuccess;
+    enBTRCoreRet        lenBtrCoreRet       = enBTRCoreSuccess;
+    int                 i32PairDevIdx       = 0;
+    unsigned int        ui32retryIdx        = aui32ConnectRetryIdx + 1;
+    enBTRCoreDeviceType lenBTRCoreDeviceType= enBTRCoreUnknown;
+    BTRMGR_DeviceOperationType_t lenMgrLConDevOpType = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
 
     lenBtrMgrRet = btrMgr_PreCheckDiscoveryStatus(aui8AdapterIdx, connectAs);
 
@@ -1724,15 +1726,41 @@ btrMgr_ConnectToDevice (
         else {
             BTRMGRLOG_INFO ("Connected Successfully - %llu\n", ahBTRMgrDevHdl);
             lenBtrMgrRet = eBTRMgrSuccess;
+            if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet) ||
+                (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
+                if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
+                    BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
+
+                    for (i32PairDevIdx = 0; i32PairDevIdx < gListOfPairedDevices.m_numOfDevices; i32PairDevIdx++) {
+                        if (ghBTRMgrDevHdlLastConnected == gListOfPairedDevices.m_deviceProperty[i32PairDevIdx].m_deviceHandle) {
+                            lenMgrLConDevOpType = btrMgr_MapDeviceOpFromDeviceType(gListOfPairedDevices.m_deviceProperty[i32PairDevIdx].m_deviceType);
+                        }
+                    }
+
+                    if (lenMgrLConDevOpType == BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT) {
+                        btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SINK_PROFILE_ID);
+                    }
+                    else if (lenMgrLConDevOpType == BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT) {
+                        btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SRC_PROFILE_ID);
+                    }
+                }
+
+                if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet)) {
+                    btrMgr_AddPersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID, 1);
+                }
+                else if ((lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
+                    btrMgr_AddPersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID, 1);
+                }
+            }
         }
 
         if (lenBtrMgrRet != eBTRMgrFailure) {
-            /* Max 20 sec timeout - Polled at 1 second interval: Confirmed 4 times */
+            /* Max 15 sec timeout - Polled at 1 second interval: Confirmed 5 times */
             unsigned int ui32sleepTimeOut = 1;
             unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
             
             do {
-                unsigned int ui32sleepIdx = 5;
+                unsigned int ui32sleepIdx = 4;
 
                 do {
                     sleep(ui32sleepTimeOut); 
@@ -1744,9 +1772,27 @@ btrMgr_ConnectToDevice (
                 BTRMGRLOG_ERROR ("Failed to Connect to this device - Confirmed - %llu\n", ahBTRMgrDevHdl);
                 lenBtrMgrRet = eBTRMgrFailure;
 
+                if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet)) {
+                    btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID);
+                }
+                else if ((lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
+                    btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID);
+                }
+
+                if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
+                    BTRMGRLOG_DEBUG ("Add back persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
+
+                    if (lenMgrLConDevOpType == BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT) {
+                        btrMgr_AddPersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SINK_PROFILE_ID, 1);
+                    }
+                    else if (lenMgrLConDevOpType == BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT) {
+                        btrMgr_AddPersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SRC_PROFILE_ID, 1);
+                    }
+                }
+
                 if (BTRCore_DisconnectDevice (ghBTRCoreHdl, ahBTRMgrDevHdl, lenBTRCoreDeviceType) != enBTRCoreSuccess) {
                     BTRMGRLOG_ERROR ("Failed to Disconnect - %llu\n", ahBTRMgrDevHdl);
-               }
+                }
             }
             else {
                 BTRMGRLOG_DEBUG ("Succes Connect to this device - Confirmed - %llu\n", ahBTRMgrDevHdl);
@@ -1756,24 +1802,6 @@ btrMgr_ConnectToDevice (
                 }
                 else if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet) ||
                          (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
-                    if (ghBTRMgrDevHdlLastConnected && ghBTRMgrDevHdlLastConnected != ahBTRMgrDevHdl) {
-                       BTRMGRLOG_DEBUG ("Remove persistent entry for previously connected device(%llu)\n", ghBTRMgrDevHdlLastConnected);
-
-                        if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet)) {
-                            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SINK_PROFILE_ID);
-                        }
-                        else if ((lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
-                            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ghBTRMgrDevHdlLastConnected, BTRMGR_A2DP_SRC_PROFILE_ID);
-                        }
-                    }
-
-                    if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet)) {
-                        btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID, 1);
-                    }
-                    else if ((lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
-                        btrMgr_AddPersistentEntry (aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID, 1);
-                    }
-
                     btrMgr_SetDevConnected(ahBTRMgrDevHdl, 1);
                     gIsUserInitiated = 0;
                     ghBTRMgrDevHdlLastConnected = ahBTRMgrDevHdl;
@@ -3638,6 +3666,12 @@ BTRMGR_DisconnectFromDevice (
     }
     else {
         BTRMGRLOG_INFO ("Disconnected  Successfully\n");
+        if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID);
+        }
+        else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+            btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID);
+        }
     }
 
 
@@ -3658,6 +3692,12 @@ BTRMGR_DisconnectFromDevice (
         if (lenBtrCoreRet != enBTRCoreSuccess) {
             BTRMGRLOG_ERROR ("Failed to Disconnect from this device - Confirmed\n");
             lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+            if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
+                btrMgr_AddPersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID, 1);
+            }
+            else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
+                btrMgr_AddPersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID, 1);
+            }
         }
         else {
             BTRMGRLOG_DEBUG ("Success Disconnect from this device - Confirmed\n");
@@ -3666,12 +3706,10 @@ BTRMGR_DisconnectFromDevice (
                 gIsLeDeviceConnected = 0;
             }
             else if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
-                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID);
                 btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
                 ghBTRMgrDevHdlLastConnected = 0;
             }
             else if ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn)) {
-                btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SRC_PROFILE_ID);
                 btrMgr_SetDevConnected(ahBTRMgrDevHdl, 0);
                 ghBTRMgrDevHdlLastConnected = 0;
             }
