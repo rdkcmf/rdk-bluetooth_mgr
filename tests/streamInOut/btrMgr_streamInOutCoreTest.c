@@ -53,6 +53,7 @@ typedef struct appDataStruct{
     int                     iDataPath;
     int                     iDataReadMTU;
     int                     iDataWriteMTU;
+    unsigned int            ui32DevDelay;
 } appDataStruct;
 
 
@@ -84,17 +85,20 @@ GetTransport (
     pstAppData->iDataPath = 0;
     pstAppData->iDataReadMTU = 0;
     pstAppData->iDataWriteMTU = 0;
+    pstAppData->ui32DevDelay = 0;
 
     BTRCore_AcquireDeviceDataPath ( pstAppData->hBTRCore, 
                                     connectedDeviceIndex,
                                     enBTRCoreMobileAudioIn,
                                     &pstAppData->iDataPath,
                                     &pstAppData->iDataReadMTU,
-                                    &pstAppData->iDataWriteMTU);
+                                    &pstAppData->iDataWriteMTU,
+                                    &pstAppData->ui32DevDelay);
 
     printf("Device Data Path = %d \n",      pstAppData->iDataPath);
     printf("Device Data Read MTU = %d \n",  pstAppData->iDataReadMTU);
     printf("Device Data Write MTU= %d \n",  pstAppData->iDataWriteMTU);
+    printf("Device Delay = %d \n",  pstAppData->ui32DevDelay);
 
     if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
 		if (pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
@@ -662,12 +666,14 @@ main (
                 stAppData.iDataPath = 0;
                 stAppData.iDataReadMTU = 0;
                 stAppData.iDataWriteMTU = 0;
+                stAppData.ui32DevDelay = 0;
 
-                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
+                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU, &stAppData.ui32DevDelay);
 
                 printf("Device Data Path = %d \n", stAppData.iDataPath);
                 printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
                 printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
+                printf("Device Delay = %d \n", stAppData.ui32DevDelay);
 
                 if (stAppData.stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
 					if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {

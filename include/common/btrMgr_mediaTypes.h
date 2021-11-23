@@ -156,6 +156,7 @@ typedef struct _stBTRMgrOutASettings {
     int             i32BtrMgrOutBufMaxSize;
     int             i32BtrMgrDevFd;
     int             i32BtrMgrDevMtu;
+    unsigned int    ui32BtrMgrDevDelay;
 } stBTRMgrOutASettings;
 
 /**

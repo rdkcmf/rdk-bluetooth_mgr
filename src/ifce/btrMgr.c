@@ -207,10 +207,10 @@ static BTRMGR_DeviceOperationType_t btrMgr_MapDeviceOpFromDeviceType (BTRMGR_Dev
 static BTRMGR_RSSIValue_t btrMgr_MapSignalStrengthToRSSI (int signalStrength);
 static eBTRMgrRet btrMgr_MapDevstatusInfoToEventInfo (void* p_StatusCB, BTRMGR_EventMessage_t* apstEventMessage, BTRMGR_Events_t type);
 
-static eBTRMgrRet btrMgr_StartCastingAudio (int outFileFd, int outMTUSize, eBTRCoreDevMediaType aenBtrCoreDevOutMType, void* apstBtrCoreDevOutMCodecInfo);
+static eBTRMgrRet btrMgr_StartCastingAudio (int outFileFd, int outMTUSize, unsigned int outDevDelay, eBTRCoreDevMediaType aenBtrCoreDevOutMType, void* apstBtrCoreDevOutMCodecInfo);
 static eBTRMgrRet btrMgr_StopCastingAudio (void);
 static eBTRMgrRet btrMgr_SwitchCastingAudio_AC (BTRMGR_StreamOut_Type_t aenCurrentSoType);
-static eBTRMgrRet btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize, eBTRCoreDevMediaType aenBtrCoreDevInMType, void* apstBtrCoreDevInMCodecInfo);
+static eBTRMgrRet btrMgr_StartReceivingAudio (int inFileFd, int inMTUSize, unsigned int inDevDelay, eBTRCoreDevMediaType aenBtrCoreDevInMType, void* apstBtrCoreDevInMCodecInfo);
 static eBTRMgrRet btrMgr_StopReceivingAudio (void);
 
 static eBTRMgrRet btrMgr_ConnectToDevice (unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_DeviceOperationType_t connectAs, unsigned int aui32ConnectRetryIdx, unsigned int aui32ConfirmIdx);
@@ -1156,6 +1156,7 @@ static eBTRMgrRet
 btrMgr_StartCastingAudio (
     int                     outFileFd, 
     int                     outMTUSize,
+    unsigned int            outDevDelay,
     eBTRCoreDevMediaType    aenBtrCoreDevOutMType,
     void*                   apstBtrCoreDevOutMCodecInfo
 ) {
@@ -1338,6 +1339,7 @@ btrMgr_StartCastingAudio (
 
     if (lenBtrMgrRet == eBTRMgrSuccess) {
         lstBtrMgrAcOutASettings.i32BtrMgrOutBufMaxSize = lstBtrMgrSoInASettings.i32BtrMgrInBufMaxSize;
+        lstBtrMgrAcOutASettings.ui32BtrMgrDevDelay = outDevDelay;
 
         if ((lenBtrMgrRet = BTRMgr_AC_Start(gstBTRMgrStreamingInfo.hBTRMgrAcHdl,
                                             &lstBtrMgrAcOutASettings,
@@ -1479,6 +1481,7 @@ static eBTRMgrRet
 btrMgr_StartReceivingAudio (
     int                  inFileFd,
     int                  inMTUSize,
+    unsigned int         inDevDelay,
     eBTRCoreDevMediaType aenBtrCoreDevInMType,
     void*                apstBtrCoreDevInMCodecInfo
 ) {
@@ -1758,9 +1761,10 @@ btrMgr_ConnectToDevice (
             /* Max 15 sec timeout - Polled at 1 second interval: Confirmed 5 times */
             unsigned int ui32sleepTimeOut = 1;
             unsigned int ui32confirmIdx = aui32ConfirmIdx + 1;
-            
+            unsigned int ui32AdjSleepIdx = (aui32ConfirmIdx > BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS) ? 2 : 5; //Interval in attempts
+
             do {
-                unsigned int ui32sleepIdx = 4;
+                unsigned int ui32sleepIdx = ui32AdjSleepIdx;
 
                 do {
                     sleep(ui32sleepTimeOut); 
@@ -1842,6 +1846,7 @@ btrMgr_StartAudioStreamingOut (
     int                         deviceFD = 0;
     int                         deviceReadMTU = 0;
     int                         deviceWriteMTU = 0;
+    unsigned int                deviceDelay = 0xFFFFu;
     unsigned int                ui32retryIdx = aui32ConnectRetryIdx + 1;
     stBTRCorePairedDevicesCount listOfPDevices;
     eBTRCoreDevMediaType        lenBtrCoreDevOutMType = eBTRCoreDevMediaTypeUnknown;
@@ -1934,6 +1939,10 @@ btrMgr_StartAudioStreamingOut (
         if (aui32ConnectRetryIdx) {
             lenBtrMgrRet = btrMgr_ConnectToDevice(aui8AdapterIdx, listOfPDevices.devices[i].tDeviceId, streamOutPref, BTRMGR_CONNECT_RETRY_ATTEMPTS, BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS);
         }
+        else if (strstr(listOfPDevices.devices[i].pcDeviceName, "Denon") || strstr(listOfPDevices.devices[i].pcDeviceName, "AVR") ||
+                 strstr(listOfPDevices.devices[i].pcDeviceName, "DENON") || strstr(listOfPDevices.devices[i].pcDeviceName, "Avr")) {
+            lenBtrMgrRet = btrMgr_ConnectToDevice(aui8AdapterIdx, listOfPDevices.devices[i].tDeviceId, streamOutPref, 0, BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS + 2);
+        }
         else {
             lenBtrMgrRet = btrMgr_ConnectToDevice(aui8AdapterIdx, listOfPDevices.devices[i].tDeviceId, streamOutPref, 0, 1);
         }
@@ -1972,10 +1981,10 @@ btrMgr_StartAudioStreamingOut (
 
             if (ui16DevMediaBitrate) {
                 /* Aquire Device Data Path to start the audio casting */
-                lenBtrCoreRet = BTRCore_AcquireDeviceDataPath(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU);
+                lenBtrCoreRet = BTRCore_AcquireDeviceDataPath(ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, enBTRCoreSpeakers, &deviceFD, &deviceReadMTU, &deviceWriteMTU, &deviceDelay);
                 if ((lenBtrCoreRet == enBTRCoreSuccess) && deviceWriteMTU) {
                     /* Now that you got the FD & Read/Write MTU, start casting the audio */
-                    if ((lenBtrMgrRet = btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU, lenBtrCoreDevOutMType, lpstBtrCoreDevOutMCodecInfo)) == eBTRMgrSuccess) {
+                    if ((lenBtrMgrRet = btrMgr_StartCastingAudio(deviceFD, deviceWriteMTU, deviceDelay, lenBtrCoreDevOutMType, lpstBtrCoreDevOutMCodecInfo)) == eBTRMgrSuccess) {
                         ghBTRMgrDevHdlCurStreaming = listOfPDevices.devices[i].tDeviceId;
                         BTRMGRLOG_INFO("Streaming Started.. Enjoy the show..! :)\n");
 
@@ -4213,6 +4222,7 @@ BTRMGR_StartAudioStreamingIn (
     int                         i32DeviceFD = 0;
     int                         i32DeviceReadMTU = 0;
     int                         i32DeviceWriteMTU = 0;
+    unsigned int                ui32deviceDelay = 0xFFFFu;
     eBTRCoreDevMediaType        lenBtrCoreDevInMType = eBTRCoreDevMediaTypeUnknown;
     void*                       lpstBtrCoreDevInMCodecInfo = NULL;
 
@@ -4363,9 +4373,9 @@ BTRMGR_StartAudioStreamingIn (
     }
 
     /* Aquire Device Data Path to start audio reception */
-    lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType, &i32DeviceFD, &i32DeviceReadMTU, &i32DeviceWriteMTU);
+    lenBtrCoreRet = BTRCore_AcquireDeviceDataPath (ghBTRCoreHdl, listOfPDevices.devices[i].tDeviceId, lenBtrCoreDevType, &i32DeviceFD, &i32DeviceReadMTU, &i32DeviceWriteMTU, &ui32deviceDelay);
     if (lenBtrCoreRet == enBTRCoreSuccess) {
-        if ((lenBtrMgrRet = btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU, lenBtrCoreDevInMType, lpstBtrCoreDevInMCodecInfo)) == eBTRMgrSuccess) {
+        if ((lenBtrMgrRet = btrMgr_StartReceivingAudio(i32DeviceFD, i32DeviceReadMTU, ui32deviceDelay, lenBtrCoreDevInMType, lpstBtrCoreDevInMCodecInfo)) == eBTRMgrSuccess) {
             ghBTRMgrDevHdlCurStreaming = listOfPDevices.devices[i].tDeviceId;
             BTRMGRLOG_INFO("Audio Reception Started.. Enjoy the show..! :)\n");
         }
