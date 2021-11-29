@@ -1718,6 +1718,10 @@ btrMgr_ConnectToDevice (
         break;
     case BTRMGR_DEVICE_OP_TYPE_AUDIO_INPUT:
         lenBTRCoreDeviceType = enBTRCoreMobileAudioIn;
+        if (!gIsAudioInEnabled) {
+            BTRMGRLOG_WARN ("Connection Rejected - BTR AudioIn is currently Disabled!\n");
+            return BTRMGR_RESULT_GENERIC_FAILURE;
+        }
         break;
     case BTRMGR_DEVICE_OP_TYPE_LE:
         lenBTRCoreDeviceType = enBTRCoreLE;
@@ -3311,6 +3315,10 @@ BTRMGR_PairDevice (
         BTRMGRLOG_WARN ("BTR HID GamePad is currently Disabled\n");
        return BTRMGR_RESULT_GENERIC_FAILURE;
     }
+    if (!gIsAudioInEnabled && ((lenBTRCoreDevTy == enBTRCoreMobileAudioIn) || (lenBTRCoreDevTy == enBTRCorePCAudioIn))) {
+        BTRMGRLOG_WARN ("Pairing Rejected - BTR AudioIn is currently Disabled!\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
+    }
     /* We always need a agent to get the pairing done.. if no agent registered, default agent will be used.
      * But we will not able able to get the PIN and other stuff received at our level. We have to have agent
      * for pairing process..
@@ -4400,6 +4408,10 @@ BTRMGR_StartAudioStreamingIn (
     }
     else if (lenBtrMgrDevType == BTRMGR_DEVICE_TYPE_TABLET) {
        lenBtrCoreDevType = enBTRCorePCAudioIn; 
+    }
+    if (!gIsAudioInEnabled && ((lenBtrCoreDevType == enBTRCoreMobileAudioIn) || (lenBtrCoreDevType == enBTRCorePCAudioIn))) {
+        BTRMGRLOG_WARN ("StreamingIn Rejected - BTR AudioIn is currently Disabled!\n");
+        return BTRMGR_RESULT_GENERIC_FAILURE;
     }
 
 
