@@ -56,12 +56,15 @@
 
 #define ENABLE_MAIN_LOOP_CONTEXT 0
 
+#define BTRMGR_SBC_ALLOCATION_SNR           (1 << 1)    // Has to match with a2dp-codecs.h
+#define BTRMGR_SBC_ALLOCATION_LOUDNESS      1           // Need a better way to pass/map this from the upper layers
 
 /* Local Types & Typedefs */
 typedef struct _stBTRMgrSOGst {
     void*        pPipeline;
     void*        pSrc;
     void*        pSink;
+    void*        pAudioConv;
     void*        pAudioResample;
     void*        pAudioEnc;
     void*        pAECapsFilter;
@@ -157,6 +160,7 @@ btrMgr_SO_g_main_loop_Task (
 #if !(ENABLE_MAIN_LOOP_CONTEXT)
     GstElement*     appsrc      = NULL;
     GstElement*     volume      = NULL;
+    GstElement*     audconvert  = NULL;
     GstElement*     audresample = NULL;
     GstElement*     audenc      = NULL;
     GstElement*     aecapsfilter= NULL;
@@ -189,12 +193,14 @@ btrMgr_SO_g_main_loop_Task (
     appsrc      = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
     volume      = gst_element_factory_make ("volume", "btmgr-so-volume");
 #if defined(DISABLE_AUDIO_ENCODING)
+    audconvert  = gst_element_factory_make ("queue", "btmgr-so-aconv");
     audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
     aecapsfilter= gst_element_factory_make ("queue", "btmgr-so-aecapsfilter");
     rtpaudpay   = gst_element_factory_make ("queue", "btmgr-so-rtpsbcpay");
 #else
 	/*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
+    audconvert  = gst_element_factory_make ("audioconvert", "btmgr-so-aconv");
     audresample = gst_element_factory_make ("audioresample", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("sbcenc", "btmgr-so-sbcenc");
     aecapsfilter= gst_element_factory_make ("capsfilter", "btmgr-so-aecapsfilter");
@@ -217,6 +223,7 @@ btrMgr_SO_g_main_loop_Task (
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
     pstBtrMgrSoGst->pVolume         = (void*)volume;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
+    pstBtrMgrSoGst->pAudioConv      = (void*)audconvert;
     pstBtrMgrSoGst->pAudioResample  = (void*)audresample;
     pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
     pstBtrMgrSoGst->pAECapsFilter   = (void*)aecapsfilter;
@@ -292,6 +299,7 @@ BTRMgr_SO_GstInit (
 #if (ENABLE_MAIN_LOOP_CONTEXT)
     GstElement*     appsrc          = NULL;
     GstElement*     volume          = NULL;
+    GstElement*     audconvert      = NULL;
     GstElement*     audresample     = NULL;
     GstElement*     audenc          = NULL;
     GstElement*     aecapsfilter    = NULL;
@@ -323,12 +331,14 @@ BTRMgr_SO_GstInit (
     appsrc      = gst_element_factory_make ("appsrc", "btmgr-so-appsrc");
     volume      = gst_element_factory_make ("volume", "btmgr-so-volume");
 #if defined(DISABLE_AUDIO_ENCODING)
+    audconvert  = gst_element_factory_make ("queue", "btmgr-so-aconv");
     audresample = gst_element_factory_make ("queue", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("queue", "btmgr-so-sbcenc");
     aecapsfilter= gst_element_factory_make ("queue", "btmgr-so-aecapsfilter");
     rtpaudpay   = gst_element_factory_make ("queue", "btmgr-so-rtpsbcpay");
 #else
 	/*TODO: Select the Audio Codec and RTP Audio Payloader based on input*/
+    audconvert  = gst_element_factory_make ("audioconvert", "btmgr-so-aconv");
     audresample = gst_element_factory_make ("audioresample", "btmgr-so-aresample");
     audenc      = gst_element_factory_make ("sbcenc", "btmgr-so-sbcenc");
     aecapsfilter= gst_element_factory_make ("capsfilter", "btmgr-so-aecapsfilter");
@@ -366,6 +376,7 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->pSrc            = (void*)appsrc;
     pstBtrMgrSoGst->pVolume         = (void*)volume;
     pstBtrMgrSoGst->pSink           = (void*)fdsink;
+    pstBtrMgrSoGst->pAudioConv      = (void*)audconvert;
     pstBtrMgrSoGst->pAudioResample  = (void*)audresample;
     pstBtrMgrSoGst->pAudioEnc       = (void*)audenc;
     pstBtrMgrSoGst->pAECapsFilter   = (void*)aecapsfilter;
@@ -552,6 +563,7 @@ BTRMgr_SO_GstStart (
     GstElement* appsrc      = (GstElement*)pstBtrMgrSoGst->pSrc;
     GstElement* volume      = (GstElement*)pstBtrMgrSoGst->pVolume;
     GstElement* fdsink      = (GstElement*)pstBtrMgrSoGst->pSink;
+    GstElement* audconvert  = (GstElement*)pstBtrMgrSoGst->pAudioConv;
     GstElement* audresample = (GstElement*)pstBtrMgrSoGst->pAudioResample;
     GstElement* audenc      = (GstElement*)pstBtrMgrSoGst->pAudioEnc;
     GstElement* aecapsfilter= (GstElement*)pstBtrMgrSoGst->pAECapsFilter;
@@ -561,7 +573,7 @@ BTRMgr_SO_GstStart (
     GstCaps* audEncSrcCaps  = NULL;
 
     unsigned int lui32InBitsPSample = 0;
-
+    const char*  lpui8StrSbcAllocMethod = NULL;
 
     /* Check if we are in correct state */
     if (btrMgr_SO_validateStateWithTimeout(pipeline, GST_STATE_NULL, BTRMGR_SLEEP_TIMEOUT_MS) != GST_STATE_NULL) {
@@ -569,12 +581,13 @@ BTRMgr_SO_GstStart (
         return eBTRMgrSOGstFailure;
     }
 
-    if ((ai32InRate != ai32OutRate) || (ai32InChannels != ai32OutChannels)) {
+    if (((ai32InRate != ai32OutRate) || (ai32InChannels != ai32OutChannels)) && audconvert && audresample) {
         //TODO: Audio resampling from 48KHz to 44.1KHz results in some timestamp issues
-        //      and discontinuties which we need to fix
-        gst_bin_add(GST_BIN(pipeline), audresample);
+        //      and discontinuties which we need to fix. Audio channel transition from 
+        //      Stereo to Mono
+        gst_bin_add_many(GST_BIN(pipeline), audconvert, audresample, NULL);
         gst_element_unlink(volume, audenc);
-        gst_element_link_many (volume, audresample, audenc, NULL);
+        gst_element_link_many (volume, audconvert, audresample, audenc, NULL);
     }
 
     pstBtrMgrSoGst->gstClkTStamp = 0;
@@ -600,7 +613,11 @@ BTRMgr_SO_GstStart (
                                          "channels", G_TYPE_INT, ai32InChannels,
                                           NULL);
 
-    (void)aui8SbcAllocMethod;
+    if (aui8SbcAllocMethod == BTRMGR_SBC_ALLOCATION_SNR)
+        lpui8StrSbcAllocMethod = "snr";
+    else
+        lpui8StrSbcAllocMethod = "loudness";
+
     (void)aui8SbcMinBitpool;
 
     /*TODO: Set the Encoder ouput caps dynamically based on input arguments to Start */
@@ -610,7 +627,7 @@ BTRMgr_SO_GstStart (
                                          "channel-mode", G_TYPE_STRING, apcOutChannelMode,
                                          "blocks", G_TYPE_INT, aui8SbcBlockLength,
                                          "subbands", G_TYPE_INT, aui8SbcSubbands,
-                                         "allocation-method", G_TYPE_STRING, "loudness",
+                                         "allocation-method", G_TYPE_STRING, lpui8StrSbcAllocMethod,
                                          "bitpool", G_TYPE_INT, aui8SbcMaxBitpool,
                                           NULL);
 
