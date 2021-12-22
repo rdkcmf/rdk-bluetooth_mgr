@@ -351,7 +351,7 @@ BTRMGR_LeOnboarding_SetData (
         int datatxd = 0;
         char *ptrPayload = payload;
         int index = 0;
-        BTRMGRLOG_DEBUG("Length of payload is %u\n", strlen(payload));
+        BTRMGRLOG_DEBUG("Length of payload is %u\n", (unsigned int)strlen(payload));
         BTRMGRLOG_INFO("Payload is %s\n", payload);
         for (index = 0; index < strlen(payload);) {
             datatxd = snprintf(tempBuffer, BTRMGR_LE_STR_LEN_MAX, "%s", ptrPayload);

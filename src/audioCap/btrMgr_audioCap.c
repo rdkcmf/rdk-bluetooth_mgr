@@ -590,8 +590,8 @@ BTRMgr_AC_GetDefaultSettings (
         }
 
         BTRMGRLOG_TRACE ("Default CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.cbBufferReady);
-        BTRMGRLOG_TRACE ("Default Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize);
-        BTRMGRLOG_TRACE ("Default Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
+        BTRMGRLOG_TRACE ("Default Fifosize      = %d\n", (int)pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.fifoSize);
+        BTRMGRLOG_TRACE ("Default Threshold     = %d\n", (int)pstBtrMgrAcHdl->stBtrMgrRmfAcDefSettings.threshold);
 
         //TODO: Get the format capture format from RMF_AudioCapture Settings
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -684,8 +684,8 @@ BTRMgr_AC_GetDefaultSettings (
         if (leBtrMgrAcRet == eBTRMgrSuccess) {
             memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmDefSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-            BTRMGRLOG_TRACE ("Default Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size);
-            BTRMGRLOG_TRACE ("Default Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold);
+            BTRMGRLOG_TRACE ("Default Fifosize = %d\n", (int)pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.fifo_size);
+            BTRMGRLOG_TRACE ("Default Threshold= %d\n", (int)pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.threshold);
             BTRMGRLOG_TRACE ("Default DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmDefSettings.delay_compensation_ms);
 
             //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
@@ -873,8 +873,8 @@ BTRMgr_AC_GetCurrentSettings (
         }
 
         BTRMGRLOG_DEBUG ("Current CBBufferReady = %p\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.cbBufferReady);
-        BTRMGRLOG_DEBUG ("Current Fifosize      = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize);
-        BTRMGRLOG_DEBUG ("Current Threshold     = %d\n", pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
+        BTRMGRLOG_DEBUG ("Current Fifosize      = %d\n", (int)pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.fifoSize);
+        BTRMGRLOG_DEBUG ("Current Threshold     = %d\n", (int)pstBtrMgrAcHdl->stBtrMgrRmfAcCurSettings.threshold);
 
         //TODO: Get the format capture format from RMF_AudioCapture Settings
         apstBtrMgrAcOutASettings->eBtrMgrOutAType     = eBTRMgrATypePCM;
@@ -967,8 +967,8 @@ BTRMgr_AC_GetCurrentSettings (
         if (leBtrMgrAcRet == eBTRMgrSuccess) {
             memcpy(&pstBtrMgrAcHdl->stBtrMgrAcmCurSettings, &lstBtrMgrIarmAcmArgs.details.arg_audio_properties, sizeof(audio_properties_ifce_t));
 
-            BTRMGRLOG_DEBUG ("Current Fifosize = %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size);
-            BTRMGRLOG_DEBUG ("Current Threshold= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold);
+            BTRMGRLOG_DEBUG ("Current Fifosize = %d\n", (int)pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.fifo_size);
+            BTRMGRLOG_DEBUG ("Current Threshold= %d\n", (int)pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.threshold);
             BTRMGRLOG_DEBUG ("Current DelayComp= %d\n", pstBtrMgrAcHdl->stBtrMgrAcmCurSettings.delay_compensation_ms);
                             
             //TODO: Get the format capture format from IARMBUS_AUDIOCAPTUREMGR_NAME
@@ -1496,7 +1496,7 @@ btrMgr_AC_rmfStatusChangeCb (
         }
 
         if (pstBtrMgrRmfAcStatus->fifoDepth != lstBtrMgrRmfAcStatus.fifoDepth) {
-            BTRMGRLOG_WARN("Status Changed - Fifo Depth = %d\n", lstBtrMgrRmfAcStatus.fifoDepth);
+            BTRMGRLOG_WARN("Status Changed - Fifo Depth = %d\n", (int)lstBtrMgrRmfAcStatus.fifoDepth);
             pstBtrMgrRmfAcStatus->fifoDepth = lstBtrMgrRmfAcStatus.fifoDepth;
             bTriggerStatusChanged = true;
         }
