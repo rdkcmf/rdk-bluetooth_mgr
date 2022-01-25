@@ -6267,13 +6267,14 @@ btrMgr_DeviceStatusCb (
     if (p_StatusCB) {
 
         lBtrMgrDevType = btrMgr_MapDeviceTypeFromCore(p_StatusCB->eDeviceClass);
-        BTRMGRLOG_INFO (" Received status callback device type %d\n",lBtrMgrDevType);
+        BTRMGRLOG_INFO (" Received status callback device type %d PrevState %d State %d\n",lBtrMgrDevType, p_StatusCB->eDevicePrevState, p_StatusCB->eDeviceCurrState);
 
         if (!gIsHidGamePadEnabled &&
             (lBtrMgrDevType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
              BTRMGRLOG_WARN ("Rejecting status callback - BTR HID Gamepad is currently Disabled!\n");
              return lenBtrCoreRet;
         }
+
         switch (p_StatusCB->eDeviceCurrState) {
         case enBTRCoreDevStPaired:
             /* Post this event only for HID Devices and Audio-In Devices */
@@ -6345,8 +6346,8 @@ btrMgr_DeviceStatusCb (
                     /* Update the flag as the Device is Connected */
                     if ((lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID)
                         || (lstEventMessage.m_pairedDevice.m_deviceType == BTRMGR_DEVICE_TYPE_HID_GAMEPAD)) {
-			    lstEventMessage.m_pairedDevice.m_deviceType = BTRMGR_DEVICE_TYPE_HID;
-			    BTRMGRLOG_WARN ("\n Sending Event for HID ");
+                        lstEventMessage.m_pairedDevice.m_deviceType = BTRMGR_DEVICE_TYPE_HID;
+                        BTRMGRLOG_WARN ("\n Sending Event for HID ");
                         btrMgr_SetDevConnected(lstEventMessage.m_pairedDevice.m_deviceHandle, 1);
                     }
                     else if (lstEventMessage.m_pairedDevice.m_deviceType != BTRMGR_DEVICE_TYPE_TILE) {
