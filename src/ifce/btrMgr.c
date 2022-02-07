@@ -2043,7 +2043,7 @@ btrMgr_StartAudioStreamingOut (
         lstEventMessage.m_adapterIndex                 = aui8AdapterIdx;
         lstEventMessage.m_pairedDevice.m_deviceHandle  = listOfPDevices.devices[i].tDeviceId;
         lstEventMessage.m_pairedDevice.m_deviceType    = btrMgr_MapDeviceTypeFromCore(listOfPDevices.devices[i].enDeviceType);
-	lstEventMessage.m_pairedDevice.m_isConnected   = (btrMgr_IsDevConnected(listOfPDevices.devices[i].tDeviceId)) ? 1 : 0;
+        lstEventMessage.m_pairedDevice.m_isConnected   = (btrMgr_IsDevConnected(listOfPDevices.devices[i].tDeviceId)) ? 1 : 0;
         lstEventMessage.m_pairedDevice.m_isLowEnergyDevice = (lstEventMessage.m_pairedDevice.m_deviceType==BTRMGR_DEVICE_TYPE_TILE)?1:0;//will make it generic later
         strncpy(lstEventMessage.m_pairedDevice.m_name, listOfPDevices.devices[i].pcDeviceName, BTRMGR_NAME_LEN_MAX);
         strncpy(lstEventMessage.m_pairedDevice.m_deviceAddress, listOfPDevices.devices[i].pcDeviceAddress, BTRMGR_NAME_LEN_MAX);
@@ -3777,10 +3777,23 @@ BTRMGR_GetConnectedDevices (
                 if ((lstBtrCoreListOfPDevices.devices[i].bDeviceConnected) && (pConnectedDevices->m_numOfDevices < BTRMGR_DEVICE_COUNT_MAX)) {
                    lpstBtrMgrPDevice = &pConnectedDevices->m_deviceProperty[pConnectedDevices->m_numOfDevices];
 
-                   lpstBtrMgrPDevice->m_isConnected  = 1;
-                   lpstBtrMgrPDevice->m_deviceHandle = lstBtrCoreListOfPDevices.devices[i].tDeviceId;
-                   lpstBtrMgrPDevice->m_vendorID     = lstBtrCoreListOfPDevices.devices[i].ui32VendorId;
                    lpstBtrMgrPDevice->m_deviceType   = btrMgr_MapDeviceTypeFromCore(lstBtrCoreListOfPDevices.devices[i].enDeviceType);
+                   lpstBtrMgrPDevice->m_deviceHandle = lstBtrCoreListOfPDevices.devices[i].tDeviceId;
+
+                    if ((lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_WEARABLE_HEADSET)  ||
+                        (lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_HANDSFREE)         ||
+                        (lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_LOUDSPEAKER)       ||
+                        (lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_HEADPHONES)        ||
+                        (lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_PORTABLE_AUDIO)    ||
+                        (lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_CAR_AUDIO)         ||
+                        (lpstBtrMgrPDevice->m_deviceType == BTRMGR_DEVICE_TYPE_HIFI_AUDIO_DEVICE) ){
+
+                        if (lpstBtrMgrPDevice->m_deviceHandle != ghBTRMgrDevHdlCurStreaming)
+                            continue;
+                    }
+
+                   lpstBtrMgrPDevice->m_vendorID     = lstBtrCoreListOfPDevices.devices[i].ui32VendorId;
+                   lpstBtrMgrPDevice->m_isConnected  = 1;
 
                    strncpy (lpstBtrMgrPDevice->m_name,          lstBtrCoreListOfPDevices.devices[i].pcDeviceName,   (BTRMGR_NAME_LEN_MAX - 1));
                    strncpy (lpstBtrMgrPDevice->m_deviceAddress, lstBtrCoreListOfPDevices.devices[i].pcDeviceAddress,(BTRMGR_NAME_LEN_MAX - 1));
@@ -3789,7 +3802,7 @@ BTRMGR_GetConnectedDevices (
                    for (j = 0; j < lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.numberOfService; j++) {
                        lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
                        strncpy (lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfPDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX -1);
-		       lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';   ///CID:136654 - Buffer size warning
+                       lpstBtrMgrPDevice->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';   ///CID:136654 - Buffer size warning
                    }
 
                    pConnectedDevices->m_numOfDevices++;
@@ -3823,7 +3836,7 @@ BTRMGR_GetConnectedDevices (
                     for (j = 0; j < lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.numberOfService; j++) {
                         lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_uuid = lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].uuid_value;
                         strncpy (lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile, lstBtrCoreListOfSDevices.devices[i].stDeviceProfile.profile[j].profile_name, BTRMGR_NAME_LEN_MAX -1);
-			lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';
+                        lpstBtrMgrSDevice->m_serviceInfo.m_profileInfo[j].m_profile[BTRMGR_NAME_LEN_MAX -1] = '\0';
                     }
 
                     pConnectedDevices->m_numOfDevices++;
