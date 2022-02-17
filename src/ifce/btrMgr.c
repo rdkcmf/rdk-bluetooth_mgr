@@ -45,6 +45,7 @@
 
 #define BTRMGR_CONNECT_RETRY_ATTEMPTS       2
 #define BTRMGR_DEVCONN_CHECK_RETRY_ATTEMPTS 3
+#define BTRMGR_DEVCONN_PWRST_CHANGE_TIME    3
 
 #define BTRMGR_DISCOVERY_HOLD_OFF_TIME      120
 #define BTRTEST_LE_ONBRDG_ENABLE 1
@@ -71,6 +72,13 @@ typedef enum _BTRMGR_DiscoveryState_t {
     BTRMGR_DISCOVERY_ST_STOPPED,
 } BTRMGR_DiscoveryState_t;
 
+typedef enum _enBTRMGRStartupAudio {
+    BTRMGR_STARTUP_AUD_INPROGRESS,
+    BTRMGR_STARTUP_AUD_SKIPPED,
+    BTRMGR_STARTUP_AUD_COMPLETED,
+    BTRMGR_STARTUP_AUD_UNKNOWN,
+} enBTRMGRStartupAudio;
+
 typedef struct _BTRMGR_DiscoveryHandle_t {
     BTRMGR_DeviceOperationType_t    m_devOpType;
     BTRMGR_DiscoveryState_t         m_disStatus;
@@ -80,6 +88,7 @@ typedef struct _BTRMGR_DiscoveryHandle_t {
 //TODO: Move to a local handle. Mutex protect all
 static tBTRCoreHandle                   ghBTRCoreHdl                = NULL;
 static tBTRMgrPIHdl                     ghBTRMgrPiHdl               = NULL;
+static tBTRMgrSDHdl                     ghBTRMgrSdHdl               = NULL;
 static BTRMgrDeviceHandle               ghBTRMgrDevHdlLastConnected = 0;
 static BTRMgrDeviceHandle               ghBTRMgrDevHdlCurStreaming  = 0;
 static BTRMGR_DiscoveryHandle_t         ghBTRMgrDiscoveryHdl;
@@ -97,15 +106,17 @@ static unsigned char                    gIsAgentActivated           = 0;
 static unsigned char                    gEventRespReceived          = 0;
 static unsigned char                    gAcceptConnection           = 0;
 static unsigned char                    gIsUserInitiated            = 0;
-static unsigned char                    gIsAudOutStartupInProgress  = 0;
 static unsigned char                    gDiscHoldOffTimeOutCbData   = 0;
+static unsigned char                    gConnPwrStChTimeOutCbData   = 0;
 static unsigned char                    gIsAudioInEnabled           = 0;
 static unsigned char                    gIsHidGamePadEnabled        = 0;
 static volatile guint                   gTimeOutRef                 = 0;
+static volatile guint                   gConnPwrStChangeTimeOutRef  = 0;
 static volatile unsigned int            gIsAdapterDiscovering       = 0;
 
 static BTRMGR_DeviceOperationType_t     gBgDiscoveryType            = BTRMGR_DEVICE_OP_TYPE_UNKNOWN;
 static BTRMGR_Events_t                  gMediaPlaybackStPrev        = BTRMGR_EVENT_MAX;
+static enBTRMGRStartupAudio             gIsAudOutStartupInProgress  = BTRMGR_STARTUP_AUD_UNKNOWN;
 
 static void*                            gpvMainLoop                 = NULL;
 static void*                            gpvMainLoopThread           = NULL;
@@ -233,11 +244,13 @@ static gpointer btrMgr_g_main_loop_Task (gpointer appvMainLoop);
 
 /* Incoming Callbacks Prototypes */
 static gboolean btrMgr_DiscoveryHoldOffTimerCb (gpointer gptr);
+static gboolean btrMgr_ConnPwrStChangeTimerCb (gpointer gptr);
 
 static eBTRMgrRet btrMgr_ACDataReadyCb (void* apvAcDataBuf, unsigned int aui32AcDataLen, void* apvUserData);
 static eBTRMgrRet btrMgr_ACStatusCb (stBTRMgrMediaStatus* apstBtrMgrAcStatus, void* apvUserData);
 static eBTRMgrRet btrMgr_SOStatusCb (stBTRMgrMediaStatus* apstBtrMgrSoStatus, void* apvUserData);
 static eBTRMgrRet btrMgr_SIStatusCb (stBTRMgrMediaStatus* apstBtrMgrSiStatus, void* apvUserData);
+static eBTRMgrRet btrMgr_SDStatusCb (stBTRMgrSysDiagStatus* apstBtrMgrSdStatus, void* apvUserData);
 
 static enBTRCoreRet btrMgr_DeviceStatusCb (stBTRCoreDevStatusCBInfo* p_StatusCB, void* apvUserData);
 static enBTRCoreRet btrMgr_DeviceDiscoveryCb (stBTRCoreDiscoveryCBInfo* astBTRCoreDiscoveryCbInfo, void* apvUserData);
@@ -2242,6 +2255,7 @@ BTRMGR_Init (
     BTRMGR_Result_t lenBtrMgrResult= BTRMGR_RESULT_SUCCESS;
     enBTRCoreRet 	lenBtrCoreRet  = enBTRCoreSuccess;
     eBTRMgrRet      lenBtrMgrPiRet = eBTRMgrFailure;
+    eBTRMgrRet      lenBtrMgrSdRet = eBTRMgrFailure;
     GMainLoop*      pMainLoop      = NULL;
     GThread*        pMainLoopThread= NULL;
 
@@ -2354,10 +2368,15 @@ BTRMGR_Init (
 
 
     // Init Persistent handles
-    lenBtrMgrPiRet = BTRMgr_PI_Init(&ghBTRMgrPiHdl);
-    if(lenBtrMgrPiRet != eBTRMgrSuccess) {
+    if ((lenBtrMgrPiRet = BTRMgr_PI_Init(&ghBTRMgrPiHdl)) != eBTRMgrSuccess) {
         BTRMGRLOG_ERROR ("Could not initialize PI module\n");
     }
+
+    // Init SysDiag handles
+    if ((lenBtrMgrSdRet = BTRMgr_SD_Init(&ghBTRMgrSdHdl, btrMgr_SDStatusCb, NULL)) != eBTRMgrSuccess) {
+        BTRMGRLOG_ERROR ("Could not initialize SD - SysDiag module\n");
+    }
+
     btrMgr_CheckAudioInServiceAvailability();
     btrMgr_CheckHidGamePadServiceAvailability();
 #if 0
@@ -2456,10 +2475,16 @@ BTRMGR_DeInit (
         return BTRMGR_RESULT_INIT_FAILED;
     }
 
+    if (ghBTRMgrSdHdl) {
+        lenBtrMgrRet = BTRMgr_SD_DeInit(ghBTRMgrSdHdl);
+        ghBTRMgrSdHdl = NULL;
+        BTRMGRLOG_ERROR ("SD Module DeInited = %d\n", lenBtrMgrRet);
+    }
+
     if (ghBTRMgrPiHdl) {
         lenBtrMgrRet = BTRMgr_PI_DeInit(ghBTRMgrPiHdl);
         ghBTRMgrPiHdl = NULL;
-        BTRMGRLOG_ERROR ("PI Module DeInited; Now will we exit the app = %d\n", lenBtrMgrRet);
+        BTRMGRLOG_ERROR ("PI Module DeInited = %d\n", lenBtrMgrRet);
     }
 
 
@@ -4015,7 +4040,7 @@ BTRMGR_StartAudioStreamingOut_StartUp (
 
     BTRMGR_Result_t         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
 
-
+    gIsAudOutStartupInProgress = BTRMGR_STARTUP_AUD_UNKNOWN;
     if (BTRMgr_PI_GetAllProfiles(ghBTRMgrPiHdl, &lstPersistentData) == eBTRMgrFailure) {
         btrMgr_AddPersistentEntry (aui8AdapterIdx, 0, BTRMGR_A2DP_SINK_PROFILE_ID, isConnected);
         return BTRMGR_RESULT_GENERIC_FAILURE;
@@ -4026,7 +4051,7 @@ BTRMGR_StartAudioStreamingOut_StartUp (
     BTRCore_GetAdapterAddr(ghBTRCoreHdl, aui8AdapterIdx, lui8adapterAddr);
 
     if (strcmp(lstPersistentData.adapterId, lui8adapterAddr) == 0) {
-        gIsAudOutStartupInProgress = 1;
+        gIsAudOutStartupInProgress = BTRMGR_STARTUP_AUD_INPROGRESS;
         numOfProfiles = lstPersistentData.numOfProfiles;
 
         BTRMGRLOG_DEBUG ("Adapter matches = %s\n", lui8adapterAddr);
@@ -4042,19 +4067,35 @@ BTRMGR_StartAudioStreamingOut_StartUp (
                 if (isConnected && lDeviceHandle) {
                     ghBTRMgrDevHdlLastConnected = lDeviceHandle;
                     if(strcmp(lstPersistentData.profileList[i32ProfileIdx].profileId, BTRMGR_A2DP_SINK_PROFILE_ID) == 0) {
-                        BTRMGRLOG_INFO ("Streaming to Device  = %lld\n", lDeviceHandle);
-                        if (btrMgr_StartAudioStreamingOut(0, lDeviceHandle, aenBTRMgrDevConT, 1, 1, 1) != eBTRMgrSuccess) {
-                            BTRMGRLOG_ERROR ("btrMgr_StartAudioStreamingOut - Failure\n");
+                        char                    lPropValue[BTRMGR_LE_STR_LEN_MAX] = {'\0'};
+                         BTRMGR_SysDiagChar_t   lenDiagElement = BTRMGR_SYS_DIAG_POWERSTATE;
+
+                        if (eBTRMgrSuccess != BTRMGR_SysDiag_GetData(ghBTRMgrSdHdl, lenDiagElement, lPropValue)) {
+                            BTRMGRLOG_ERROR("Could not get diagnostic data\n");
                             lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+                        }
+
+                        if ((lenBtrMgrResult == BTRMGR_RESULT_GENERIC_FAILURE) ||
+                             !strncmp(lPropValue, BTRMGR_SYS_DIAG_PWRST_ON, strlen(BTRMGR_SYS_DIAG_PWRST_ON))) {
+                            BTRMGRLOG_INFO ("Streaming to Device  = %lld\n", lDeviceHandle);
+                            if (btrMgr_StartAudioStreamingOut(0, lDeviceHandle, aenBTRMgrDevConT, 1, 1, 1) != eBTRMgrSuccess) {
+                                BTRMGRLOG_ERROR ("btrMgr_StartAudioStreamingOut - Failure\n");
+                                lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
+                            }
+
+                            gIsAudOutStartupInProgress = BTRMGR_STARTUP_AUD_COMPLETED;
+                        }
+                        else {
+                            gIsAudOutStartupInProgress = BTRMGR_STARTUP_AUD_SKIPPED;
                         }
                     }
                 }
             }
         }
 
-        gIsAudOutStartupInProgress = 0;
+        if (gIsAudOutStartupInProgress == BTRMGR_STARTUP_AUD_INPROGRESS)
+            gIsAudOutStartupInProgress = BTRMGR_STARTUP_AUD_UNKNOWN;
     }
-
 
     return lenBtrMgrResult;
 }
@@ -5874,7 +5915,7 @@ BTRMGR_SysDiagInfo(
 
     if ((BTRMGR_SYS_DIAG_BEGIN < (BTRMGR_SysDiagChar_t)lenDiagElement) && (BTRMGR_SYS_DIAG_END > (BTRMGR_SysDiagChar_t)lenDiagElement)) {
         if (BTRMGR_LE_OP_READ_VALUE == aOpType) {
-            if (eBTRMgrSuccess != BTRMGR_SysDiag_GetData(lenDiagElement, lPropValue)) {
+            if (eBTRMgrSuccess != BTRMGR_SysDiag_GetData(ghBTRMgrSdHdl, lenDiagElement, lPropValue)) {
                 BTRMGRLOG_ERROR("Could not get diagnostic data\n");
                 lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
             }
@@ -5937,7 +5978,7 @@ BTRMGR_ConnectToWifi(
 ) {
     BTRMGR_Result_t lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
 
-    if (!ghBTRCoreHdl) {
+    if (!ghBTRCoreHdl || !ghBTRMgrSdHdl) {
         BTRMGRLOG_ERROR("BTRCore is not Inited\n");
         return BTRMGR_RESULT_INIT_FAILED;
     }
@@ -5947,7 +5988,7 @@ BTRMGR_ConnectToWifi(
         return BTRMGR_RESULT_INVALID_INPUT;
     }
 
-    lenBtrMgrResult = BTRMGR_Wifi_ConnectToWifi(apSSID, apPassword, aSecMode);
+    lenBtrMgrResult = BTRMGR_SysDiag_ConnectToWifi(ghBTRMgrSdHdl, apSSID, apPassword, aSecMode);
 
     return lenBtrMgrResult;
 }
@@ -6001,17 +6042,42 @@ btrMgr_DiscoveryHoldOffTimerCb (
     if (gptr) {
         lui8AdapterIdx = *(unsigned char*)gptr;
     } else {
-        BTRMGRLOG_WARN ("CB context received NULL arg!");
+        BTRMGRLOG_WARN ("CB context received NULL arg!\n");
     }
 
     gTimeOutRef = 0;
 
     if (btrMgr_PostCheckDiscoveryStatus (lui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_UNKNOWN) != eBTRMgrSuccess) {
-	BTRMGRLOG_ERROR ("Post Check Disc Status Failed!\n");
+        BTRMGRLOG_ERROR ("Post Check Disc Status Failed!\n");
     }
 
     return FALSE;
 }
+
+
+static gboolean
+btrMgr_ConnPwrStChangeTimerCb (
+    gpointer gptr
+) {
+    unsigned char lui8AdapterIdx = 0;
+
+    BTRMGRLOG_DEBUG ("CB context Invoked for btrMgr_ConnPwrStChangeTimerCb || TimeOutReference - %u\n", gConnPwrStChangeTimeOutRef);
+
+    if (gptr) {
+        lui8AdapterIdx = *(unsigned char*)gptr;
+    } else {
+        BTRMGRLOG_WARN ("CB context received NULL arg!\n");
+    }
+
+    gConnPwrStChangeTimeOutRef = 0;
+
+    if (BTRMGR_StartAudioStreamingOut_StartUp(lui8AdapterIdx, BTRMGR_DEVICE_OP_TYPE_AUDIO_OUTPUT) != BTRMGR_RESULT_SUCCESS) {
+        BTRMGRLOG_ERROR ("ConnPwrStChange - BTRMGR_StartAudioStreamingOut_StartUp Failed!\n");
+    }
+
+    return FALSE;
+}
+
 
 static eBTRMgrRet
 btrMgr_ACDataReadyCb (
@@ -6124,6 +6190,26 @@ btrMgr_SIStatusCb (
 }
 
 
+static eBTRMgrRet
+btrMgr_SDStatusCb (
+    stBTRMgrSysDiagStatus*  apstBtrMgrSdStatus,
+    void*                   apvUserData
+) {
+    eBTRMgrRet           leBtrMgrSdRet = eBTRMgrFailure;
+
+    if ((apstBtrMgrSdStatus != NULL) &&
+        (gIsAudOutStartupInProgress != BTRMGR_STARTUP_AUD_COMPLETED) &&
+        (apstBtrMgrSdStatus->enSysDiagChar == BTRMGR_SYS_DIAG_POWERSTATE) &&
+        !strncmp(apstBtrMgrSdStatus->pcSysDiagRes, BTRMGR_SYS_DIAG_PWRST_ON, strlen(BTRMGR_SYS_DIAG_PWRST_ON))) {
+
+        gConnPwrStChTimeOutCbData = 0; // TODO: Change when this entire file is made re-entrant
+        if ((gConnPwrStChangeTimeOutRef =  g_timeout_add_seconds (BTRMGR_DEVCONN_PWRST_CHANGE_TIME, btrMgr_ConnPwrStChangeTimerCb, (gpointer)&gConnPwrStChTimeOutCbData)) != 0)
+            leBtrMgrSdRet = eBTRMgrSuccess;
+    }
+
+    return leBtrMgrSdRet;
+}
+
 
 static enBTRCoreRet
 btrMgr_DeviceStatusCb (
@@ -6173,7 +6259,7 @@ btrMgr_DeviceStatusCb (
             break;
         case enBTRCoreDevStConnected:               /*  notify user device back   */
             if (enBTRCoreDevStLost == p_StatusCB->eDevicePrevState || enBTRCoreDevStPaired == p_StatusCB->eDevicePrevState) {
-                if (!gIsAudOutStartupInProgress) {
+                if (gIsAudOutStartupInProgress != BTRMGR_STARTUP_AUD_INPROGRESS) {
                     unsigned char doPostCheck = 0;
                     btrMgr_MapDevstatusInfoToEventInfo ((void*)p_StatusCB, &lstEventMessage, BTRMGR_EVENT_DEVICE_FOUND);
 
@@ -6745,7 +6831,7 @@ btrMgr_ConnectionInAuthenticationCb (
 
             BTRMGRLOG_DEBUG ("Paired - Last Connected device...\n");
 
-            if (!gIsAudOutStartupInProgress) {
+            if (gIsAudOutStartupInProgress != BTRMGR_STARTUP_AUD_INPROGRESS) {
                 BTRMGR_EventMessage_t lstEventMessage;
 
                 memset (&lstEventMessage, 0, sizeof(lstEventMessage));

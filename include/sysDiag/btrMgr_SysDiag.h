@@ -31,6 +31,15 @@
 #define BTRMGR_STR_LEN_MAX        256
 
 
+#define BTRMGR_SYS_DIAG_PWRST_OFF               "off"
+#define BTRMGR_SYS_DIAG_PWRST_STANDBY           "standby"
+#define BTRMGR_SYS_DIAG_PWRST_ON                "on"
+#define BTRMGR_SYS_DIAG_PWRST_STDBY_LIGHT_SLEEP "stby_light_sleep"
+#define BTRMGR_SYS_DIAG_PWRST_STDBY_DEEP_SLEEP  "stby_deep_sleep"
+#define BTRMGR_SYS_DIAG_PWRST_UNKNOWN           "unknown"
+
+typedef void* tBTRMgrSDHdl;
+
 typedef enum _BTRMGR_SysDiagChar_t {
     BTRMGR_SYS_DIAG_BEGIN = 100,
     BTRMGR_SYS_DIAG_DEVICEMAC,
@@ -48,10 +57,20 @@ typedef enum _BTRMGR_SysDiagChar_t {
     BTRMGR_SYS_DIAG_WIFIRADIO1STATUS,
     BTRMGR_SYS_DIAG_WIFIRADIO2STATUS,
     BTRMGR_SYS_DIAG_RFSTATUS,
+    BTRMGR_SYS_DIAG_POWERSTATE,
     BTRMGR_SYS_DIAG_WIFI_CONNECT,
     BTRMGR_SYS_DIAG_UNKNOWN,
     BTRMGR_SYS_DIAG_END
 } BTRMGR_SysDiagChar_t;
+
+typedef struct _stBTRMgrSysDiagStatus {
+    BTRMGR_SysDiagChar_t enSysDiagChar;
+    char                 pcSysDiagRes[BTRMGR_STR_LEN_MAX];
+} stBTRMgrSysDiagStatus;
+
+
+/* Fptr Callbacks types */
+typedef eBTRMgrRet (*fPtr_BTRMgr_SD_StatusCb) (stBTRMgrSysDiagStatus* apstBtrMgrSdStatus, void *apvUserData);
 
 
 /* Interfaces */
@@ -60,10 +79,13 @@ typedef enum _BTRMGR_SysDiagChar_t {
  * @{
  *
  */
+eBTRMgrRet BTRMgr_SD_Init(tBTRMgrSDHdl* hBTRMgrSdHdl, fPtr_BTRMgr_SD_StatusCb afpcBSdStatus, void* apvUserData);
 
-eBTRMgrRet BTRMGR_SysDiag_GetData(BTRMGR_SysDiagChar_t aenSysDiagChar, char* aData);
+eBTRMgrRet BTRMgr_SD_DeInit(tBTRMgrSDHdl hBTRMgrSdHdl);
 
-eBTRMgrRet BTRMGR_Wifi_ConnectToWifi(char* aSSID, char* aPassword, int aSecurityMode);
+eBTRMgrRet BTRMGR_SysDiag_GetData(tBTRMgrSDHdl hBTRMgrSdHdl, BTRMGR_SysDiagChar_t aenSysDiagChar, char* aData);
+
+eBTRMgrRet BTRMGR_SysDiag_ConnectToWifi(tBTRMgrSDHdl hBTRMgrSdHdl, char* aSSID, char* aPassword, int aSecurityMode);
 
 /** @} */
 
