@@ -1740,7 +1740,13 @@ btrMgr_ConnectToDevice (
             lenBtrMgrRet = eBTRMgrFailure;
         }
         else {
-            BTRMGRLOG_INFO ("Connected Successfully - %llu\n", ahBTRMgrDevHdl);
+            int j;
+            for (j = 0; j <= gListOfPairedDevices.m_numOfDevices; j++) {
+                 if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[j].m_deviceHandle) {
+                     BTRMGRLOG_INFO ("Connected Successfully -  %llu - Name -  %s\n",ahBTRMgrDevHdl,gListOfPairedDevices.m_deviceProperty[j].m_name);
+                     break;
+                 }
+            }
             lenBtrMgrRet = eBTRMgrSuccess;
             if ((lenBTRCoreDeviceType == enBTRCoreSpeakers) || (lenBTRCoreDeviceType == enBTRCoreHeadSet) ||
                 (lenBTRCoreDeviceType == enBTRCoreMobileAudioIn) || (lenBTRCoreDeviceType == enBTRCorePCAudioIn)) {
@@ -3335,7 +3341,6 @@ BTRMGR_PairDevice (
         lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_PAIRING_FAILED;
     }
     else {
-        BTRMGRLOG_INFO ("Paired Successfully\n");
         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
         lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE;
     }
@@ -3357,8 +3362,18 @@ BTRMGR_PairDevice (
     }
 
     /* Update the Paired Device List */
+    if(lenBTRCoreDevTy == enBTRCoreHID){
+       sleep(10);
+    }
     BTRMGR_GetPairedDevices (aui8AdapterIdx, &gListOfPairedDevices);
-
+    int j ;
+    for (j = 0; j <= gListOfPairedDevices.m_numOfDevices; j++) {
+         if ((ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[j].m_deviceHandle) && ( BTRMGR_EVENT_DEVICE_PAIRING_COMPLETE == lBtMgrOutEvent )) {
+             BTRMGRLOG_INFO ("Paired Successfully -  %llu - Name - %s\n",ahBTRMgrDevHdl,gListOfPairedDevices.m_deviceProperty[j].m_name);
+             break;
+         }
+    }
+   
     if (ui8reActivateAgent) {
         BTRMGRLOG_INFO ("Activate agent\n");
         if ((lenBtrCoreRet = BTRCore_RegisterAgent(ghBTRCoreHdl, 1)) != enBTRCoreSuccess) {
@@ -3451,7 +3466,13 @@ BTRMGR_UnpairDevice (
         lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_UNPAIRING_FAILED;
     }
     else {
-        BTRMGRLOG_INFO ("Unpaired Successfully\n");
+        int j;
+        for (j = 0; j <= gListOfPairedDevices.m_numOfDevices; j++) {
+             if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[j].m_deviceHandle) {
+                 BTRMGRLOG_INFO ("Unpaired Successfully -  %llu - Name -  %s\n",ahBTRMgrDevHdl,gListOfPairedDevices.m_deviceProperty[j].m_name);
+                 break;
+             }
+        }   
         lenBtrMgrResult = BTRMGR_RESULT_SUCCESS;
         lBtMgrOutEvent  = BTRMGR_EVENT_DEVICE_UNPAIRING_COMPLETE;
     }
@@ -3701,7 +3722,13 @@ BTRMGR_DisconnectFromDevice (
         }
     }
     else {
-        BTRMGRLOG_INFO ("Disconnected  Successfully\n");
+        int j;
+        for (j = 0; j <= gListOfPairedDevices.m_numOfDevices; j++) {
+             if (ahBTRMgrDevHdl == gListOfPairedDevices.m_deviceProperty[j].m_deviceHandle) {
+                 BTRMGRLOG_INFO ("Disconnected Successfully -  %llu - Name -  %s\n",ahBTRMgrDevHdl,gListOfPairedDevices.m_deviceProperty[j].m_name);
+                 break;
+             }
+        }
         if ((lenBTRCoreDevTy == enBTRCoreSpeakers) || (lenBTRCoreDevTy == enBTRCoreHeadSet)) {
             btrMgr_RemovePersistentEntry(aui8AdapterIdx, ahBTRMgrDevHdl, BTRMGR_A2DP_SINK_PROFILE_ID);
         }
