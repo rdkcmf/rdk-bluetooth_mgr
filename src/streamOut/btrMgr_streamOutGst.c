@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <math.h>
 
 /* Ext lib Headers */
 #include <gst/gst.h>
@@ -48,9 +48,10 @@
 
 
 /* Local defines */
-#define BTRMGR_SLEEP_TIMEOUT_MS            1   // Suspend execution of thread. Keep as minimal as possible
-#define BTRMGR_WAIT_TIMEOUT_MS             2   // Use for blocking operations
-#define BTRMGR_MAX_INTERNAL_QUEUE_ELEMENTS 8   // Number of blocks in the internal queue
+#define BTRMGR_SLEEP_TIMEOUT_MS             1   // Suspend execution of thread. Keep as minimal as possible
+#define BTRMGR_WAIT_TIMEOUT_MS              2   // Use for blocking operations
+#define BTRMGR_MAX_INTERNAL_QUEUE_ELEMENTS  8   // Number of blocks in the internal queue
+#define BTRMGR_INPUT_BUF_INTERVAL_THRES_CNT 4   // Number of buffer threshold based on input buffer interval
 
 #define GST_ELEMENT_GET_STATE_RETRY_CNT_MAX 5
 
@@ -88,17 +89,21 @@ typedef struct _stBTRMgrSOGst {
     int          i32InRate;
     int          i32InChannels;
     unsigned int ui32InBitsPSample;
+    unsigned int ui32InBufIntervalms;
+    unsigned char ui8IpBufThrsCnt;
 
     fPtr_BTRMgr_SO_GstStatusCb  fpcBSoGstStatus;
     void*                       pvcBUserData;
 
     GMutex       pipelineDataMutex;
     gboolean     bPipelineError;
+    gboolean     bIsInputPaused;
 } stBTRMgrSOGst;
 
 
 /* Static Function Prototypes */
 static GstState btrMgr_SO_validateStateWithTimeout (GstElement* element, GstState stateToValidate, guint msTimeOut);
+static eBTRMgrSOGstRet btrMgr_SO_GstSendBuffer (stBTRMgrSOGst*  pstBtrMgrSoGst, char* pcInBuf, int aiInBufSize);
 
 /* Local Op Threads Prototypes */
 static gpointer btrMgr_SO_g_main_loop_Task (gpointer apstBtrMgrSoGst);
@@ -231,6 +236,7 @@ btrMgr_SO_g_main_loop_Task (
     pstBtrMgrSoGst->gstClkTStamp    = 0;
     pstBtrMgrSoGst->inBufOffset     = 0;
     pstBtrMgrSoGst->bPipelineError  = FALSE;
+    pstBtrMgrSoGst->bIsInputPaused  = FALSE;
     g_mutex_init(&pstBtrMgrSoGst->pipelineDataMutex);
 
 
@@ -387,6 +393,7 @@ BTRMgr_SO_GstInit (
     pstBtrMgrSoGst->fpcBSoGstStatus = NULL;
     pstBtrMgrSoGst->pvcBUserData    = NULL;
     pstBtrMgrSoGst->bPipelineError  = FALSE;
+    pstBtrMgrSoGst->bIsInputPaused  = FALSE;
     g_mutex_init(&pstBtrMgrSoGst->pipelineDataMutex);
 
 
@@ -512,6 +519,8 @@ BTRMgr_SO_GstDeInit (
     if (pstBtrMgrSoGst->fpcBSoGstStatus)
         pstBtrMgrSoGst->fpcBSoGstStatus = NULL;
 
+
+    pstBtrMgrSoGst->bIsInputPaused  = FALSE;
 
     g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
     pstBtrMgrSoGst->bPipelineError  = FALSE;
@@ -674,10 +683,35 @@ BTRMgr_SO_GstStart (
         return eBTRMgrSOGstFailure;
     }
 
+    pstBtrMgrSoGst->bIsInputPaused      = FALSE;
     pstBtrMgrSoGst->i32InBufMaxSize     = ai32InBufMaxSize;
     pstBtrMgrSoGst->i32InRate           = ai32InRate;
     pstBtrMgrSoGst->i32InChannels       = ai32InChannels;
     pstBtrMgrSoGst->ui32InBitsPSample   = lui32InBitsPSample;
+    pstBtrMgrSoGst->ui32InBufIntervalms = round((pstBtrMgrSoGst->i32InBufMaxSize * 1000) / (pstBtrMgrSoGst->i32InRate * pstBtrMgrSoGst->i32InChannels * (pstBtrMgrSoGst->ui32InBitsPSample/8)));
+    pstBtrMgrSoGst->ui8IpBufThrsCnt     = 0;
+
+    BTRMGRLOG_WARN ("i32InRate - %d i32InChannels - %d, ui32InBitsPSample - %d, i32InBufMaxSize - %d ui32InBufIntervalms - %d\n",
+                    pstBtrMgrSoGst->i32InRate, pstBtrMgrSoGst->i32InChannels, pstBtrMgrSoGst->ui32InBitsPSample, pstBtrMgrSoGst->i32InBufMaxSize, pstBtrMgrSoGst->ui32InBufIntervalms);
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    {
+        GSource* source = g_timeout_source_new(pstBtrMgrSoGst->ui32InBufIntervalms);
+        g_source_set_priority(source, G_PRIORITY_DEFAULT);
+        g_source_set_callback(source, (GSourceFunc) btrMgr_SO_g_timeout_EmptyBufPushCb, pstBtrMgrSoGst, NULL);
+
+        if (pstBtrMgrSoGst->emptyBufPushId) {
+            g_source_destroy(g_main_context_find_source_by_id(pstBtrMgrSoGst->pContext, pstBtrMgrSoGst->emptyBufPushId));
+            pstBtrMgrSoGst->emptyBufPushId = 0;
+        }
+
+        if ((pstBtrMgrSoGst->emptyBufPushId = g_source_attach(source, pstBtrMgrSoGst->pContext)) != 0) {
+            BTRMGRLOG_DEBUG("Empty Buf Push Id = %d\n", pstBtrMgrSoGst->emptyBufPushId);
+        }
+
+        g_source_unref(source);
+    }
+#endif
 
     return eBTRMgrSOGstSuccess;
 }
@@ -697,6 +731,7 @@ BTRMgr_SO_GstStop (
 
     pipeline    = (GstElement*)pstBtrMgrSoGst->pPipeline;
 
+    pstBtrMgrSoGst->bIsInputPaused  = FALSE;
 
     g_mutex_lock(&pstBtrMgrSoGst->pipelineDataMutex);
     pstBtrMgrSoGst->bPipelineError  = FALSE;
@@ -717,6 +752,8 @@ BTRMgr_SO_GstStop (
     pstBtrMgrSoGst->i32InRate           = 0;
     pstBtrMgrSoGst->i32InChannels       = 0;
     pstBtrMgrSoGst->ui32InBitsPSample   = 0;
+    pstBtrMgrSoGst->ui32InBufIntervalms = 0;
+    pstBtrMgrSoGst->ui8IpBufThrsCnt     = 0;
 
 
     return eBTRMgrSOGstSuccess;
@@ -802,15 +839,17 @@ BTRMgr_SO_GstSetInputPaused (
 
 #if !(ENABLE_MAIN_LOOP_CONTEXT)
     if (ui8InputPaused) {
-        guint       interval = (pstBtrMgrSoGst->i32InBufMaxSize * 1000) / (pstBtrMgrSoGst->i32InRate * pstBtrMgrSoGst->i32InChannels * (pstBtrMgrSoGst->ui32InBitsPSample/8));
         GSource*    source;
 
         BTRMGRLOG_WARN ("SO Empty Cb i32InRate          - %d\n", pstBtrMgrSoGst->i32InRate);
         BTRMGRLOG_WARN ("SO Empty Cb i32InChannels      - %d\n", pstBtrMgrSoGst->i32InChannels);
         BTRMGRLOG_WARN ("SO Empty Cb ui32InBitsPSample  - %d\n", pstBtrMgrSoGst->ui32InBitsPSample);
         BTRMGRLOG_WARN ("SO Empty Cb i32InBufMaxSize    - %d\n", pstBtrMgrSoGst->i32InBufMaxSize);
-        BTRMGRLOG_WARN ("SO Empty Cb Interval           - %d\n", interval);
-        source = g_timeout_source_new(interval);
+        BTRMGRLOG_WARN ("SO Empty Cb ui32InBufIntervalms- %d\n", pstBtrMgrSoGst->ui32InBufIntervalms);
+
+        pstBtrMgrSoGst->bIsInputPaused  = TRUE;
+        pstBtrMgrSoGst->ui8IpBufThrsCnt = BTRMGR_INPUT_BUF_INTERVAL_THRES_CNT;
+        source = g_timeout_source_new(pstBtrMgrSoGst->ui32InBufIntervalms);
         g_source_set_priority(source, G_PRIORITY_DEFAULT);
         g_source_set_callback(source, (GSourceFunc) btrMgr_SO_g_timeout_EmptyBufPushCb, pstBtrMgrSoGst, NULL);
 
@@ -826,6 +865,8 @@ BTRMgr_SO_GstSetInputPaused (
         g_source_unref(source);
     }
     else {
+        pstBtrMgrSoGst->bIsInputPaused  = FALSE;
+        pstBtrMgrSoGst->ui8IpBufThrsCnt = 0;
         if (pstBtrMgrSoGst->emptyBufPushId) {
             BTRMGRLOG_WARN ("SO Empty Cb GSource Destroy - %d\n", pstBtrMgrSoGst->emptyBufPushId);
             g_source_destroy(g_main_context_find_source_by_id(pstBtrMgrSoGst->pContext, pstBtrMgrSoGst->emptyBufPushId));
@@ -922,7 +963,7 @@ BTRMgr_SO_GstGetMute (
 
     volume = (GstElement*)pstBtrMgrSoGst->pVolume;
     g_object_get (volume, "mute", &mute,  NULL);
-    *muted = mute ;
+    *muted = mute;
     BTRMGRLOG_DEBUG("Get mute at StreamOut %d \n", *muted);
 
     return eBTRMgrSOGstSuccess;
@@ -936,14 +977,40 @@ BTRMgr_SO_GstSendBuffer (
     int             aiInBufSize
 ) {
     stBTRMgrSOGst*  pstBtrMgrSoGst  = (stBTRMgrSOGst*)hBTRMgrSoGstHdl;
-    int             i32InBufOffset  = 0;
-    GstElement*     appsrc          = NULL;
-    gboolean        lbPipelineEr    = FALSE;
 
-    if (!pstBtrMgrSoGst) {
+    if (!pstBtrMgrSoGst || !pcInBuf) {
         BTRMGRLOG_ERROR ("Invalid input argument\n");
         return eBTRMgrSOGstFailInArg;
     }
+
+#if !(ENABLE_MAIN_LOOP_CONTEXT)
+    pstBtrMgrSoGst->bIsInputPaused  = FALSE;
+    if (pstBtrMgrSoGst->emptyBufPushId && pstBtrMgrSoGst->pContext) {
+        BTRMGRLOG_WARN ("SO Empty Cb GSource Destroy - %d Context - %p\n", pstBtrMgrSoGst->emptyBufPushId, pstBtrMgrSoGst->pContext);
+        g_source_destroy(g_main_context_find_source_by_id(pstBtrMgrSoGst->pContext, pstBtrMgrSoGst->emptyBufPushId));
+        pstBtrMgrSoGst->emptyBufPushId  = 0;
+        if (pstBtrMgrSoGst->ui8IpBufThrsCnt == BTRMGR_INPUT_BUF_INTERVAL_THRES_CNT) {
+            gst_element_send_event(GST_ELEMENT(pstBtrMgrSoGst->pPipeline), gst_event_new_flush_start());
+            gst_element_send_event(GST_ELEMENT(pstBtrMgrSoGst->pPipeline), gst_event_new_flush_stop(FALSE));
+        }
+    }
+
+    pstBtrMgrSoGst->ui8IpBufThrsCnt = 0;
+#endif
+
+    return btrMgr_SO_GstSendBuffer(pstBtrMgrSoGst, pcInBuf, aiInBufSize);
+}
+
+
+static eBTRMgrSOGstRet
+btrMgr_SO_GstSendBuffer (                   /* TODO: Move whole function to status function definitions section later */
+    stBTRMgrSOGst*  pstBtrMgrSoGst,
+    char*           pcInBuf,
+    int             aiInBufSize
+) {
+    int             i32InBufOffset  = 0;
+    GstElement*     appsrc          = NULL;
+    gboolean        lbPipelineEr    = FALSE;
 
     appsrc = (GstElement*)pstBtrMgrSoGst->pSrc;
 
@@ -1100,13 +1167,22 @@ btrMgr_SO_g_timeout_EmptyBufPushCb (
         return FALSE;
     }
 
+    if ((pstBtrMgrSoGst->bIsInputPaused == FALSE) &&
+        (pstBtrMgrSoGst->ui8IpBufThrsCnt >= BTRMGR_INPUT_BUF_INTERVAL_THRES_CNT)) {
+        BTRMGRLOG_TRACE ("Not pushing Empty buffer - %d\n", pstBtrMgrSoGst->ui8IpBufThrsCnt);
+        return TRUE;
+    }
+
+    if (pstBtrMgrSoGst->ui8IpBufThrsCnt < BTRMGR_INPUT_BUF_INTERVAL_THRES_CNT)
+        pstBtrMgrSoGst->ui8IpBufThrsCnt++;
+
     if ((pcInBuf = malloc(pstBtrMgrSoGst->i32InBufMaxSize * sizeof(char))) == NULL) {
         BTRMGRLOG_ERROR ("GTimeOut Error - Unable to Alloc memory\n");
         return FALSE;
     }
 
     memset(pcInBuf, 0, pstBtrMgrSoGst->i32InBufMaxSize);
-    if (BTRMgr_SO_GstSendBuffer(pstBtrMgrSoGst, pcInBuf, pstBtrMgrSoGst->i32InBufMaxSize) != eBTRMgrSOGstSuccess) {
+    if (btrMgr_SO_GstSendBuffer(pstBtrMgrSoGst, pcInBuf, pstBtrMgrSoGst->i32InBufMaxSize) != eBTRMgrSOGstSuccess) {
         BTRMGRLOG_WARN ("GTimeOut - Unable to Push Enpty Buffer\n");
     }
 
