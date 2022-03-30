@@ -225,13 +225,16 @@ btrMgr_AC_acmDataCapture_InTask (
             }
             /* eBTRMgrACAcmDCStop - STOP */
             else if (leBtrMgrAcmDCCurOp == eBTRMgrACAcmDCStop) {
-                lui16msTimeout = 500;
+                lui16msTimeout = 50;
                 BTRMGRLOG_INFO ("eBTRMgrACAcmDCStop\n");
 
                 if (pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd == -1) {
                     BTRMGRLOG_ERROR("eBTRMgrACAcmDCStop :FAILURE\n");
                 }
                 else {
+                    iarmbus_acm_arg_t   lstBtrMgrIarmAcmArgs;
+                    IARM_Result_t       leBtrMgIarmAcmRet = IARM_RESULT_SUCCESS;
+
                     // Flush the read queue before closing the read socket
                     if (lpInDataBuf) {
                         int li32InDataBufBytesRead = 0;
@@ -250,6 +253,20 @@ btrMgr_AC_acmDataCapture_InTask (
                     if (pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd  >  0) {
                         close(pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd);  //CID:23436
                         pstBtrMgrAcHdl->i32BtrMgrAcmDCSockFd = -1;
+                    }
+
+                    memset(&lstBtrMgrIarmAcmArgs, 0, sizeof(iarmbus_acm_arg_t));
+                    lstBtrMgrIarmAcmArgs.session_id = pstBtrMgrAcHdl->hBtrMgrIarmAcmHdl;
+
+                    if ((leBtrMgIarmAcmRet = IARM_Bus_Call (IARMBUS_AUDIOCAPTUREMGR_NAME,
+                                                            IARMBUS_AUDIOCAPTUREMGR_STOP,
+                                                            (void *)&lstBtrMgrIarmAcmArgs,
+                                                            sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
+                        BTRMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_STOP:Return Status = %d\n", leBtrMgIarmAcmRet);
+                    }
+
+                    if (lstBtrMgrIarmAcmArgs.result != 0) {
+                        BTRMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
                     }
 
                 }
@@ -1352,10 +1369,6 @@ BTRMgr_AC_Stop (
     rmf_Error       leBtrMgrRmfAcRet = RMF_SUCCESS; 
 #endif
 
-#if defined(USE_ACM)
-    iarmbus_acm_arg_t           lstBtrMgrIarmAcmArgs;
-    IARM_Result_t               leBtrMgIarmAcmRet = IARM_RESULT_SUCCESS;
-#endif
 
     if (pstBtrMgrAcHdl == NULL) {
         return eBTRMgrNotInitialized;
@@ -1374,17 +1387,6 @@ BTRMgr_AC_Stop (
 #if defined(USE_ACM)
     if ((pstBtrMgrAcHdl->pcBTRMgrAcType == NULL) ||
         (!strncmp(pstBtrMgrAcHdl->pcBTRMgrAcType, BTRMGR_AC_TYPE_PRIMARY, strlen(BTRMGR_AC_TYPE_PRIMARY)))) {
-        memset(&lstBtrMgrIarmAcmArgs, 0, sizeof(iarmbus_acm_arg_t));
-        lstBtrMgrIarmAcmArgs.session_id = pstBtrMgrAcHdl->hBtrMgrIarmAcmHdl;
-
-        if ((leBtrMgIarmAcmRet = IARM_Bus_Call (IARMBUS_AUDIOCAPTUREMGR_NAME,
-                                                IARMBUS_AUDIOCAPTUREMGR_STOP,
-                                                (void *)&lstBtrMgrIarmAcmArgs,
-                                                sizeof(lstBtrMgrIarmAcmArgs))) != IARM_RESULT_SUCCESS) {
-            BTRMGRLOG_ERROR("IARMBUS_AUDIOCAPTUREMGR_STOP:Return Status = %d\n", leBtrMgIarmAcmRet);
-            leBtrMgrAcRet = eBTRMgrFailure;
-        }
-
 
         if (pstBtrMgrAcHdl->pBtrMgrAcmDataCapGThread) {
             gpointer    lpeBtrMgrAcmDCOp = NULL;
@@ -1399,12 +1401,7 @@ BTRMgr_AC_Stop (
             leBtrMgrAcRet = eBTRMgrFailure;
         }
 
-        pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady = NULL; 
-
-        if ((leBtrMgrAcRet != eBTRMgrSuccess) || (lstBtrMgrIarmAcmArgs.result != 0)) {
-            BTRMGRLOG_ERROR("lstBtrMgrIarmAcmArgs:Return Status = %d\n", lstBtrMgrIarmAcmArgs.result);
-            leBtrMgrAcRet = eBTRMgrFailure;
-        }
+        pstBtrMgrAcHdl->fpcBBtrMgrAcDataReady = NULL;
     }
 #elif defined(USE_AC_RMF)
     if ((pstBtrMgrAcHdl->pcBTRMgrAcType == NULL) ||
