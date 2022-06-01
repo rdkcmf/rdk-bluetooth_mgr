@@ -529,7 +529,7 @@ int main(int argc, char *argv[])
 {
     BTRMGR_Result_t rc = BTRMGR_RESULT_SUCCESS;
     int loop = 1, i = 0;
-    char array[32] = "";
+    char array[64] = ""; //CID 23413: Out-of-bounds access
     BTRMgrDeviceHandle handle = 0;
     int counter;
     size_t sz;
