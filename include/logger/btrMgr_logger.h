@@ -55,6 +55,8 @@ extern int b_rdk_logger_enabled;
 }
 #else
 
+#include <stdio.h>
+
 #define LOG_ERROR(format, ...)            fprintf(stderr, format, __VA_ARGS__)
 #define LOG_WARN(format,  ...)            fprintf(stderr, format, __VA_ARGS__)
 #define LOG_INFO(format,  ...)            fprintf(stderr, format, __VA_ARGS__)

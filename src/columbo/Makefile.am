@@ -21,7 +21,7 @@ SUBDIRS =
 INCLUDE_FILES =
 
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/columbo -I${top_srcdir}/include/logger
-AM_LDFLAGS = -lrdkloggers
+AM_LDFLAGS = $(RDKLOGGER_LIBS)
 
 lib_LTLIBRARIES = libbtrMgrColumbo.la
 libbtrMgrColumbo_la_SOURCES = btrMgr_Columbo.c

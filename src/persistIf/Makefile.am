@@ -21,7 +21,7 @@ SUBDIRS =
 INCLUDE_FILES =
 
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/logger
-AM_LDFLAGS = -lrdkloggers
+AM_LDFLAGS = $(RDKLOGGER_LIBS)
 AM_LDFLAGS += $(LIBCJSON_LIBS)
 lib_LTLIBRARIES = libbtrMgrPersistInterface.la
 libbtrMgrPersistInterface_la_SOURCES =btrMgr_persistIface.c

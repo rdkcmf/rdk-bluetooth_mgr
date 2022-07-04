@@ -149,6 +149,7 @@ AC_ARG_ENABLE([systemd-notify],
 
 # Use Glib
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
+PKG_CHECK_MODULES([GTHREAD], [gthread-2.0 >= 2.24.0])
 PKG_CHECK_MODULES([LIBCJSON], [libcjson >= 1.0])
 
 # GStreamer version. Use 1.0 Only
@@ -174,17 +175,17 @@ AS_IF([test "x$enable_gstreamer1" = "xyes" -a "x$have_gst1" != "xyes"], [
 $GST_PKG_ERRORS])], [])
 
 
-RPC_ENABLE="" #true"
 AC_ARG_ENABLE([rpc],
               AS_HELP_STRING([--enable-rpc],[enable rpc plugin (default is no)]),
               [
       		case "${enableval}" in
-        	 yes) RPC_ENABLE=true ;;
-        	 no)  RPC_ENABLE=false AC_MSG_ERROR([rpc plugin is disabled]) ;;
+        	 yes) remotepc=true ;;
+        	 no)  remotepc=false AC_MSG_ERROR([rpc plugin is disabled]) ;;
         	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-rpc]) ;;
        		esac
     	      ],
-    	      [echo "rpc plugin is disabled"])
+    	      [remotepc=false])
+AM_CONDITIONAL([USE_RPC], [test "x$remotepc" = xtrue])
 
 SYS_DIAG_ENABLE="" #true"
 AC_ARG_ENABLE([sys-diag],
@@ -196,7 +197,8 @@ AC_ARG_ENABLE([sys-diag],
         	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-sys-diag]) ;;
        		esac
     	      ],
-    	      [echo "system diagnostics is disabled"])
+    	      [echo "system diagnostics is disabled default"])
+AM_CONDITIONAL(USE_SYS_DIAG, test "x$SYS_DIAG_ENABLE" = xtrue)
 
 # Check for breakpad
 BREAKPAD_CFLAGS=" "
@@ -241,11 +243,13 @@ AS_IF([test "x$rdk_logger_ok" = "xyes"], [
        AC_MSG_RESULT($enable_rdk_logger)
        if test "$enable_rdk_logger" = yes; then
           AC_DEFINE(RDK_LOGGER_ENABLED, 1, [Enabled RDK Logger])
+	      RDKLOGGER_LIBS="-lrdkloggers"
        else
           AC_MSG_ERROR([RDK_LOGGER library (librdkloggers) not found])
        fi
     fi
 ], [])
+AC_SUBST([RDKLOGGER_LIBS])
 
 # Check for pi build
 AC_ARG_ENABLE([pi-build],
@@ -301,8 +305,6 @@ plugindir="\$(libdir)/gstreamer-$GST_MAJORMINOR"
 BTR_MGR_SRC="src"
 BTR_MGR_TEST="tests"
 
-AM_CONDITIONAL(USE_RPC, test "x$RPC_ENABLE" = xtrue)
-AM_CONDITIONAL(USE_SYS_DIAG, test "x$SYS_DIAG_ENABLE" = xtrue)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T

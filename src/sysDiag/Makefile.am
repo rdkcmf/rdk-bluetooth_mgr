@@ -21,11 +21,11 @@ SUBDIRS =
 INCLUDE_FILES =
 
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include/common -I${top_srcdir}/include/sysDiag -I${top_srcdir}/include/logger
-AM_LDFLAGS = -lrdkloggers
-AM_CPPFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal
-AM_LDFLAGS += -lIARMBus
+AM_LDFLAGS = $(RDKLOGGER_LIBS)
 
 if USE_SYS_DIAG
+AM_CPPFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal
+AM_LDFLAGS += -lIARMBus
 AM_CPPFLAGS += -DBTRTEST_SYS_DIAG_ENABLE=1
 endif
 

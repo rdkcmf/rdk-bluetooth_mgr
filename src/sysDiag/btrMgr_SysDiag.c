@@ -34,13 +34,13 @@
 #include <stdio.h>
 
 /* Ext lib Headers */
+#ifdef BTRTEST_SYS_DIAG_ENABLE
 #include "libIBus.h"
 #include "libIARM.h"
-#ifdef BTRTEST_SYS_DIAG_ENABLE
 #include "wifiSrvMgrIarmIf.h"
-#endif
 #include "sysMgr.h"
 #include "pwrMgr.h"
+#endif
 
 /* Interface lib Headers */
 #include "btrMgr_logger.h"
@@ -51,7 +51,9 @@
 
 
 typedef struct _stBTRMgrSDHdl {
+#ifdef BTRTEST_SYS_DIAG_ENABLE
     IARM_Bus_PWRMgr_PowerState_t    _powerState;
+#endif
     stBTRMgrSysDiagStatus           lstBtrMgrSysDiagStat;
     fPtr_BTRMgr_SD_StatusCb         fpcBSdStatus;
     void*                           pvcBUserData;
@@ -65,7 +67,9 @@ static int btrMgr_SysDiag_getDiagInfoFromFile(char* aFileName, char* aData);
 static int btrMgr_SysDiag_getDiagInfoFromPipe(char* aCmd, char* aData);
 
 /* Incoming Callbacks Prototypes */
+#ifdef BTRTEST_SYS_DIAG_ENABLE
 static void btrMgr_SysDiag_powerModeChangeCb (const char *owner, IARM_EventId_t eventId, void *data, size_t len); 
+#endif
 
 /* Static Function Definitions */
 static int
@@ -186,7 +190,9 @@ BTRMgr_SD_Init (
 
     memset(sDHandle, 0, sizeof(stBTRMgrSDHdl));
     sDHandle->lstBtrMgrSysDiagStat.enSysDiagChar = BTRMGR_SYS_DIAG_UNKNOWN;
+#ifdef BTRTEST_SYS_DIAG_ENABLE
     sDHandle->_powerState = IARM_BUS_PWRMGR_POWERSTATE_OFF;
+#endif
     sDHandle->fpcBSdStatus= afpcBSdStatus;
     sDHandle->pvcBUserData= apvUserData;
 
@@ -224,7 +230,9 @@ BTRMGR_SysDiag_GetData (
 ) {
     stBTRMgrSDHdl*  pstBtrMgrSdHdl = (stBTRMgrSDHdl*)hBTRMgrSdHdl;
     eBTRMgrRet      rc = eBTRMgrSuccess;
+#ifdef BTRTEST_SYS_DIAG_ENABLE
     IARM_Result_t   lIARMStatus = IARM_RESULT_SUCCESS;
+#endif
 
     if (NULL == pstBtrMgrSdHdl)
         return eBTRMgrFailure;
@@ -267,10 +275,11 @@ BTRMGR_SysDiag_GetData (
         }
         break;
         case BTRMGR_SYS_DIAG_FWDOWNLOADSTATUS: {
-            IARM_Bus_SYSMgr_GetSystemStates_Param_t param = { 0 };
             char lValue[BTRMGR_STR_LEN_MAX] = "";
-
+#ifdef BTRTEST_SYS_DIAG_ENABLE
+            IARM_Bus_SYSMgr_GetSystemStates_Param_t param = { 0 };
             memset(&param, 0, sizeof(param));
+#endif
 
             btrMgr_SysDiag_getDiagInfoFromPipe("grep BOX_TYPE /etc/device.properties | cut -d'=' -f2", lValue);
             if (!strcmp(lValue, "pi")) {
@@ -278,6 +287,7 @@ BTRMGR_SysDiag_GetData (
                 snprintf(aData, (BTRMGR_STR_LEN_MAX - 1), "%s", "COMPLETED");
             }
             else {
+#ifdef BTRTEST_SYS_DIAG_ENABLE
                 lIARMStatus = IARM_Bus_Call(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_API_GetSystemStates, (void *)&param, sizeof(param));
                 if (IARM_RESULT_SUCCESS != lIARMStatus) {
                     BTRMGRLOG_DEBUG("Failure : Return code is %d\n", lIARMStatus);
@@ -293,6 +303,7 @@ BTRMGR_SysDiag_GetData (
                         snprintf(aData, (BTRMGR_STR_LEN_MAX - 1), "%s", "COMPLETED");
                     }
                 }
+#endif
             }
         }
         break;
@@ -338,10 +349,11 @@ BTRMGR_SysDiag_GetData (
         }
         break;
         case BTRMGR_SYS_DIAG_RFSTATUS: {
-            IARM_Bus_SYSMgr_GetSystemStates_Param_t param = { 0 };
             char lValue[BTRMGR_STR_LEN_MAX] = "";
-
+#ifdef BTRTEST_SYS_DIAG_ENABLE
+            IARM_Bus_SYSMgr_GetSystemStates_Param_t param = { 0 };
             memset(&param, 0, sizeof(param));
+#endif
 
             btrMgr_SysDiag_getDiagInfoFromPipe("grep GATEWAY_DEVICE /etc/device.properties | cut -d'=' -f2", lValue);
             BTRMGRLOG_DEBUG("Is Gateway device:%s\n", lValue);
@@ -350,6 +362,7 @@ BTRMGR_SysDiag_GetData (
                 snprintf(aData, (BTRMGR_STR_LEN_MAX - 1), "%s", "NOT CONNECTED");
             }
             else {
+#ifdef BTRTEST_SYS_DIAG_ENABLE
                 lIARMStatus = IARM_Bus_Call(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_API_GetSystemStates, (void *)&param, sizeof(param));
                 if (IARM_RESULT_SUCCESS != lIARMStatus) {
                     BTRMGRLOG_DEBUG("Failure : Return code is %d\n", lIARMStatus);
@@ -365,10 +378,12 @@ BTRMGR_SysDiag_GetData (
                         snprintf(aData, (BTRMGR_STR_LEN_MAX - 1), "%s", "CONNECTED");
                     }
                 }
+#endif
             }
         }
         break;
         case BTRMGR_SYS_DIAG_POWERSTATE: {
+#ifdef BTRTEST_SYS_DIAG_ENABLE
             IARM_Bus_PWRMgr_GetPowerState_Param_t param;
             IARM_Result_t res = IARM_Bus_Call(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_API_GetPowerState,
                     (void *)&param, sizeof(param));
@@ -403,6 +418,7 @@ BTRMGR_SysDiag_GetData (
                 IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, btrMgr_SysDiag_powerModeChangeCb);
                 rc = eBTRMgrFailure;
             }
+#endif
         }
         break;
         default: {
@@ -447,6 +463,7 @@ BTRMGR_SysDiag_ConnectToWifi (
 }
 
 /*  Incoming Callbacks */
+#ifdef BTRTEST_SYS_DIAG_ENABLE
 static void
 btrMgr_SysDiag_powerModeChangeCb (
     const char *owner,
@@ -504,3 +521,4 @@ btrMgr_SysDiag_powerModeChangeCb (
         }
     }
 }
+#endif /* #ifdef BTRTEST_SYS_DIAG_ENABLE */

@@ -19,7 +19,13 @@
 SUBDIRS =
 if !USE_RPC
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include -I${top_srcdir}/include/common -I${top_srcdir}/include/persistIf -I${top_srcdir}/include/audioCap -I${top_srcdir}/include/streamOut -I${top_srcdir}/include/streamIn -I${top_srcdir}/include/logger -I${top_srcdir}/include/sysDiag -I${top_srcdir}/include/columbo -I${top_srcdir}/include/leOnboarding -I=${includedir} ${GLIB_CFLAGS} ${RPC_FLAGS} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/wdmp-c -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}
-AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(G_THREAD_LIBS) $(BTRCORE_LIBS) -lrdkloggers -lrfcapi -lssl -lcrypto
+AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) $(GTHREAD_LIBS) $(BTRCORE_LIBS) $(RDKLOGGER_LIBS) -lssl -lcrypto
+
+if WITH_PI_BUILD
+AM_CPPFLAGS += $(PI_BUILD_FLAG)
+else
+AM_LDFLAGS +=  -lrfcapi
+endif
 
 lib_LTLIBRARIES = libBTMgr.la
 libBTMgr_la_SOURCES = btrMgr.c

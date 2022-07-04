@@ -176,6 +176,7 @@ BTRMGR_RegisterForCallbacks (
     IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_TRACKLIST_INFO, btrMgrMediaCallback);
     IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_MUTE, btrMgrMediaCallback);
     IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_UNMUTE, btrMgrMediaCallback);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_MEDIA_STATUS, btrMgrdeviceCallback);
 
     BTRMGRLOG_INFO ("IARM Interface Inited Register Event Successfully\n");
 
@@ -288,6 +289,7 @@ BTRMGR_UnRegisterFromCallbacks (
     IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_OUT_OF_RANGE);
     IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_MUTE);
     IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_MEDIA_PLAYER_UNMUTE);
+    IARM_Bus_UnRegisterEventHandler(IARM_BUS_BTRMGR_NAME, BTRMGR_IARM_EVENT_DEVICE_MEDIA_STATUS);
 
     BTRMGRLOG_INFO ("IARM Interface UnRegister Event Succesful\n");
 
@@ -2049,6 +2051,7 @@ btrMgrdeviceCallback (
             (BTRMGR_IARM_EVENT_RECEIVED_EXTERNAL_PLAYBACK_REQUEST   == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_OP_READY                      == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_OP_INFORMATION                == eventId) ||
+            (BTRMGR_IARM_EVENT_DEVICE_MEDIA_STATUS                  == eventId) ||
             (BTRMGR_IARM_EVENT_DEVICE_FOUND                         == eventId) ){
 
             memcpy (&newEvent, pReceivedEvent, sizeof(BTRMGR_EventMessage_t));

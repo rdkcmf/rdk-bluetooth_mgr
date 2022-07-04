@@ -122,7 +122,8 @@ getChoice (
 ) {
     int mychoice;
     printf("Enter a choice...\n");
-    scanf("%d", &mychoice);
+    if (scanf("%d", &mychoice)) {
+    }
         getchar();//suck up a newline?
     return mychoice;
 }
@@ -133,7 +134,8 @@ getEncodedSBCFile (
 ) {
     char sbcEncodedFile[1024];
     printf("Enter SBC File location...\n");
-    scanf("%s", sbcEncodedFile);
+    if (scanf("%s", sbcEncodedFile)) {
+    }
         getchar();//suck up a newline?
     return strdup(sbcEncodedFile);
 }
@@ -180,8 +182,10 @@ sendSBCFileOverBT (
 
         // write bluetooth
         if (timeout > 0) {
-            fread (encoded_buf, 1, bytesToSend, sbcFilePtr);
-            write(fd, encoded_buf, bytesToSend);
+            if (fread (encoded_buf, 1, bytesToSend, sbcFilePtr)) {
+            }
+            if (write(fd, encoded_buf, bytesToSend)) {
+            }
             bytesLeft -= bytesToSend;
         }
 
@@ -403,7 +407,8 @@ main (
 
     do {
         printf("Enter a choice...\n");
-        scanf("%d", &choice);
+        if(scanf("%d", &choice)) {
+        }
         getchar();//suck up a newline?
         switch (choice) {
         case 1: 
@@ -549,7 +554,8 @@ main (
             {
                 char lcAdapterName[64] = {'\0'};
                 printf("Set friendly name (up to 64 characters): \n");
-                fgets(lcAdapterName, 63 , stdin);
+                if (fgets(lcAdapterName, 63 , stdin)) {
+                }
                 printf("setting name to %s\n", lcAdapterName);
                 BTRCore_SetAdapterDeviceName(lhBTRCore, &lstBTRCoreAdapter, lcAdapterName);
             }
@@ -584,7 +590,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
-                fgets(myService,sizeof(myService),stdin);
+                if (fgets(myService,sizeof(myService),stdin)) {
+                }
                 for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                       {
                     if(myService[i] == '\n')
@@ -613,7 +620,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
-                fgets(myService,sizeof(myService),stdin);
+                if (fgets(myService,sizeof(myService),stdin)) {
+                }
                 for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                       {
                     if(myService[i] == '\n')
@@ -941,7 +949,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 printf("Query for any of the mentioned property....(Name|Type|Subtype|Position|Status|Repeat|Shuffle|Browsable|Searchable)\n");
-                scanf("%s",prop);
+                if (scanf("%s",prop)) {
+                }
 
                 if (!strcmp(prop, "Position") || !strcmp(prop, "Browsable") || !strcmp(prop, "Searchable")) {
                    unsigned int val = 0;
@@ -991,7 +1000,8 @@ main (
                 printf("Pick a Device to Connect...\n");
                 devnum = getChoice();
                 printf ("Enter the UUID : ");
-                scanf ("%s", leUuidString);
+                if (scanf ("%s", leUuidString)) {
+                }
                 printf ("Select the property to query...\n");
                 printf ("[0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value |"
                         " 5 - Notifying | 6 - Flags | 7 -Character]\n");
@@ -1057,7 +1067,8 @@ main (
                 printf("Pick a Device to Connect...\n");
                 devnum = getChoice();
                 printf ("Enter the UUID : ");
-                scanf ("%s", leUuidString);
+                if (scanf ("%s", leUuidString)) {
+                }
 
                 printf("%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
                 printf("\t[0 - ReadValue | 1 - WriteValue | 2 - StartNotify | 3 - StopNotify]\n");
@@ -1066,7 +1077,8 @@ main (
 
                 if (aenBTRCoreLeOp == enBTRCoreLeOpGWriteValue) { 
                     printf("\tEnter the value to write : ");
-                    scanf("%s", leWriteArg);
+                    if (scanf("%s", leWriteArg)) {
+                    }
                 }
 
                 if (leUuidString[0]) {
@@ -1272,7 +1284,8 @@ extractWavHeader (
             return -1; 
         }
 
-        fread(&pstAudioWaveHeader->ucFormatArr16x8Bits, 16, 1, fpInAudioFile);
+        if (fread(&pstAudioWaveHeader->ucFormatArr16x8Bits, 16, 1, fpInAudioFile)) {
+        }
     }   
     else if (pstAudioWaveHeader->ulWaveHeaderLength32Bits == 18 && pstAudioWaveHeader->usWaveHeaderFmt16Bits == 1) {
 
@@ -1388,7 +1401,8 @@ doDataCapture (
         if (inFileBytesLeft < inBufSize)
             inBytesToEncode = inFileBytesLeft;
 
-        fread (inDataBuf, 1, inBytesToEncode, inFileFp);
+        if (fread (inDataBuf, 1, inBytesToEncode, inFileFp)) {
+        }
       
         if (eBTRMgrSuccess != BTRMgr_SO_SendBuffer(hBTRMgrSoHdl, inDataBuf, inBytesToEncode)) {
             fprintf(stderr, "BTRMgr_SO_SendBuffer - FAILED\n");

@@ -35,12 +35,14 @@
 
 /* Ext lib Headers */
 
+#ifdef BTRTEST_LE_ONBRDG_ENABLE
 #include "libIBus.h"
 #include "libIARM.h"
-#ifdef BTRTEST_LE_ONBRDG_ENABLE
+
 #include "wifiSrvMgrIarmIf.h"
-#endif
+
 #include "sysMgr.h"
+#endif
 
 
 #include "cJSON.h"
@@ -75,9 +77,9 @@ short int gUuidProvisionStatus = 0;
 char gWifiPayload[MAX_PAYLOAD_LEN];
 int gWifiPayloadLen = 0;
 int gDataLenRxd = 0;
-bool gWifiPayloadDecodeSuccess = FALSE;
-bool gWifiConnectSuccess = FALSE;
-bool gWifiPayloadRxd = FALSE;
+bool gWifiPayloadDecodeSuccess = false;
+bool gWifiConnectSuccess = false;
+bool gWifiPayloadRxd = false;
 typedef struct wifi_credentials wifi_creds_t;
 wifi_creds_t WifiCreds;
 
@@ -210,7 +212,7 @@ BTRMGR_LeDecodeRxdWifiPayload (
             if (ret == 0) {
                 BTRMGRLOG_DEBUG("wifi creds for %s radio: ssid (%s) password (%s)",
                     WifiCreds.frequency, WifiCreds.ssid, WifiCreds.passphrase);
-                gWifiPayloadDecodeSuccess = TRUE;
+                gWifiPayloadDecodeSuccess = true;
             }
         }
     }
@@ -278,7 +280,7 @@ BTRMGR_LeOnboarding_GetData (
         }
             break;
         case BTRMGR_LE_ONBRDG_GET_WIFI_CREDS: {
-            if(TRUE == gWifiPayloadRxd) {
+            if(true == gWifiPayloadRxd) {
                 gLeOnboardingState = BTRMGR_LE_ONBRDG_CONNECT_WIFI;
                 snprintf(aData, (BTRMGR_LE_STR_LEN_MAX - 1), "0x%x", BTRMGR_LE_ONBRDG_PROCESSING_WIFI_CONFIG);
             }
@@ -288,12 +290,12 @@ BTRMGR_LeOnboarding_GetData (
         }
             break;
         case BTRMGR_LE_ONBRDG_CONNECT_WIFI: {
-            if ((TRUE == gWifiConnectSuccess) && (eBTRMgrSuccess == BTRMGR_LeWifi_CheckWifiConnSuccess(WifiCreds.ssid))) {
+            if ((true == gWifiConnectSuccess) && (eBTRMgrSuccess == BTRMGR_LeWifi_CheckWifiConnSuccess(WifiCreds.ssid))) {
                 BTRMGRLOG_INFO("Wifi is connected\n");
                 snprintf(aData, (BTRMGR_LE_STR_LEN_MAX - 1), "0x%x", BTRMGR_LE_ONBRDG_WIFI_CONNECT_SUCCESS);
                 gLeOnboardingState = BTRMGR_LE_ONBRDG_COMPLETE;
             }
-            else if (TRUE == gWifiPayloadDecodeSuccess) {
+            else if (true == gWifiPayloadDecodeSuccess) {
                 snprintf(aData, (BTRMGR_LE_STR_LEN_MAX - 1), "0x%x", BTRMGR_LE_ONBRDG_CONNECTING_TO_WIFI);
                 WifiCreds.securitymode = 6;
                 if (eBTRMgrSuccess == BTRMGR_LeWifi_ConnectToWifi(WifiCreds.ssid, WifiCreds.passphrase, WifiCreds.securitymode)) {
@@ -373,7 +375,7 @@ BTRMGR_LeOnboarding_SetData (
         }
 
         if (gDataLenRxd == gWifiPayloadLen) {
-            gWifiPayloadRxd = TRUE;
+            gWifiPayloadRxd = true;
             BTRMGRLOG_DEBUG("Data is %s", gWifiPayload);
             gWifiPayloadLen = 0;
             /* Decode received data */

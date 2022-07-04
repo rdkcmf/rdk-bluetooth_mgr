@@ -31,7 +31,7 @@ endif
 lib_LTLIBRARIES = libbtrMgrStreamOut.la
 libbtrMgrStreamOut_la_SOURCES = btrMgr_streamOut.c
 libbtrMgrStreamOut_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
-libbtrMgrStreamOut_la_LIBADD = $(GLIB_LIBS) -lrdkloggers
+libbtrMgrStreamOut_la_LIBADD = $(GLIB_LIBS) $(RDKLOGGER_LIBS)
 
 if USE_GSTREAMER1
 libbtrMgrStreamOut_la_SOURCES += btrMgr_streamOutGst.c

@@ -57,8 +57,8 @@ extern "C"
 #define BTRMGR_MEDIA_ELEMENT_COUNT_MAX      64
 #define BTRMGR_DEVICE_MAC_LEN               6
 #define BTRMGR_MAX_DEV_OP_DATA_LEN          BTRMGR_MAX_STR_LEN * 3
-#define BTRMGR_SERVICE_DATA_LEN_MAX    32
-#define BTRMGR_UUID_STR_LEN_MAX        64
+#define BTRMGR_SERVICE_DATA_LEN_MAX         32
+#define BTRMGR_UUID_STR_LEN_MAX             64
 
 #define BTRMGR_DEVICE_INFORMATION_UUID      "0x180a"
 #define BTRMGR_RDKDIAGNOSTICS_UUID          "0xFDB9"
@@ -72,28 +72,28 @@ extern "C"
 #define BTRMGR_SOFTWARE_REVISION_UUID       "0x2a28"
 #define BTRMGR_MANUFACTURER_NAME_UUID       "0x2a29"
 
-#define BTRMGR_DEVICE_STATUS_UUID           "1f113f2c-cc01-4f03-9c5c-4b273ed631bb"
-#define BTRMGR_FWDOWNLOAD_STATUS_UUID       "915f96a6-3788-4271-a7ea-6820e98896b8"
-#define BTRMGR_WEBPA_STATUS_UUID            "9d5d3aae-51e3-4767-a055-59febd71de9d"
-#define BTRMGR_WIFIRADIO1_STATUS_UUID       "59a99d5a-3d2f-4265-af13-316c7c76b1f0"
-#define BTRMGR_WIFIRADIO2_STATUS_UUID       "9d6cf473-4fa6-4868-bf2b-c310f38df0c8"
-#define BTRMGR_RF_STATUS_UUID               "91b9497e-634c-408a-9f77-8375b1461b8b"
+#define BTRMGR_DEVICE_STATUS_UUID               "1f113f2c-cc01-4f03-9c5c-4b273ed631bb"
+#define BTRMGR_FWDOWNLOAD_STATUS_UUID           "915f96a6-3788-4271-a7ea-6820e98896b8"
+#define BTRMGR_WEBPA_STATUS_UUID                "9d5d3aae-51e3-4767-a055-59febd71de9d"
+#define BTRMGR_WIFIRADIO1_STATUS_UUID           "59a99d5a-3d2f-4265-af13-316c7c76b1f0"
+#define BTRMGR_WIFIRADIO2_STATUS_UUID           "9d6cf473-4fa6-4868-bf2b-c310f38df0c8"
+#define BTRMGR_RF_STATUS_UUID                   "91b9497e-634c-408a-9f77-8375b1461b8b"
 
-#define BTRMGR_COLUMBO_START                 "7c3fea2e-c082-4e17-b78b-1e69ca3889b9"
-#define BTRMGR_COLUMBO_STOP                  "5a7e479b-9fac-4d73-b5b0-906669946720"
-#define BTRMGR_COLUMBO_STATUS                "26f05ee1-cefa-460d-8985-98c0dc078d6c"
-#define BTRMGR_COLUMBO_REPORT                "c1e62616-b4de-4f72-86ca-9d9469041b6d"
-#define BTRMGR_DEVICE_MAC                    "device_mac"
-#define BTRMGR_WIFI_CONNECT_DUMMY_UUID              "4ffab12b-e545-1baf-1dc6-bd3fd749716a"
-#define BTRMGR_WIFI_SSID_DUMMY_UUID                 "22d68435-f7af-1156-b2e2-c7d17211b026"
-#define BTRMGR_WIFI_PWD_DUMMY_UUID                  "6bfebfe7-294d-2f4e-a4b3-b04f2a66f2f0"
-#define BTRMGR_WIFI_SEC_MODE_DUMMY_UUID             "112f9c72-82c1-93a3-d4fc-3dba3441b2c8"
-#define BTRMGR_LEONBRDG_SERVICE_UUID_SETUP          "8DF5AD72-9BBC-4167-BCD9-E8EB9E4D671B"
-#define BTRMGR_LEONBRDG_UUID_QR_CODE                "12984C43-3B43-4952-A387-715DCF9795C6"
-#define BTRMGR_LEONBRDG_UUID_PROVISION_STATUS       "79DEFBC1-EB45-448D-9F2A-1ECC3A47A242"
-#define BTRMGR_LEONBRDG_UUID_PUBLIC_KEY             "CB9FEE4D-C6ED-48C1-AB46-C3F2DA38EEDD"
-#define BTRMGR_LEONBRDG_UUID_WIFI_CONFIG            "B87A896B-4052-4CAB-A7E7-A71594D9C353"
-#define BTRMGR_LEONBRDG_UUID_SSID_LIST              "AAF92F88-7F35-48F1-9C3E-1FE5C3978B7A"
+#define BTRMGR_COLUMBO_START                    "7c3fea2e-c082-4e17-b78b-1e69ca3889b9"
+#define BTRMGR_COLUMBO_STOP                     "5a7e479b-9fac-4d73-b5b0-906669946720"
+#define BTRMGR_COLUMBO_STATUS                   "26f05ee1-cefa-460d-8985-98c0dc078d6c"
+#define BTRMGR_COLUMBO_REPORT                   "c1e62616-b4de-4f72-86ca-9d9469041b6d"
+#define BTRMGR_DEVICE_MAC                       "device_mac"
+#define BTRMGR_WIFI_CONNECT_DUMMY_UUID          "4ffab12b-e545-1baf-1dc6-bd3fd749716a"
+#define BTRMGR_WIFI_SSID_DUMMY_UUID             "22d68435-f7af-1156-b2e2-c7d17211b026"
+#define BTRMGR_WIFI_PWD_DUMMY_UUID              "6bfebfe7-294d-2f4e-a4b3-b04f2a66f2f0"
+#define BTRMGR_WIFI_SEC_MODE_DUMMY_UUID         "112f9c72-82c1-93a3-d4fc-3dba3441b2c8"
+#define BTRMGR_LEONBRDG_SERVICE_UUID_SETUP      "8DF5AD72-9BBC-4167-BCD9-E8EB9E4D671B"
+#define BTRMGR_LEONBRDG_UUID_QR_CODE            "12984C43-3B43-4952-A387-715DCF9795C6"
+#define BTRMGR_LEONBRDG_UUID_PROVISION_STATUS   "79DEFBC1-EB45-448D-9F2A-1ECC3A47A242"
+#define BTRMGR_LEONBRDG_UUID_PUBLIC_KEY         "CB9FEE4D-C6ED-48C1-AB46-C3F2DA38EEDD"
+#define BTRMGR_LEONBRDG_UUID_WIFI_CONFIG        "B87A896B-4052-4CAB-A7E7-A71594D9C353"
+#define BTRMGR_LEONBRDG_UUID_SSID_LIST          "AAF92F88-7F35-48F1-9C3E-1FE5C3978B7A"
 
 typedef unsigned long long int BTRMgrDeviceHandle;
 typedef unsigned long long int BTRMgrMediaElementHandle;
@@ -157,6 +157,7 @@ typedef enum _BTRMGR_Events_t {
     BTRMGR_EVENT_MEDIA_TRACK_INFO,
     BTRMGR_EVENT_MEDIA_PLAYER_MUTE,
     BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE,
+    BTRMGR_EVENT_DEVICE_MEDIA_STATUS,
     BTRMGR_EVENT_MAX
 } BTRMGR_Events_t;
 
@@ -519,6 +520,15 @@ typedef struct _BTRMGR_MediaElementListInfo_t {
 } BTRMGR_MediaElementListInfo_t;
 
 /**
+  * @brief Represents Media Element List.
+ */
+typedef struct _BTRMGR_MediaDeviceStatus_t {
+    unsigned char                   m_ui8mediaDevVolume;
+    unsigned char                   m_ui8mediaDevMute;
+    BTRMGR_MediaControlCommand_t    m_enmediaCtrlCmd;
+} BTRMGR_MediaDeviceStatus_t;
+
+/**
  * @brief Represents the media info.
  */
 typedef struct _BTRMGR_MediaInfo_t {
@@ -527,16 +537,17 @@ typedef struct _BTRMGR_MediaInfo_t {
     char                   m_name [BTRMGR_NAME_LEN_MAX];
 
     union {
-       BTRMGR_MediaTrackInfo_t          m_mediaTrackInfo;
-       BTRMGR_MediaPositionInfo_t       m_mediaPositionInfo;
-       BTRMGR_MediaElementListInfo_t    m_mediaAlbumListInfo;
-       BTRMGR_MediaElementListInfo_t    m_mediaArtistListInfo;
-       BTRMGR_MediaElementListInfo_t    m_mediaGenreListInfo;
-       BTRMGR_MediaElementListInfo_t    m_mediaCompilationInfo;
-       BTRMGR_MediaElementListInfo_t    m_mediaPlayListInfo;
-       BTRMGR_MediaElementListInfo_t    m_mediaTrackListInfo;
-       char                             m_mediaPlayerName[BTRMGR_MAX_STR_LEN];
-       unsigned char                    m_mediaPlayerVolumeInPercentage;
+        BTRMGR_MediaTrackInfo_t         m_mediaTrackInfo;
+        BTRMGR_MediaPositionInfo_t      m_mediaPositionInfo;
+        BTRMGR_MediaElementListInfo_t   m_mediaAlbumListInfo;
+        BTRMGR_MediaElementListInfo_t   m_mediaArtistListInfo;
+        BTRMGR_MediaElementListInfo_t   m_mediaGenreListInfo;
+        BTRMGR_MediaElementListInfo_t   m_mediaCompilationInfo;
+        BTRMGR_MediaElementListInfo_t   m_mediaPlayListInfo;
+        BTRMGR_MediaElementListInfo_t   m_mediaTrackListInfo;
+        char                            m_mediaPlayerName[BTRMGR_MAX_STR_LEN];
+        unsigned char                   m_mediaPlayerVolume;
+        BTRMGR_MediaDeviceStatus_t      m_mediaDevStatus;
     };
 } BTRMGR_MediaInfo_t;
 
@@ -1114,7 +1125,7 @@ BTRMGR_Result_t BTRMGR_SelectMediaElement (unsigned char aui8AdapterIdx, BTRMgrD
 /**
  * @brief  This API fetches the Device name of the media.
  *
- * @param[in]  type		Device type.
+ * @param[in]  type     Device type.
  *
  * @return Returns the device name.
  */

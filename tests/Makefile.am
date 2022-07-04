@@ -28,6 +28,10 @@ btrMgrTest_SOURCES = btrMgr_test.c
 #btrMgrHTMLControl_SOURCES = btrMgr_testFcgi.c
 #btrMgrHTMLControl_LDFLAGS = -lfcgi
 
+if WITH_PI_BUILD
+AM_CPPFLAGS += $(PI_BUILD_FLAG)
+endif
+
 if USE_RPC
 AM_LDFLAGS = -ldbus-1  -lIARMBus -lrfcapi
 btrMgrTest_LDADD     = $(top_builddir)/src/rpc/libBTMgr.la

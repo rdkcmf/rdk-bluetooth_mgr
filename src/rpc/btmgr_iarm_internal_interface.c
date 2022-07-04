@@ -2141,6 +2141,10 @@ btrMgr_EventCallback (
         BTRMGRLOG_WARN ("Post Media UnMute Info\n");
         lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_MEDIA_PLAYER_UNMUTE, (void *)&lstEventMessage, sizeof(lstEventMessage));
     }
+    else if (lstEventMessage.m_eventType == BTRMGR_EVENT_DEVICE_MEDIA_STATUS) {
+        BTRMGRLOG_WARN ("Post Device Media Status Info\n");
+        lenIarmResult = IARM_Bus_BroadcastEvent(IARM_BUS_BTRMGR_NAME, (IARM_EventId_t) BTRMGR_IARM_EVENT_DEVICE_MEDIA_STATUS, (void *)&lstEventMessage, sizeof(lstEventMessage));
+    }
 
     if (lenIarmResult != IARM_RESULT_SUCCESS) {
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;

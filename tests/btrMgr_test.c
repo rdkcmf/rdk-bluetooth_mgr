@@ -21,7 +21,10 @@
 #include <string.h>
 #include <unistd.h>
 #include "btmgr.h"
+
+#ifndef BUILD_FOR_PI
 #include "rfcapi.h"
+#endif
 
 /* Tile Specific TOA msg feilds */
 # define _1_BYTE_TOA_CID                    "00"
@@ -189,7 +192,8 @@ static int getUserSelection (void)
     if (cliDisabled)
     {
     printf("Enter a choice...\n");
-    scanf("%d", &mychoice);
+    if (scanf("%d", &mychoice)) {
+    }
     getchar();//to catch newline
     }
     else
@@ -211,7 +215,8 @@ static BTRMgrDeviceHandle getDeviceSelection(void)
     if (cliDisabled)
     {
     printf("Enter a choice...\n");
-    scanf("%llu", &mychoice);
+    if (scanf("%llu", &mychoice)) {
+    }
     getchar();//to catch newline
     }
     else
@@ -234,7 +239,9 @@ void getString (char* mychoice)
     if (cliDisabled)
     {
     char *tmp = NULL;
-    fgets (mychoice, BTRMGR_NAME_LEN_MAX, stdin);
+    if (fgets (mychoice, BTRMGR_NAME_LEN_MAX, stdin)) {
+    }
+
     tmp = strchr(mychoice, '\n');
     if (tmp)
         *tmp = '\0';
@@ -311,7 +318,8 @@ const char* getEventAsString (BTRMGR_Events_t etype)
     case BTRMGR_EVENT_MEDIA_TRACKLIST_INFO              : event = "MEDIA_PLAYER_TRACKLIST_INFO";         break;
     case BTRMGR_EVENT_MEDIA_PLAYER_MUTE                 : event = "MEDIA_PLAYER_MUTE";                   break;
     case BTRMGR_EVENT_MEDIA_PLAYER_UNMUTE               : event = "MEDIA_PLAYER_UNMUTE";                 break;
-    default                                            : event = "##INVALID##";
+    case BTRMGR_EVENT_DEVICE_MEDIA_STATUS               : event = "DEVICE_MEDIA_STATUS";                 break;
+    default                                             : event = "##INVALID##";
   }
   return event;
 }
@@ -481,11 +489,14 @@ BTRMGR_Result_t eventCallback (BTRMGR_EventMessage_t event)
     case BTRMGR_EVENT_DEVICE_DISCOVERY_UPDATE:
         printf ("\n\tDiscovered %s device of type %s\n", event.m_discoveredDevice.m_name, BTRMGR_GetDeviceTypeAsString(event.m_discoveredDevice.m_deviceType));
         break;
+    case BTRMGR_EVENT_DEVICE_MEDIA_STATUS:
+        printf("\n\t[%s] set  %s  Vol %d Mute %d Ctrl %d %% \n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType), event.m_mediaInfo.m_mediaDevStatus.m_ui8mediaDevVolume, event.m_mediaInfo.m_mediaDevStatus.m_ui8mediaDevMute, event.m_mediaInfo.m_mediaDevStatus.m_enmediaCtrlCmd);
+        break;
     case BTRMGR_EVENT_MEDIA_PLAYER_NAME:
         printf("\n\t[%s] set  %s  %s \n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType), event.m_mediaInfo.m_mediaPlayerName);
         break;
     case BTRMGR_EVENT_MEDIA_PLAYER_VOLUME:
-        printf("\n\t[%s] set  %s  %d%% \n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType), event.m_mediaInfo.m_mediaPlayerVolumeInPercentage);
+        printf("\n\t[%s] set  %s  %d%% \n", event.m_mediaInfo.m_name, getEventAsString(event.m_eventType), event.m_mediaInfo.m_mediaPlayerVolume);
         break;
     case BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_OFF:
     case BTRMGR_EVENT_MEDIA_PLAYER_EQUALIZER_ON:
@@ -1304,19 +1315,23 @@ int main(int argc, char *argv[])
             case 41:
                 {
                     int choice = 0;
-                    WDMP_STATUS status = WDMP_FAILURE;
 
                     printf ("\n\nATTENTION! Disconnect all existing AudioIn connection before flipping the AudioIn Service state.\n\n");
                     printf ("Press 1 to Enable and 0 to Disable AudioIn Service.\n");
-                    scanf("%d", &choice);
+                    if (scanf("%d", &choice)) {
+                    }
 
+#ifndef BUILD_FOR_PI
+                    WDMP_STATUS status = WDMP_FAILURE;
                     status = setRFCParameter("btrMgrTest", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.AudioIn.Enable",
                                                            (choice)? "true" : "false", WDMP_BOOLEAN);
 
                     if (status != WDMP_SUCCESS) {
                         printf("\nsetRFCParameter Failed : %s\n", getRFCErrorString(status));
                     }
-                    else {
+                    else 
+#endif
+                    {
                         if (choice) {
                             printf("\nSuccessfully Enabled AudioIn.\n");
                         }
@@ -1332,7 +1347,8 @@ int main(int argc, char *argv[])
 
                     printf ("\n\nATTENTION! Disconnect all existing AudioIn connection before flipping the AudioIn Service state.\n\n");
                     printf ("Press 1 to Enable and 0 to Disable AudioIn Service.\n");
-                    scanf("%d", &choice);
+                    if (scanf("%d", &choice)) {
+                    }
 
                     rc = BTRMGR_SetAudioInServiceState (0, choice);
 
@@ -1357,10 +1373,12 @@ int main(int argc, char *argv[])
                     printf ("\nPlease Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
                     printf("\nEnter the Media Browser Element Handle\t: ");
-                    scanf("%llu", &mediaElementHdl);
+                    if (scanf("%llu", &mediaElementHdl)) {
+                    } 
                     printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList | 7.Track"
                            "\nEnter the Media Element type\t: ");
-                    scanf("%d", &mediaElementType);
+                    if (scanf("%d", &mediaElementType)) {
+                    }
 
                     rc = BTRMGR_SetMediaElementActive(0, handle, mediaElementHdl, mediaElementType);
 
@@ -1383,14 +1401,18 @@ int main(int argc, char *argv[])
                     printf ("\nPlease Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
                     printf("\nEnter the Media Browser Element Handle\t: ");
-                    scanf("%llu", &mediaElementHdl);
+                    if (scanf("%llu", &mediaElementHdl)) {
+                    }
                     printf("\nEnter the Start index of List\t: ");
-                    scanf("%hu", &startIdx);
+                    if (scanf("%hu", &startIdx)) {
+                    }
                     printf("\nEnter the End index of List\t: ");
-                    scanf("%hu", &endIdx);
+                    if (scanf("%hu", &endIdx)) {
+                    }
                     printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList | 7. Track"
                            "\nEnter the Media Element type\t: ");
-                    scanf("%d", &mediaElementType);
+                    if (scanf("%d", &mediaElementType)) {
+                    }
 
                     memset (&mediaEementListInfo, 0, sizeof(BTRMGR_MediaElementListInfo_t));
 
@@ -1426,10 +1448,12 @@ int main(int argc, char *argv[])
                     printf ("\nPlease Enter the device Handle number of the device\t: ");
                     handle = getDeviceSelection();
                     printf("\nEnter the Media Element Handle to select\t: ");
-                    scanf("%llu", &mediaElementHdl);
+                    if (scanf("%llu", &mediaElementHdl)) {
+                    }
                     printf("\n0. Unknown | 1. Album | 2. Artist | 3. Genre | 4. Compilation | 5. PlayList | 6. TrackList | 7. Track"
                            "\nEnter the Media Element type\t: ");
-                    scanf("%d", &mediaElementType);
+                    if (scanf("%d", &mediaElementType)) {
+                    }
 
                     rc = BTRMGR_SelectMediaElement (0, handle, mediaElementHdl, mediaElementType);
 
@@ -1450,7 +1474,8 @@ int main(int argc, char *argv[])
                     handle = getDeviceSelection();
 
                     printf("\nEnter the Media Browser Element Handle\t: ");
-                    scanf("%llu", &mediaElementHdl);
+                    if (scanf("%llu", &mediaElementHdl)) {
+                    }
 
                     rc = BTRMGR_GetMediaElementTrackInfo(0, handle, mediaElementHdl, &mediaTrackInfo);
 
@@ -1600,16 +1625,19 @@ int main(int argc, char *argv[])
                     {
                         printf("\nAdd test Gatt info\n");
                         printf("0 - No | 1 - Service | 2 - Characteristic | 3 - Descriptor\n");
-                        scanf("%d", &lChoice);
+                        if (scanf("%d", &lChoice)) {
+                        }
                         switch (lChoice)
                         {
                             case 1:
                             {
                                 printf("Enter UUID of Service\n");
-                                scanf("%s", lUUID);
+                                if (scanf("%s", lUUID)) {
+                                }
                                 printf("Enter Service Type\n");
                                 printf("1 - Primary | 0 - Secondary\n");
-                                scanf("%d", (int*)&lServiceType);
+                                if (scanf("%d", (int*)&lServiceType)) {
+                                }
                                 BTRMGR_LE_SetServiceInfo(0, lUUID, (lServiceType != 0 ? 1 : 0));
                             }
                             break;
@@ -1617,9 +1645,11 @@ int main(int argc, char *argv[])
                             case 3:
                             {
                                 printf("Enter UUID\n");
-                                scanf("%s", lUUID);
+                                if (scanf("%s", lUUID)) {
+                                }
                                 printf("Enter UUID of parent\n");
-                                scanf("%s", lParentUUID);
+                                if (scanf("%s", lParentUUID)) {
+                                }
                                 do {
                                     printf("Enter the characteristic flags \n");
                                     printf("\n"
@@ -1640,7 +1670,8 @@ int main(int argc, char *argv[])
                                         "14 - writable-auxiliaries\n"
                                         "15 - Done");
                                     printf("\nPress enter when done");
-                                    scanf("%d", &lFlag);
+                                    if (scanf("%d", &lFlag)) {
+                                    }
                                     if ((lFlag >= 0) || (lFlag <= 14))
                                     {
                                         lFlagMask |= (1 << lFlag);
@@ -1649,7 +1680,8 @@ int main(int argc, char *argv[])
                                 if (0x1 == (lFlagMask & 0x1))
                                 {
                                     printf("Enter value of the characteristic\n");
-                                    scanf("%s", lValue);
+                                    if (scanf("%s", lValue)) {
+                                    }
                                 }
                                 BTRMGR_LE_SetGattInfo(0, lParentUUID, lUUID, lFlagMask, lValue, (lChoice == 2?BTRMGR_LE_PROP_CHAR: BTRMGR_LE_PROP_DESC));
                             }
@@ -1739,19 +1771,23 @@ int main(int argc, char *argv[])
             case 54:
                 {
                     int choice = 0;
-                    WDMP_STATUS status = WDMP_FAILURE;
 
                     printf ("\n\nATTENTION! Disconnect all existing GamePad connection before flipping the GamePad Service state.\n\n");
                     printf ("Press 1 to Enable and 0 to Disable GamePad Service.\n");
-                    scanf("%d", &choice);
+                    if (scanf("%d", &choice)) {
+                    }
 
+#ifndef BUILD_FOR_PI
+                    WDMP_STATUS status = WDMP_FAILURE;              
                     status = setRFCParameter("btrMgrTest", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.BTR.GamePad.Enable",
                                                            (choice)? "true" : "false", WDMP_BOOLEAN);
 
                     if (status != WDMP_SUCCESS) {
                         printf("\nsetRFCParameter Failed : %s\n", getRFCErrorString(status));
                     }
-                    else {
+                    else 
+#endif
+                    {
                         if (choice) {
                             printf("\nSuccessfully Enabled GamePad.\n");
                         }
@@ -1767,7 +1803,8 @@ int main(int argc, char *argv[])
 
                     printf ("\n\nATTENTION! Disconnect all existing GamePad connection before flipping the GamePad Service state.\n\n");
                     printf ("Press 1 to Enable and 0 to Disable GamePad Service.\n");
-                    scanf("%d", &choice);
+                    if (scanf("%d", &choice)) {
+                    }
 
                     rc = BTRMGR_SetHidGamePadServiceState (0, choice);
 
