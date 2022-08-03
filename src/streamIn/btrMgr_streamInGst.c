@@ -186,12 +186,13 @@ btrMgr_SI_g_main_loop_Task (
     auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
     volume          = gst_element_factory_make ("volume",       "btmgr-si-volume");
 
-#if defined BUILD_FOR_PI || defined BUILD_FOR_MTK
-    fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
-#else
+#if defined BUILD_FOR_BRCM
     // make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
     fdsink          = gst_element_factory_make ("brcmpcmsink",  "btmgr-si-pcmsink");
-#endif  //BUILD_FOR_PI || BUILD_FOR_MTK
+#else
+    /* Use generic sink element */
+    fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
+#endif
 
     /* Create a new pipeline to hold the elements */
     pipeline        = gst_pipeline_new ("btmgr-si-pipeline");
@@ -298,12 +299,13 @@ BTRMgr_SI_GstInit (
     auddec          = gst_element_factory_make ("sbcdec",       "btmgr-si-sbcdec");
     volume          = gst_element_factory_make ("volume",       "btmgr-si-volume");
 
-#if defined BUILD_FOR_PI || defined BUILD_FOR_MTK
-    fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
-#else
+#if defined BUILD_FOR_BRCM
     // make fdsink a filesink, so you can  write pcm data to file or pipe, or alternatively, send it to the brcmpcmsink
     fdsink          = gst_element_factory_make ("brcmpcmsink",  "btmgr-si-pcmsink");
-#endif  //BUILD_FOR_PI || BUILD_FOR_MTK
+#else
+    /* Use generic sink element */
+    fdsink          = gst_element_factory_make ("autoaudiosink",  "btmgr-si-pcmsink");
+#endif
 
     /* Create an event loop and feed gstreamer bus mesages to it */
     loop = g_main_loop_new (NULL, FALSE);

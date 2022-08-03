@@ -267,19 +267,19 @@ AM_CONDITIONAL([WITH_PI_BUILD], [test x$pi_build_ok = xyes])
 AC_SUBST(PI_BUILD_FLAG)
 
 # Check for mtk build
-AC_ARG_ENABLE([mtk-build],
-               AS_HELP_STRING([--enable-mtk-build],[enable mediatek build (default is no)]),
+AC_ARG_ENABLE([brcm-build],
+               AS_HELP_STRING([--enable-brcm-build],[enable broadcom build (default is no)]),
                [
                  case "${enableval}" in
-                  yes) mtk_build_ok=yes
-                    MTK_BUILD_FLAG="-DBUILD_FOR_MTK" ;;
-                  no)  mtk_build_ok=no;;
-                  *) AC_MSG_ERROR([bad value ${enableval} for --enable-mtk-build]) ;;
+                  yes) brcm_build_ok=yes
+                    BRCM_BUILD_FLAG="-DBUILD_FOR_BRCM" ;;
+                  no)  brcm_build_ok=no;;
+                  *) AC_MSG_ERROR([bad value ${enableval} for --enable-brcm-build]) ;;
                  esac
                ],
-               [echo "Building for comcast devices"])
-AM_CONDITIONAL([WITH_MTK_BUILD], [test x$mtk_build_ok = xyes])
-AC_SUBST(MTK_BUILD_FLAG)
+               [echo "Building for broadcom BRCM devices"])
+AM_CONDITIONAL([WITH_BRCM_BUILD], [test x$brcm_build_ok = xyes])
+AC_SUBST(BRCM_BUILD_FLAG)
 
 # Check for sky build
 AC_ARG_ENABLE([sky-build],

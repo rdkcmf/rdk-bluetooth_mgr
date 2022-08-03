@@ -41,8 +41,8 @@ if WITH_PI_BUILD
 AM_CPPFLAGS += $(PI_BUILD_FLAG)
 endif
 
-if WITH_MTK_BUILD
-AM_CPPFLAGS += $(MTK_BUILD_FLAG)
+if WITH_BRCM_BUILD
+AM_CPPFLAGS += $(BRCM_BUILD_FLAG)
 endif
 
 include_HEADERS = $(top_srcdir)/include/streamIn/btrMgr_streamIn.h
