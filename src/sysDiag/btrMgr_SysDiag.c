@@ -418,6 +418,8 @@ BTRMGR_SysDiag_GetData (
                 IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, btrMgr_SysDiag_powerModeChangeCb);
                 rc = eBTRMgrFailure;
             }
+#else
+            rc = eBTRMgrFailure;
 #endif
         }
         break;
