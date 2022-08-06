@@ -3373,6 +3373,12 @@ BTRMGR_PairDevice (
         BTRMGR_EventMessage_t  lstEventMessage;
         memset (&lstEventMessage, 0, sizeof(lstEventMessage));
         btrMgr_GetDiscoveredDevInfo (ahBTRMgrDevHdl, &lstEventMessage.m_discoveredDevice);
+
+        if (lstEventMessage.m_discoveredDevice.m_deviceHandle != ahBTRMgrDevHdl) {
+            BTRMGRLOG_WARN ("Attempted to pair Undiscovered device - %lld\n", ahBTRMgrDevHdl);
+            lstEventMessage.m_discoveredDevice.m_deviceHandle = ahBTRMgrDevHdl;
+        }
+
         lstEventMessage.m_adapterIndex = aui8AdapterIdx;
         lstEventMessage.m_eventType    = lBtMgrOutEvent;
         
