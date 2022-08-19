@@ -36,6 +36,10 @@ typedef void* tBTRMgrSoHdl;
  *
  */
 
+/* Public macros */
+#define BTRMGR_SO_MAX_VOLUME   255
+
+
 /* Fptr Callbacks types */
 typedef eBTRMgrRet (*fPtr_BTRMgr_SO_StatusCb) (stBTRMgrMediaStatus* apstBtrMgrSoStatus, void *apvUserData);
 
