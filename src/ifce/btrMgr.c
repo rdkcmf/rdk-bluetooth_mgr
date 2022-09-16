@@ -4124,6 +4124,7 @@ BTRMGR_StartAudioStreamingOut_StartUp (
                          BTRMGR_SysDiagChar_t   lenDiagElement = BTRMGR_SYS_DIAG_POWERSTATE;
 
                         if (eBTRMgrSuccess != BTRMGR_SysDiag_GetData(ghBTRMgrSdHdl, lenDiagElement, lPropValue)) {
+                            gIsAudOutStartupInProgress = BTRMGR_STARTUP_AUD_UNKNOWN;
                             BTRMGRLOG_ERROR("Could not get diagnostic data\n");
                             lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
                         }
@@ -4885,11 +4886,13 @@ btrMgr_MediaControl (
                 break;
 
                 default:
-                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl))
+                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl)) {
                         lenBtrMgrRet = eBTRMgrSuccess;
-                    else 
+                    }
+                    else  {
                         BTRMGRLOG_ERROR ("Media Control Command for %llu Failed for streamout!!!\n", ahBTRMgrDevHdl);
                         lenBtrMgrRet = eBTRMgrFailure;
+                    }
                 }
 
                 if ((lenBtrMgrRet == eBTRMgrSuccess) && (gfpcBBTRMgrEventOut)) {
@@ -6391,7 +6394,7 @@ btrMgr_SDStatusCb (
     eBTRMgrRet           leBtrMgrSdRet = eBTRMgrFailure;
 
     if ((apstBtrMgrSdStatus != NULL) &&
-        (gIsAudOutStartupInProgress != BTRMGR_STARTUP_AUD_COMPLETED) &&
+        (gIsAudOutStartupInProgress != BTRMGR_STARTUP_AUD_INPROGRESS) &&
         (apstBtrMgrSdStatus->enSysDiagChar == BTRMGR_SYS_DIAG_POWERSTATE) &&
         !strncmp(apstBtrMgrSdStatus->pcSysDiagRes, BTRMGR_SYS_DIAG_PWRST_ON, strlen(BTRMGR_SYS_DIAG_PWRST_ON))) {
 

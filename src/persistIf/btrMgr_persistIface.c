@@ -43,6 +43,9 @@
 #include "btrMgr_persistIface.h"
 
 
+#define BTRMGR_PI_DEVID_LEN     17
+#define BTRMGR_PI_VOL_LEN       4
+
 typedef struct _stBTRMgrPIHdl {
     BTRMGR_PersistentData_t piData;
 } stBTRMgrPIHdl;
@@ -278,7 +281,8 @@ BTRMgr_PI_SetVolume (
 
     /*Adding value of volume */
     BTRMGRLOG_INFO ("Appending object to JSON file\n");
-    char VolStr[4];
+    char VolStr[BTRMGR_PI_VOL_LEN];
+    memset(VolStr, '\0', BTRMGR_PI_VOL_LEN);
     sprintf(VolStr, "%d",persistentData->Volume);
     cJSON *Volume = cJSON_GetObjectItem(btData,"Volume");
     if (Volume == NULL) {
@@ -576,7 +580,8 @@ BTRMgr_PI_SetAllProfiles (
             devices = cJSON_CreateArray();
             for(dcount = 0; dcount<deviceCount; dcount++) {
                 cJSON* device = cJSON_CreateObject();
-                char deviceId[15];
+                char deviceId[BTRMGR_PI_DEVID_LEN];
+                memset(deviceId, '\0', BTRMGR_PI_DEVID_LEN);
                 sprintf(deviceId, "%lld",persistentData->profileList[pcount].deviceList[dcount].deviceId );
                 cJSON_AddStringToObject(device, "DeviceId",deviceId );
                 cJSON_AddNumberToObject(device, "ConnectionStatus",persistentData->profileList[pcount].deviceList[dcount].isConnected);
