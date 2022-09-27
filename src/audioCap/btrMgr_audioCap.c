@@ -71,6 +71,10 @@ int b_rdk_logger_enabled = 0;
 #define IARM_BUS_BTRMGR_NAME        "BTRMgrBus" 
 #endif
 
+#if defined(BUILD_SKY)
+#define TV_CUSTOM_DELAY_COMP 1
+#endif
+
 /* Local types */
 #if defined(USE_ACM)
 typedef enum _eBTRMgrACAcmDCOp {
@@ -1203,13 +1207,84 @@ BTRMgr_AC_Start (
         pstBtrMgrRmfAcSettings->fifoSize            = 8 * apstBtrMgrAcOutASettings->i32BtrMgrOutBufMaxSize;
         pstBtrMgrRmfAcSettings->threshold           = apstBtrMgrAcOutASettings->i32BtrMgrOutBufMaxSize;
 
+  #if defined(TV_CUSTOM_DELAY_COMP)
         //TODO: Work on a intelligent way to arrive at this value. This is not good enough
-        if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu))
-            pstBtrMgrRmfAcSettings->delayCompensation_ms = apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay;
-        else if (pstBtrMgrRmfAcSettings->threshold > 4096)
+        if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold > 4096) {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 140;
+        }
+        else if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold >= 3584) {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 120;
+        }
+        else {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 100;
+        }
+
+        if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu)) {
+            // There is no ideal BT device capable of rendering instantaneously, as the external device is
+            // specifying delay, deduct from aggregate values of trials of device which donot specify any delay param
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms -= 100;
+            // As the external device is specifying delay, add it to total Compensation
+            // Device delay is in 1/10 of millisecond
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms += apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay/10;
+            // AVDTP 1.3 - 5.5 Delay Reporting
+            // The delay reporting feature enables synchronization of audio and video playback by
+            // reporting of SNK delay values caused by buffering, decoding and rendering
+
+            if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1500) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 50;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1400) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 40;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1200) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 20;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1000) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 0;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 800) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 20;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 600) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 30;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 400) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 40;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 200) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 60;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 100) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 80;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 50) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 100;
+            }
+        }
+  #else
+        //TODO: Work on a intelligent way to arrive at this value. This is not good enough
+        if (pstBtrMgrRmfAcSettings->threshold > 4096) {
             pstBtrMgrRmfAcSettings->delayCompensation_ms = 400;
-        else
+        }
+        else if (pstBtrMgrRmfAcSettings->threshold >= 3584) {
+            pstBtrMgrRmfAcSettings->delayCompensation_ms = 380;
+        }
+        else {
             pstBtrMgrRmfAcSettings->delayCompensation_ms = 360;
+        }
+
+        if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu)) {
+            // There is no ideal BT device capable of rendering instantaneously, as the external device is
+            // specifying delay, deduct from aggregate values of trials of device which donot specify any delay param
+            pstBtrMgrRmfAcSettings->delayCompensation_ms -= 120;
+            // As the external device is specifying delay, add it to total Compensation
+            // Device delay is in 1/10 of millisecond
+            pstBtrMgrRmfAcSettings->delayCompensation_ms += apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay/10;
+            // AVDTP 1.3 - 5.5 Delay Reporting
+            // The delay reporting feature enables synchronization of audio and video playback by
+            // reporting of SNK delay values caused by buffering, decoding and rendering
+        }
+  #endif
         //TODO: Bad hack above, need to modify before taking it to stable2
 
 
@@ -1237,13 +1312,84 @@ BTRMgr_AC_Start (
         pstBtrMgrAcHdl->pstBtrMgrAcmSettings->fifo_size = 8 * apstBtrMgrAcOutASettings->i32BtrMgrOutBufMaxSize;
         pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold = apstBtrMgrAcOutASettings->i32BtrMgrOutBufMaxSize;
 
+  #if defined(TV_CUSTOM_DELAY_COMP)
         //TODO: Work on a intelligent way to arrive at this value. This is not good enough
-        if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu))
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay;
-        else if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold > 4096)
+        if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold > 4096) {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 140;
+        }
+        else if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold >= 3584) {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 120;
+        }
+        else {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 100;
+        }
+
+        if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu)) {
+            // There is no ideal BT device capable of rendering instantaneously, as the external device is
+            // specifying delay, deduct from aggregate values of trials of device which donot specify any delay param
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms -= 100;
+            // As the external device is specifying delay, add it to total Compensation
+            // Device delay is in 1/10 of millisecond
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms += apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay/10;
+            // AVDTP 1.3 - 5.5 Delay Reporting
+            // The delay reporting feature enables synchronization of audio and video playback by
+            // reporting of SNK delay values caused by buffering, decoding and rendering
+
+            if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1500) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 50;
+            }
+	    else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1400) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 40;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1200) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 20;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 1000) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  -= 0;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay >= 800) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 20;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 600) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 30;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 400) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 40;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 200) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 60;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 100) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 80;
+            }
+            else if  (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay > 50) {
+                pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms  += 100;
+            }
+        }
+  #else
+        //TODO: Work on a intelligent way to arrive at this value. This is not good enough
+        if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold > 4096) {
             pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 240;
-        else
+        }
+        else if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold >= 3584) {
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 220;
+        }
+        else {
             pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 200;
+        }
+
+        if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu)) {
+            // There is no ideal BT device capable of rendering instantaneously, as the external device is
+            // specifying delay, deduct from aggregate values of trials of device which donot specify any delay param
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms -= 120;
+            // As the external device is specifying delay, add it to total Compensation
+            // Device delay is in 1/10 of millisecond
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms += apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay/10;
+            // AVDTP 1.3 - 5.5 Delay Reporting
+            // The delay reporting feature enables synchronization of audio and video playback by
+            // reporting of SNK delay values caused by buffering, decoding and rendering
+        }
+  #endif
         //TODO: Bad hack above, need to modify before taking it to stable2
 
         memcpy(&lstBtrMgrIarmAcmArgs.details.arg_audio_properties, pstBtrMgrAcHdl->pstBtrMgrAcmSettings, sizeof(audio_properties_ifce_t));
