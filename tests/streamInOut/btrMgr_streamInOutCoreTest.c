@@ -875,7 +875,7 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
 
-                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreSpeakers, mediaCtrl))
+                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreSpeakers, mediaCtrl, NULL))
                    printf("Failed  to set Volume!!!\n");
             }
             break; 
@@ -889,7 +889,7 @@ main (
                 printf("Enter Media choice ....(0-Play/1-Pause/2-Stop/3-Next/4-Previous)\n");
                 ch = getChoice();
 
-                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreMobileAudioIn, ch))
+                if (enBTRCoreSuccess != BTRCore_MediaControl(lhBTRCore, devnum, enBTRCoreMobileAudioIn, ch, NULL))
                    printf("Failed  to set the Media Control Option!!!\n");
             }
             break;

@@ -239,7 +239,7 @@ static eBTRMgrRet btrMgr_StartAudioStreamingOut (unsigned char aui8AdapterIdx, B
 
 static eBTRMgrRet btrMgr_AddPersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apui8ProfileStr, int ai32DevConnected);
 static eBTRMgrRet btrMgr_RemovePersistentEntry(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, const char* apui8ProfileStr);
-static eBTRMgrRet btrMgr_MediaControl(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaDeviceStatus_t* apstMediaDeviceStatus, enBTRCoreDeviceType aenBtrCoreDevTy, enBTRCoreDeviceClass aenBtrCoreDevCl);
+static eBTRMgrRet btrMgr_MediaControl(unsigned char aui8AdapterIdx, BTRMgrDeviceHandle ahBTRMgrDevHdl, BTRMGR_MediaDeviceStatus_t* apstMediaDeviceStatus, enBTRCoreDeviceType aenBtrCoreDevTy, enBTRCoreDeviceClass aenBtrCoreDevCl, stBTRCoreMediaCtData *apstBtrCoreMediaCData);
 
 #if 0
 static void btrMgr_AddStandardAdvGattInfo(void);
@@ -4698,7 +4698,7 @@ BTRMGR_MediaControl (
         lstMediaDeviceStatus.m_ui8mediaDevMute  =  BTRMGR_SO_MAX_VOLUME;     // To handle alternate options
 
 
-    if (btrMgr_MediaControl(aui8AdapterIdx, ahBTRMgrDevHdl, &lstMediaDeviceStatus, lenBtrCoreDevTy, lenBtrCoreDevCl) != eBTRMgrSuccess)
+    if (btrMgr_MediaControl(aui8AdapterIdx, ahBTRMgrDevHdl, &lstMediaDeviceStatus, lenBtrCoreDevTy, lenBtrCoreDevCl, NULL) != eBTRMgrSuccess)
         lenBtrMgrResult = BTRMGR_RESULT_GENERIC_FAILURE;
 
     return lenBtrMgrResult;
@@ -4710,7 +4710,8 @@ btrMgr_MediaControl (
     BTRMgrDeviceHandle          ahBTRMgrDevHdl,
     BTRMGR_MediaDeviceStatus_t* apstMediaDeviceStatus,
     enBTRCoreDeviceType         aenBtrCoreDevTy,
-    enBTRCoreDeviceClass        aenBtrCoreDevCl
+    enBTRCoreDeviceClass        aenBtrCoreDevCl,
+    stBTRCoreMediaCtData*       apstBtrCoreMediaCData
 ) {
     enBTRCoreMediaCtrl  lenBTRCoreMediaCtrl = enBTRCoreMediaCtrlUnknown;
     eBTRMgrRet          lenBtrMgrRet        = eBTRMgrFailure;
@@ -4792,7 +4793,7 @@ btrMgr_MediaControl (
 
                 switch (apstMediaDeviceStatus->m_enmediaCtrlCmd) {
                 case BTRMGR_MEDIA_CTRL_VOLUMEUP:
-                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl)) {
+                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl, apstBtrCoreMediaCData)) {
                         BTRMGRLOG_INFO ("Media Control Command BTRMGR_MEDIA_CTRL_VOLUMEUP for %llu Success for streamout!!!\n", ahBTRMgrDevHdl);
                         lenBtrMgrRet = eBTRMgrSuccess;
                     }
@@ -4801,12 +4802,18 @@ btrMgr_MediaControl (
 
                         BTRMgr_SO_GetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,&ui8CurVolume);
                         BTRMGRLOG_DEBUG ("ui8CurVolume %d \n ",ui8CurVolume);
-                        if(ui8CurVolume < 5)
-                            ui8CurVolume = 5;
-                        else if (ui8CurVolume <= 245 && ui8CurVolume >= 5)
-                            ui8CurVolume = ui8CurVolume + 10; // Increment steps in 10
-                        else
-                            ui8CurVolume = BTRMGR_SO_MAX_VOLUME;
+
+                        if (apstBtrCoreMediaCData != NULL) {
+                            ui8CurVolume = apstBtrCoreMediaCData->m_mediaAbsoluteVolume;
+                        }
+                        else {
+                            if(ui8CurVolume < 5)
+                                ui8CurVolume = 5;
+                            else if (ui8CurVolume <= 245 && ui8CurVolume >= 5)
+                                ui8CurVolume = ui8CurVolume + 10; // Increment steps in 10
+                            else
+                                ui8CurVolume = BTRMGR_SO_MAX_VOLUME;
+                        }
 
                         if ((lenBtrMgrRet = BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, ui8CurVolume)) == eBTRMgrSuccess) {
                             lstEventMessage.m_eventType = BTRMGR_EVENT_DEVICE_MEDIA_STATUS;
@@ -4822,7 +4829,7 @@ btrMgr_MediaControl (
                 break;
 
                 case BTRMGR_MEDIA_CTRL_VOLUMEDOWN:
-                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl)) {
+                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl, apstBtrCoreMediaCData)) {
                         BTRMGRLOG_INFO ("Media Control Command BTRMGR_MEDIA_CTRL_VOLUMEDOWN for %llu Success for streamout!!!\n", ahBTRMgrDevHdl);
                         lenBtrMgrRet = eBTRMgrSuccess;
                     }
@@ -4831,12 +4838,18 @@ btrMgr_MediaControl (
 
                         BTRMgr_SO_GetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl,&ui8CurVolume);
                         BTRMGRLOG_DEBUG ("ui8CurVolume %d \n ",ui8CurVolume);
-                        if (ui8CurVolume > 250)
-                            ui8CurVolume = 250;
-                        else if (ui8CurVolume <= 250 && ui8CurVolume >= 10)
-                            ui8CurVolume = ui8CurVolume - 10;   // Decrement steps in 10
-                        else
-                            ui8CurVolume = 0;
+
+                        if (apstBtrCoreMediaCData != NULL) {
+                            ui8CurVolume = apstBtrCoreMediaCData->m_mediaAbsoluteVolume;
+                        }
+                        else {
+                            if (ui8CurVolume > 250)
+                                ui8CurVolume = 250;
+                            else if (ui8CurVolume <= 250 && ui8CurVolume >= 10)
+                                ui8CurVolume = ui8CurVolume - 10;   // Decrement steps in 10
+                            else
+                                ui8CurVolume = 0;
+                        }
 
                         lenBtrMgrRet = BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, ui8CurVolume);
 
@@ -4886,7 +4899,7 @@ btrMgr_MediaControl (
                 break;
 
                 default:
-                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl)) {
+                    if (enBTRCoreSuccess == BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl, apstBtrCoreMediaCData)) {
                         lenBtrMgrRet = eBTRMgrSuccess;
                     }
                     else  {
@@ -4914,7 +4927,7 @@ btrMgr_MediaControl (
             }
         }
         else {
-            if (enBTRCoreSuccess != BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl)) {
+            if (enBTRCoreSuccess != BTRCore_MediaControl(ghBTRCoreHdl, ahBTRMgrDevHdl, aenBtrCoreDevTy, lenBTRCoreMediaCtrl, apstBtrCoreMediaCData)) {
                 BTRMGRLOG_ERROR ("Media Control Command for %llu Failed!!!\n", ahBTRMgrDevHdl);
                 lenBtrMgrRet = eBTRMgrFailure;
             }
@@ -5031,6 +5044,7 @@ BTRMGR_SetDeviceVolumeMute (
     gboolean                    lbMuted             = FALSE;
     gboolean                    abMuted             = FALSE;
     BTRMGR_MediaDeviceStatus_t  lstMediaDeviceStatus;
+    stBTRCoreMediaCtData        lstBTRCoreMediaCData;
     BTRMGR_EventMessage_t       lstEventMessage;
 
 
@@ -5068,16 +5082,18 @@ BTRMGR_SetDeviceVolumeMute (
     lstMediaDeviceStatus.m_ui8mediaDevVolume= aui8Volume;
     lstMediaDeviceStatus.m_ui8mediaDevMute  = aui8Mute;
 
+    lstBTRCoreMediaCData.m_mediaAbsoluteVolume  = aui8Volume;
+
     if (aui8Volume > lui8Volume)
         lstMediaDeviceStatus.m_enmediaCtrlCmd   = BTRMGR_MEDIA_CTRL_VOLUMEUP;
     else if (aui8Volume < lui8Volume)
         lstMediaDeviceStatus.m_enmediaCtrlCmd   = BTRMGR_MEDIA_CTRL_VOLUMEDOWN;
     
 
-    if ((lenBtrMgrRet = btrMgr_MediaControl(aui8AdapterIdx, ahBTRMgrDevHdl, &lstMediaDeviceStatus, lenBtrCoreDevTy, lenBtrCoreDevCl)) == eBTRMgrSuccess) {
+    if ((lenBtrMgrRet = btrMgr_MediaControl(aui8AdapterIdx, ahBTRMgrDevHdl, &lstMediaDeviceStatus, lenBtrCoreDevTy, lenBtrCoreDevCl, &lstBTRCoreMediaCData)) == eBTRMgrSuccess) {
         BTRMGRLOG_INFO ("Device Handle(%lld) AVRCP audio out volume Set Success\n", ahBTRMgrDevHdl);
         if (BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, BTRMGR_SO_MAX_VOLUME) != eBTRMgrSuccess) {
-            BTRMGRLOG_ERROR ("Device Handle(%lld) AVRCP audio out volume Set fail\n", ahBTRMgrDevHdl);
+            BTRMGRLOG_ERROR ("Device Handle(%lld) AVRCP audio-out SO volume Set fail\n", ahBTRMgrDevHdl);
         }
     }
     else if ((aui8Volume != lui8Volume) && ((lenBtrMgrRet = BTRMgr_SO_SetVolume(gstBTRMgrStreamingInfo.hBTRMgrSoHdl, aui8Volume)) != eBTRMgrSuccess)) {
