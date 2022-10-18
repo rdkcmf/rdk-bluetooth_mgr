@@ -1210,13 +1210,13 @@ BTRMgr_AC_Start (
   #if defined(TV_CUSTOM_DELAY_COMP)
         //TODO: Work on a intelligent way to arrive at this value. This is not good enough
         if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold > 4096) {
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 140;
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 260;
         }
         else if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold >= 3584) {
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 120;
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 260;
         }
         else {
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 100;
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 240;
         }
 
         if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu)) {
@@ -1315,13 +1315,13 @@ BTRMgr_AC_Start (
   #if defined(TV_CUSTOM_DELAY_COMP)
         //TODO: Work on a intelligent way to arrive at this value. This is not good enough
         if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold > 4096) {
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 140;
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 260;
         }
         else if (pstBtrMgrAcHdl->pstBtrMgrAcmSettings->threshold >= 3584) {
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 120;
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 260;
         }
         else {
-            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 100;
+            pstBtrMgrAcHdl->pstBtrMgrAcmSettings->delay_compensation_ms = 240;
         }
 
         if ((apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0) && (apstBtrMgrAcOutASettings->ui32BtrMgrDevDelay != 0xFFFFu)) {
