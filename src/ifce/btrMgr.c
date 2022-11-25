@@ -1964,6 +1964,12 @@ btrMgr_StartAudioStreamingOut (
             BTRMGRLOG_ERROR ("Device Not Connectable\n");
             return eBTRMgrFailure;
         }
+        else if (((btrMgr_IsDevConnected(listOfPDevices.devices[i].tDeviceId) == 1) ||
+                  (ghBTRMgrDevHdlCurStreaming == listOfPDevices.devices[i].tDeviceId)) &&
+                  (ghBTRMgrDevHdlLastConnected == listOfPDevices.devices[i].tDeviceId)) {
+            BTRMGRLOG_INFO ("Device Already Connected and Streaming = %lld\n", listOfPDevices.devices[i].tDeviceId);
+            return eBTRMgrSuccess;
+        }
     }
 
 
